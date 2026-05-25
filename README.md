@@ -164,6 +164,29 @@ ws://127.0.0.1:8000/ws/events
 
 配置 token 后可使用 `Authorization: Bearer <token>`，也可以在本地调试时使用 `?token=<token>`。
 
+## Python 客户端 SDK
+
+其他 Python 项目可以不直接依赖 xtquant，通过 qmtserver 客户端访问本地服务：
+
+```python
+from qmtserver.client import QmtClient
+
+client = QmtClient("http://127.0.0.1:8000", token="dev-token")
+print(client.health())
+print(client.status())
+print(client.rpc("xtdata", "get_full_tick", [["000001.SZ"]]))
+print(client.xtdata.get_full_tick(["000001.SZ"]))
+```
+
+事件订阅：
+
+```python
+for event in client.events():
+    print(event)
+```
+
+示例见 [client_rpc.py](examples/client_rpc.py) 和 [client_events.py](examples/client_events.py)。
+
 ## 开发
 
 开发路线：

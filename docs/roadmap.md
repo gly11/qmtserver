@@ -159,7 +159,7 @@ uv run qmtserver check --userdata "..." --account-id "..."
 
 目标：让其他 Python 项目调用 qmtserver 像调用本地库一样简单。
 
-状态：计划中。
+状态：已完成。
 
 详细计划见 [Milestone 6: Python Client SDK](milestone-6-python-client-sdk.md)。
 

@@ -282,13 +282,14 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "pydantic-settings" },
     { name = "uvicorn", extra = ["standard"] },
+    { name = "websockets" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "ruff" },
     { name = "ty" },
 ]
@@ -296,13 +297,14 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.136.3" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "pydantic-settings", specifier = ">=2.14.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.48.0" },
+    { name = "websockets", specifier = ">=15.0.1" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "httpx", specifier = ">=0.28.1" },
     { name = "ruff", specifier = ">=0.15.14" },
     { name = "ty", specifier = ">=0.0.39" },
 ]

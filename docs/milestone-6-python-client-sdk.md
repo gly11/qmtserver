@@ -2,6 +2,8 @@
 
 Milestone 6 的目标是提供一个轻量 Python 客户端，让其他 Python 项目无需安装 xtquant，也能方便调用 qmtserver。
 
+状态：已完成。
+
 ## 目标
 
 完成后应支持：
@@ -13,6 +15,15 @@ Milestone 6 的目标是提供一个轻量 Python 客户端，让其他 Python �
 - 支持动态代理：`client.xtdata.get_full_tick(...)`。
 - 支持 WebSocket 事件订阅客户端。
 - 提供清晰异常类型。
+
+已落地：
+
+- 新增 `qmtserver.client.QmtClient` 同步 HTTP 客户端。
+- 支持 token、timeout、`health()`、`status()`、`methods()` 和通用 `rpc()`。
+- 支持 `client.xtdata.<method>(...)`、`client.trader.<method>(...)` 动态代理。
+- RPC `ok=false` 时抛 `QmtRpcError`，HTTP 401 抛 `QmtAuthError`。
+- 新增 `client.events()` 同步事件迭代器，消费 `/ws/events`。
+- 新增 `examples/client_rpc.py` 和 `examples/client_events.py`。
 
 ## 非目标
 
@@ -169,15 +180,9 @@ Milestone 6 完成时必须满足：
 6. 示例脚本存在。
 7. 自动化测试通过。
 
-## 建议提交顺序
+## 实际提交
 
-```text
-feat(client): add qmt http client
-feat(client): add dynamic rpc proxies
-feat(client): add websocket event client
-test(client): cover rpc client behavior
-docs(client): add sdk examples
-```
+代码、测试、示例和文档随 Milestone 6 完成提交。
 
 ## 风险与应对
 
