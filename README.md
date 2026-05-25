@@ -95,6 +95,7 @@ GET  /qmt/status
 POST /qmt/connect
 POST /qmt/reconnect
 POST /qmt/disconnect
+GET  /metrics
 GET  /rpc/methods
 POST /rpc
 WS   /ws/events
@@ -152,6 +153,9 @@ QMT_AUDIT_LOG=true
 QMT_AUDIT_LOG_ARGS=true
 QMT_WS_HEARTBEAT_SECONDS=15
 QMT_WS_CLIENT_QUEUE_SIZE=1000
+QMT_LOG_LEVEL=INFO
+QMT_LOG_DIR=logs
+QMT_LOG_JSON=false
 ```
 
 `QMT_ENABLE_TRADING=false` 是第一层保护，`QMT_TRADING_DRY_RUN=true` 是第二层保护。只有显式开启交易并关闭 dry-run 后，交易类 RPC 才会调用 xtquant。
@@ -187,6 +191,19 @@ for event in client.events():
 
 示例见 [client_rpc.py](examples/client_rpc.py) 和 [client_events.py](examples/client_events.py)。
 
+## 运维
+
+服务会为 HTTP 请求生成或透传 `X-Request-ID`，并提供 `/metrics` JSON 指标。日志默认写入 `logs/qmtserver.log`，支持文件轮转。
+
+Windows 启动脚本：
+
+```powershell
+.\scripts\run-server.ps1 -Userdata "C:\国金证券QMT交易端\userdata_mini" -AccountId "资金账号"
+.\scripts\check.ps1
+```
+
+更多说明见 [operations.md](docs/operations.md) 和 [troubleshooting.md](docs/troubleshooting.md)。
+
 ## 开发
 
 开发路线：
@@ -200,6 +217,8 @@ for event in client.events():
 - [Milestone 5: WebSocket Events](docs/milestone-5-websocket-events.md)
 - [Milestone 6: Python Client SDK](docs/milestone-6-python-client-sdk.md)
 - [Milestone 7: Observability and Operations](docs/milestone-7-observability-ops.md)
+- [Operations](docs/operations.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
 运行测试：
 

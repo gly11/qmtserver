@@ -181,7 +181,7 @@ client.rpc("trader", "query_stock_asset", [{"__type__": "StockAccount", "account
 
 目标：服务长期运行时好排查、好监控。
 
-状态：计划中。
+状态：已完成。
 
 详细计划见 [Milestone 7: Observability and Operations](milestone-7-observability-ops.md)。
 

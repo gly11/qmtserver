@@ -11,3 +11,4 @@
 - 增加受控交易 RPC、dry-run、账号白名单和下单参数限制。
 - 增加 WebSocket 事件流、内存 EventBus、生命周期事件和交易回调事件。
 - 增加 Python 客户端 SDK、动态 RPC 代理和事件订阅示例。
+- 增加 request ID、`/metrics`、RPC 指标、日志轮转配置和 Windows 运维脚本。

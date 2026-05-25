@@ -65,6 +65,10 @@ class EventBus:
     def subscriber_count(self) -> int:
         return len(self._subscribers)
 
+    @property
+    def events_published(self) -> int:
+        return self._sequence
+
     def _remember_loop(self) -> None:
         with contextlib.suppress(RuntimeError):
             self._loop = asyncio.get_running_loop()

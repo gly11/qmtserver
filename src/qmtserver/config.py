@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     allowed_accounts: str | None = None
     ws_heartbeat_seconds: float = Field(default=15, gt=0)
     ws_client_queue_size: int = Field(default=1000, ge=1)
+    log_level: str = "INFO"
+    log_dir: Path = Path("logs")
+    log_json: bool = False
+    log_max_bytes: int = Field(default=10485760, ge=1)
+    log_backup_count: int = Field(default=10, ge=0)
     api_token: str | None = None
     require_token: bool = False
     audit_log: bool = True

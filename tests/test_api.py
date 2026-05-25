@@ -42,6 +42,7 @@ class FakeService:
         )
         self.connected = False
         self.trader = FakeTrader()
+        self.metrics: object | None = None
 
     def status(self) -> dict[str, object]:
         return {
@@ -94,6 +95,37 @@ class ApiTests(unittest.TestCase):
 
         self.assertFalse(status.json()["quote"]["connected"])
         self.assertTrue(connected.json()["quote"]["connected"])
+
+    def test_request_id_header_is_returned(self) -> None:
+        app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
+
+        with TestClient(app) as client:
+            response = client.get("/health", headers={"X-Request-ID": "test-request"})
+
+        self.assertEqual(response.headers["X-Request-ID"], "test-request")
+
+    def test_metrics_endpoint(self) -> None:
+        app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
+
+        with TestClient(app) as client:
+            service = FakeService()
+            service.metrics = app.state.metrics
+            app.state.qmt_service = service
+            client.post(
+                "/rpc",
+                json={
+                    "target": "xtdata",
+                    "method": "get_full_tick",
+                    "args": [["000001.SZ"]],
+                    "kwargs": {},
+                },
+            )
+            response = client.get("/metrics")
+
+        body = response.json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["rpc"]["total"], 1)
+        self.assertIn("websocket", body)
 
     def test_qmt_reconnect_and_disconnect(self) -> None:
         app = create_app(load_settings(auto_connect=False), connect_on_startup=False)

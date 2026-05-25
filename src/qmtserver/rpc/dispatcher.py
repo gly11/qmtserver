@@ -127,6 +127,9 @@ class RpcDispatcher:
                 elapsed_ms=elapsed_ms,
                 dry_run=dry_run,
             )
+            metrics = getattr(self.service, "metrics", None)
+            if metrics is not None:
+                metrics.record_rpc(ok=ok, elapsed_ms=elapsed_ms)
 
 
 def _error_response(

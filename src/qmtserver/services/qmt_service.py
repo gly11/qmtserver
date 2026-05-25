@@ -9,6 +9,7 @@ from qmtserver.config import Settings
 from qmtserver.errors import QmtTargetNotConnectedError, QmtTargetNotFoundError
 from qmtserver.events import EventBus
 from qmtserver.miniqmt import MiniQmtCallback, check_xtquant_import
+from qmtserver.observability import Metrics
 
 
 @dataclass
@@ -35,6 +36,7 @@ class LifecycleState:
 class QmtService:
     settings: Settings
     event_bus: EventBus | None = None
+    metrics: Metrics | None = None
     quote_client: Any = None
     trader: Any = None
     callback: MiniQmtCallback | None = None

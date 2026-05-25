@@ -2,6 +2,8 @@
 
 Milestone 7 的目标是让 qmtserver 具备长期运行所需的可观测性和基础运维能力。这个阶段关注日志、指标、运行手册、Windows 启动方式和故障排查。
 
+状态：已完成。
+
 ## 目标
 
 完成后应支持：
@@ -14,6 +16,16 @@ Milestone 7 的目标是让 qmtserver 具备长期运行所需的可观测性和
 - Windows 启动脚本。
 - 运行手册和故障排查文档。
 - 可选 Windows 计划任务或服务方案。
+
+已落地：
+
+- HTTP request ID 中间件，支持 `X-Request-ID` 透传和响应头回写。
+- `qmtserver.access` 访问日志记录 method、path、status、elapsed_ms 和 request_id。
+- `Metrics` 记录 RPC total/success/error/avg_elapsed_ms。
+- 新增 `GET /metrics`，返回服务、RPC、QMT 和 WebSocket 基础指标。
+- 日志支持 `QMT_LOG_DIR`、`QMT_LOG_LEVEL`、`QMT_LOG_JSON` 和 RotatingFileHandler 轮转。
+- 新增 `scripts/run-dev.ps1`、`scripts/run-server.ps1`、`scripts/check.ps1`。
+- 新增 `docs/operations.md` 和 `docs/troubleshooting.md`。
 
 ## 非目标
 
@@ -204,16 +216,9 @@ Milestone 7 完成时必须满足：
 7. 常见故障有明确处理步骤。
 8. 自动化测试通过。
 
-## 建议提交顺序
+## 实际提交
 
-```text
-feat(observability): add request id middleware
-feat(metrics): collect rpc and service metrics
-feat(logging): add rotating log configuration
-chore(scripts): add windows run scripts
-docs(ops): add operations and troubleshooting guides
-test(observability): cover metrics and request ids
-```
+代码、测试、脚本和文档随 Milestone 7 完成提交。
 
 ## 风险与应对
 
