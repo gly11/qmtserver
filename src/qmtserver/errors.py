@@ -11,3 +11,11 @@ class QmtTargetNotFoundError(QmtServerError):
 
 class QmtTargetNotConnectedError(QmtServerError):
     code = "TARGET_NOT_CONNECTED"
+
+
+class QmtUnauthorizedError(QmtServerError):
+    code = "UNAUTHORIZED"
+
+
+class QmtTradingDisabledError(QmtServerError):
+    code = "TRADING_DISABLED"

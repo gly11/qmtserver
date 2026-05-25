@@ -2,6 +2,8 @@
 
 Milestone 3 的目标是给 qmtserver 建立安全边界，为后续开放真实交易能力做准备。这个阶段仍不开放真实下单和撤单；重点是鉴权、方法分级、交易保护开关和审计日志。
 
+状态：已完成。
+
 ## 目标
 
 完成后应支持：
@@ -15,6 +17,15 @@ Milestone 3 的目标是给 qmtserver 建立安全边界，为后续开放真实
 - 即使 future milestone 将交易方法加入白名单，默认也不会真实开放。
 - RPC 调用记录审计日志：target、method、level、参数摘要、耗时、结果。
 - 不在日志中写入 token、完整账号敏感信息或大体量行情响应。
+
+已落地：
+
+- `QMT_API_TOKEN` / `QMT_REQUIRE_TOKEN` 控制 bearer token 鉴权。
+- `/health` 保持开放，`/qmt/*` 和 `/rpc*` 在 token 配置后受保护。
+- RPC registry 升级为 `RpcMethodSpec`，记录 `readonly` / `trading` / `admin` 等级。
+- `order_stock`、`order_stock_async`、`cancel_order_stock`、`cancel_order_stock_async` 作为 disabled trading spec 预留。
+- `QMT_ENABLE_TRADING=false` 时 trading 方法返回 `TRADING_DISABLED`。
+- `qmtserver.audit` 记录 RPC 调用摘要、等级、结果和耗时。
 
 ## 非目标
 
@@ -182,7 +193,7 @@ qmtserver.audit
 INFO qmtserver.audit rpc target=trader method=query_stock_asset level=readonly ok=true elapsed_ms=12.3 args=[StockAccount(account_id=123****789)]
 ```
 
-## 建议目录调整
+## 目录调整
 
 新增：
 
@@ -254,15 +265,9 @@ Milestone 3 完成时必须满足：
 9. 日志不泄露 token。
 10. 自动化测试通过。
 
-## 建议提交顺序
+## 实际提交
 
-```text
-feat(security): add bearer token dependency
-feat(rpc): add method levels and trading guard
-feat(audit): add rpc audit logging
-test(security): cover token and trading guard behavior
-docs(milestone): document security boundary completion
-```
+代码和测试随 Milestone 3 完成提交，文档同步记录完成状态。
 
 ## 风险与应对
 

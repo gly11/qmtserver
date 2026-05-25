@@ -14,6 +14,9 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.port, 8000)
         self.assertEqual(settings.account_type, "STOCK")
         self.assertFalse(settings.enable_trading)
+        self.assertFalse(settings.require_token)
+        self.assertTrue(settings.audit_log)
+        self.assertTrue(settings.audit_log_args)
         self.assertTrue(settings.connect_on_startup)
         self.assertTrue(settings.connect_quote)
         self.assertTrue(settings.connect_trader)
@@ -24,6 +27,10 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.userdata, Path("userdata_mini"))
         self.assertEqual(settings.account_id, "10001")
         self.assertEqual(settings.port, 9000)
+
+    def test_require_token_requires_api_token(self) -> None:
+        with self.assertRaises(ValueError):
+            load_settings(require_token=True, api_token="")
 
 
 if __name__ == "__main__":

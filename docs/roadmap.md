@@ -93,7 +93,7 @@ uv run qmtserver check --userdata "..." --account-id "..."
 
 目标：为未来开放交易接口建立安全边界。
 
-状态：计划中。
+状态：已完成。
 
 详细计划见 [Milestone 3: Security Boundary and Trading Guard](milestone-3-security-trading-guard.md)。
 

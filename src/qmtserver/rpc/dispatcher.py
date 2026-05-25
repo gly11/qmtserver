@@ -4,8 +4,10 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import Any, Protocol
 
-from qmtserver.errors import QmtServerError
-from qmtserver.rpc.registry import is_method_allowed
+from qmtserver.audit import audit_rpc_call
+from qmtserver.config import Settings
+from qmtserver.errors import QmtServerError, QmtTradingDisabledError
+from qmtserver.rpc.registry import get_method_spec
 from qmtserver.rpc.serializers import convert_input, to_jsonable
 
 
@@ -18,6 +20,8 @@ class RpcCall:
 
 
 class RpcTargetProvider(Protocol):
+    settings: Settings
+
     def get_target(self, target: str) -> Any: ...
 
 
@@ -27,47 +31,86 @@ class RpcDispatcher:
 
     def dispatch(self, call: RpcCall) -> dict[str, Any]:
         started_at = perf_counter()
+        spec = get_method_spec(call.target, call.method)
+        result: dict[str, Any]
+
         try:
-            if not is_method_allowed(call.target, call.method):
-                return _error_response(
+            if spec is None:
+                result = _error_response(
                     call,
                     "METHOD_NOT_ALLOWED",
                     f"RPC method is not allowed: {call.target}.{call.method}",
                     started_at,
                 )
+                return result
+
+            if spec.level == "trading" and not self.service.settings.enable_trading:
+                raise QmtTradingDisabledError("Trading RPC methods are disabled")
+
+            if not spec.enabled:
+                result = _error_response(
+                    call,
+                    "METHOD_NOT_ALLOWED",
+                    f"RPC method is not allowed: {call.target}.{call.method}",
+                    started_at,
+                    spec.level,
+                )
+                return result
 
             target = self.service.get_target(call.target)
             handler = getattr(target, call.method, None)
             if handler is None:
-                return _error_response(
+                result = _error_response(
                     call,
                     "METHOD_NOT_FOUND",
                     f"RPC method does not exist: {call.target}.{call.method}",
                     started_at,
+                    spec.level,
                 )
+                return result
 
             args = [convert_input(arg) for arg in call.args]
             kwargs = {key: convert_input(value) for key, value in call.kwargs.items()}
-            result = handler(*args, **kwargs)
-            return {
+            handler_result = handler(*args, **kwargs)
+            result = {
                 "ok": True,
-                "data": to_jsonable(result),
+                "data": to_jsonable(handler_result),
                 "error": None,
-                "meta": _meta(call, started_at),
+                "meta": _meta(call, started_at, spec.level),
             }
+            return result
         except QmtServerError as exc:
-            return _error_response(
+            result = _error_response(
                 call,
                 exc.code,
                 str(exc),
                 started_at,
+                spec.level if spec is not None else None,
             )
+            return result
         except Exception as exc:
-            return _error_response(
+            result = _error_response(
                 call,
                 type(exc).__name__,
                 str(exc),
                 started_at,
+                spec.level if spec is not None else None,
+            )
+            return result
+        finally:
+            elapsed_ms = round((perf_counter() - started_at) * 1000, 3)
+            ok = "result" in locals() and bool(result.get("ok"))
+            error = result.get("error") if "result" in locals() else None
+            audit_rpc_call(
+                settings=self.service.settings,
+                spec=spec,
+                target=call.target,
+                method=call.method,
+                args=call.args,
+                kwargs=call.kwargs,
+                ok=ok,
+                error_code=error.get("code") if isinstance(error, dict) else None,
+                elapsed_ms=elapsed_ms,
             )
 
 
@@ -76,6 +119,7 @@ def _error_response(
     code: str,
     message: str,
     started_at: float,
+    level: str | None = None,
 ) -> dict[str, Any]:
     return {
         "ok": False,
@@ -84,13 +128,16 @@ def _error_response(
             "code": code,
             "message": message,
         },
-        "meta": _meta(call, started_at),
+        "meta": _meta(call, started_at, level),
     }
 
 
-def _meta(call: RpcCall, started_at: float) -> dict[str, Any]:
-    return {
+def _meta(call: RpcCall, started_at: float, level: str | None = None) -> dict[str, Any]:
+    meta: dict[str, Any] = {
         "target": call.target,
         "method": call.method,
         "elapsed_ms": round((perf_counter() - started_at) * 1000, 3),
     }
+    if level is not None:
+        meta["level"] = level
+    return meta

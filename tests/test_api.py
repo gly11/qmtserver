@@ -19,7 +19,8 @@ class FakeTrader:
 
 
 class FakeService:
-    def __init__(self) -> None:
+    def __init__(self, *, enable_trading: bool = False) -> None:
+        self.settings = load_settings(auto_connect=False, enable_trading=enable_trading)
         self.connected = False
 
     def status(self) -> dict[str, object]:
@@ -90,9 +91,11 @@ class ApiTests(unittest.TestCase):
         app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
 
         with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
             response = client.get("/rpc/methods")
 
         self.assertIn("get_full_tick", response.json()["methods"]["xtdata"])
+        self.assertIn("specs", response.json())
 
     def test_rpc_dispatch(self) -> None:
         app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
@@ -130,7 +133,7 @@ class ApiTests(unittest.TestCase):
 
         body = response.json()
         self.assertFalse(body["ok"])
-        self.assertEqual(body["error"]["code"], "METHOD_NOT_ALLOWED")
+        self.assertEqual(body["error"]["code"], "TRADING_DISABLED")
 
     def test_rpc_dispatches_trader_query_stock_asset(self) -> None:
         app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
@@ -156,6 +159,68 @@ class ApiTests(unittest.TestCase):
         body = response.json()
         self.assertTrue(body["ok"])
         self.assertEqual(body["data"], {"account_id": "10001"})
+
+    def test_health_does_not_require_token(self) -> None:
+        app = create_app(
+            load_settings(auto_connect=False, api_token="dev-token"),
+            connect_on_startup=False,
+        )
+
+        with TestClient(app) as client:
+            response = client.get("/health")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_protected_routes_require_token_when_configured(self) -> None:
+        app = create_app(
+            load_settings(auto_connect=False, api_token="dev-token"),
+            connect_on_startup=False,
+        )
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            status = client.get("/qmt/status")
+            methods = client.get("/rpc/methods")
+            rpc = client.post(
+                "/rpc",
+                json={"target": "xtdata", "method": "get_full_tick", "args": [], "kwargs": {}},
+            )
+
+        self.assertEqual(status.status_code, 401)
+        self.assertEqual(methods.status_code, 401)
+        self.assertEqual(rpc.status_code, 401)
+        self.assertEqual(status.json()["detail"]["code"], "UNAUTHORIZED")
+
+    def test_protected_routes_accept_valid_bearer_token(self) -> None:
+        app = create_app(
+            load_settings(auto_connect=False, api_token="dev-token"),
+            connect_on_startup=False,
+        )
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            response = client.get(
+                "/qmt/status",
+                headers={"Authorization": "Bearer dev-token"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("quote", response.json())
+
+    def test_protected_routes_reject_invalid_bearer_token(self) -> None:
+        app = create_app(
+            load_settings(auto_connect=False, api_token="dev-token"),
+            connect_on_startup=False,
+        )
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            response = client.get(
+                "/qmt/status",
+                headers={"Authorization": "Bearer wrong-token"},
+            )
+
+        self.assertEqual(response.status_code, 401)
 
 
 if __name__ == "__main__":

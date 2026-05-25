@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from qmtserver.api.dependencies import get_qmt_service
-from qmtserver.rpc import RpcDispatcher, allowed_methods
+from qmtserver.rpc import RpcDispatcher, allowed_methods, method_specs
 from qmtserver.rpc.dispatcher import RpcCall
 from qmtserver.services import QmtService
 
@@ -22,10 +22,11 @@ class RpcRequest(BaseModel):
 
 
 @router.get("/methods")
-def methods() -> dict[str, object]:
+def methods(_service: QmtServiceDep) -> dict[str, object]:
     return {
         "ok": True,
         "methods": allowed_methods(),
+        "specs": method_specs(),
     }
 
 

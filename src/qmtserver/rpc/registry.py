@@ -1,5 +1,19 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Literal
+
+RpcMethodLevel = Literal["readonly", "trading", "admin"]
+
+
+@dataclass(frozen=True)
+class RpcMethodSpec:
+    target: str
+    method: str
+    level: RpcMethodLevel
+    enabled: bool = True
+
+
 READONLY_METHODS: dict[str, set[str]] = {
     "xtdata": {
         "get_full_tick",
@@ -18,13 +32,55 @@ READONLY_METHODS: dict[str, set[str]] = {
     },
 }
 
+TRADING_METHODS: dict[str, set[str]] = {
+    "trader": {
+        "order_stock",
+        "order_stock_async",
+        "cancel_order_stock",
+        "cancel_order_stock_async",
+    },
+}
 
-def allowed_methods() -> dict[str, list[str]]:
-    return {
-        target: sorted(methods)
-        for target, methods in sorted(READONLY_METHODS.items(), key=lambda item: item[0])
-    }
+RPC_METHODS: dict[tuple[str, str], RpcMethodSpec] = {}
+for _target, _methods in READONLY_METHODS.items():
+    for _method in _methods:
+        RPC_METHODS[(_target, _method)] = RpcMethodSpec(_target, _method, "readonly")
+for _target, _methods in TRADING_METHODS.items():
+    for _method in _methods:
+        RPC_METHODS[(_target, _method)] = RpcMethodSpec(
+            _target,
+            _method,
+            "trading",
+            enabled=False,
+        )
+
+
+def allowed_methods(*, include_disabled: bool = False) -> dict[str, list[str]]:
+    result: dict[str, list[str]] = {}
+    for spec in sorted(RPC_METHODS.values(), key=lambda item: (item.target, item.method)):
+        if spec.enabled or include_disabled:
+            result.setdefault(spec.target, []).append(spec.method)
+    return result
 
 
 def is_method_allowed(target: str, method: str) -> bool:
-    return method in READONLY_METHODS.get(target, set())
+    spec = get_method_spec(target, method)
+    return spec is not None and spec.enabled
+
+
+def get_method_spec(target: str, method: str) -> RpcMethodSpec | None:
+    return RPC_METHODS.get((target, method))
+
+
+def method_specs(*, include_disabled: bool = True) -> dict[str, list[dict[str, object]]]:
+    result: dict[str, list[dict[str, object]]] = {}
+    for spec in sorted(RPC_METHODS.values(), key=lambda item: (item.target, item.method)):
+        if spec.enabled or include_disabled:
+            result.setdefault(spec.target, []).append(
+                {
+                    "method": spec.method,
+                    "level": spec.level,
+                    "enabled": spec.enabled,
+                }
+            )
+    return result

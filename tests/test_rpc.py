@@ -5,7 +5,7 @@ from pathlib import Path
 
 from qmtserver.config import load_settings
 from qmtserver.errors import QmtTargetNotConnectedError
-from qmtserver.rpc import RpcDispatcher, allowed_methods, is_method_allowed
+from qmtserver.rpc import RpcDispatcher, allowed_methods, is_method_allowed, method_specs
 from qmtserver.rpc.dispatcher import RpcCall
 from qmtserver.rpc.serializers import convert_input, to_jsonable
 
@@ -16,6 +16,9 @@ class FakeTarget:
 
 
 class FakeService:
+    def __init__(self, *, enable_trading: bool = False) -> None:
+        self.settings = load_settings(auto_connect=False, enable_trading=enable_trading)
+
     def get_target(self, target: str) -> FakeTarget:
         if target != "xtdata":
             raise QmtTargetNotConnectedError("target is not connected")
@@ -36,7 +39,7 @@ class RpcTests(unittest.TestCase):
         )
 
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error"]["code"], "METHOD_NOT_ALLOWED")
+        self.assertEqual(result["error"]["code"], "TRADING_DISABLED")
 
     def test_dispatches_whitelisted_method(self) -> None:
         dispatcher = RpcDispatcher(FakeService())
@@ -69,6 +72,42 @@ class RpcTests(unittest.TestCase):
     def test_method_allowlist(self) -> None:
         self.assertTrue(is_method_allowed("xtdata", "get_full_tick"))
         self.assertFalse(is_method_allowed("trader", "order_stock"))
+
+    def test_method_specs_include_trading_metadata(self) -> None:
+        specs = method_specs()
+        trader_specs = {item["method"]: item for item in specs["trader"]}
+
+        self.assertEqual(trader_specs["order_stock"]["level"], "trading")
+        self.assertFalse(trader_specs["order_stock"]["enabled"])
+        self.assertNotIn("order_stock", allowed_methods()["trader"])
+
+    def test_trading_method_remains_blocked_when_trading_enabled_but_disabled(self) -> None:
+        dispatcher = RpcDispatcher(FakeService(enable_trading=True))
+        result = dispatcher.dispatch(
+            RpcCall(target="trader", method="order_stock", args=[], kwargs={})
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"]["code"], "METHOD_NOT_ALLOWED")
+
+    def test_audit_log_records_rpc_summary(self) -> None:
+        dispatcher = RpcDispatcher(FakeService())
+
+        with self.assertLogs("qmtserver.audit", level="INFO") as logs:
+            dispatcher.dispatch(
+                RpcCall(
+                    target="xtdata",
+                    method="get_full_tick",
+                    args=[["000001.SZ"]],
+                    kwargs={},
+                )
+            )
+
+        output = "\n".join(logs.output)
+        self.assertIn("target=xtdata", output)
+        self.assertIn("method=get_full_tick", output)
+        self.assertIn("level=readonly", output)
+        self.assertIn("ok=True", output)
 
     def test_returns_stable_target_error_code(self) -> None:
         dispatcher = RpcDispatcher(FakeService())

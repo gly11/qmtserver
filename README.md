@@ -8,6 +8,7 @@ qmtserver 是一个面向 MiniQMT / xtquant 的本地 Python 项目。当前阶�
 - 使用标准 `src/` 布局，避免本地路径污染导入结果。
 - 提供 CLI 连接检查命令，可验证行情连接、交易连接、账号订阅和资金查询。
 - 将 MiniQMT 连接逻辑集中在 `qmtserver.miniqmt`，方便后续封装 API 服务。
+- 提供本地 HTTP RPC 网关，支持 token 鉴权、只读白名单、交易保护和审计日志。
 
 ## 项目结构
 
@@ -128,6 +129,26 @@ RPC 请求示例：
 
 第一版只开放只读白名单方法。下单、撤单类方法默认不开放。
 
+### 安全配置
+
+默认只监听 `127.0.0.1`。如果设置了 `QMT_API_TOKEN`，除 `/health` 外的 `/qmt/*` 和 `/rpc*` 接口都需要：
+
+```http
+Authorization: Bearer <token>
+```
+
+相关环境变量：
+
+```env
+QMT_API_TOKEN=
+QMT_REQUIRE_TOKEN=false
+QMT_ENABLE_TRADING=false
+QMT_AUDIT_LOG=true
+QMT_AUDIT_LOG_ARGS=true
+```
+
+`QMT_ENABLE_TRADING=false` 是默认保护。即使 registry 中已预留交易方法，交易类 RPC 也会先被交易开关拦截；真实下单和撤单会在后续 milestone 中单独开放。
+
 ## 开发
 
 开发路线：
@@ -136,6 +157,11 @@ RPC 请求示例：
 - [Development Roadmap](docs/roadmap.md)
 - [Milestone 1: Readonly RPC Gateway](docs/milestone-1-readonly-rpc.md)
 - [Milestone 2: Connection Lifecycle Management](docs/milestone-2-connection-lifecycle.md)
+- [Milestone 3: Security Boundary and Trading Guard](docs/milestone-3-security-trading-guard.md)
+- [Milestone 4: Trading RPC](docs/milestone-4-trading-rpc.md)
+- [Milestone 5: WebSocket Events](docs/milestone-5-websocket-events.md)
+- [Milestone 6: Python Client SDK](docs/milestone-6-python-client-sdk.md)
+- [Milestone 7: Observability and Operations](docs/milestone-7-observability-ops.md)
 
 运行测试：
 
