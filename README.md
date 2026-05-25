@@ -92,6 +92,8 @@ http://127.0.0.1:8000
 GET  /health
 GET  /qmt/status
 POST /qmt/connect
+POST /qmt/reconnect
+POST /qmt/disconnect
 GET  /rpc/methods
 POST /rpc
 ```
@@ -133,6 +135,7 @@ RPC 请求示例：
 - [Documentation Index](docs/README.md)
 - [Development Roadmap](docs/roadmap.md)
 - [Milestone 1: Readonly RPC Gateway](docs/milestone-1-readonly-rpc.md)
+- [Milestone 2: Connection Lifecycle Management](docs/milestone-2-connection-lifecycle.md)
 
 运行测试：
 

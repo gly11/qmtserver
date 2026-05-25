@@ -71,7 +71,7 @@ uv run qmtserver check --userdata "..." --account-id "..."
 
 目标：服务端能长期稳定运行，而不是只做一次性调用。
 
-状态：计划中。
+状态：已完成。
 
 详细计划见 [Milestone 2: Connection Lifecycle Management](milestone-2-connection-lifecycle.md)。
 
