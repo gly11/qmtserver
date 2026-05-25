@@ -215,7 +215,7 @@ ORDER_LIMIT_EXCEEDED
 ```powershell
 $env:QMT_ENABLE_TRADING="true"
 $env:QMT_TRADING_DRY_RUN="true"
-uv run qmtserver serve --userdata "C:\国金证券QMT交易端\userdata_mini" --account-id "你的资金账号"
+uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "你的资金账号"
 ```
 
 确认不会真实下单。

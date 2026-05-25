@@ -7,19 +7,19 @@ qmtserver 默认面向本机运行，建议保持 `QMT_HOST=127.0.0.1`，先启�
 开发模式：
 
 ```powershell
-.\scripts\run-dev.ps1 -Userdata "C:\国金证券QMT交易端\userdata_mini" -AccountId "资金账号"
+.\scripts\run-dev.ps1 -Userdata "D:\path\to\MiniQMT\userdata_mini" -AccountId "资金账号"
 ```
 
 常规运行：
 
 ```powershell
-.\scripts\run-server.ps1 -Userdata "C:\国金证券QMT交易端\userdata_mini" -AccountId "资金账号"
+.\scripts\run-server.ps1 -Userdata "D:\path\to\MiniQMT\userdata_mini" -AccountId "资金账号"
 ```
 
 也可以直接运行：
 
 ```powershell
-uv run qmtserver serve --userdata "C:\国金证券QMT交易端\userdata_mini" --account-id "资金账号"
+uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
 ```
 
 ## 检查

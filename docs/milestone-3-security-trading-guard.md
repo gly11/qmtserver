@@ -237,7 +237,7 @@ src/qmtserver/api/dependencies.py # 增加 auth dependency
 
 ```powershell
 $env:QMT_API_TOKEN="dev-token"
-uv run qmtserver serve --userdata "C:\国金证券QMT交易端\userdata_mini"
+uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini"
 ```
 
 验证：

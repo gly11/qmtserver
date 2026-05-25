@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "Windows MiniQMT gateway server."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
+license = "MIT"
+authors = [
+    { name = "gly11" },
+]
 dependencies = [
     "fastapi>=0.136.3",
     "httpx>=0.28.1",
@@ -16,11 +20,14 @@ keywords = ["miniqmt", "qmt", "xtquant", "trading"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
+    "Framework :: FastAPI",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.13",
     "Topic :: Office/Business :: Financial",
+    "Typing :: Typed",
 ]
 
 [project.optional-dependencies]
@@ -32,7 +39,7 @@ xtquant = [
 Homepage = "https://github.com/gly11/qmtserver"
 Repository = "https://github.com/gly11/qmtserver"
 Issues = "https://github.com/gly11/qmtserver/issues"
-Documentation = "https://github.com/gly11/qmtserver/tree/master/docs"
+Documentation = "https://github.com/gly11/qmtserver/tree/main/docs"
 
 [project.scripts]
 qmtserver = "qmtserver.cli:main"

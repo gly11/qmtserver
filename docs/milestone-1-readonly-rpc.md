@@ -77,7 +77,7 @@ src/qmtserver/
 `.env` 规划：
 
 ```env
-QMT_USERDATA=C:\国金证券QMT交易端\userdata_mini
+QMT_USERDATA=D:\path\to\MiniQMT\userdata_mini
 QMT_ACCOUNT_ID=
 QMT_ACCOUNT_TYPE=STOCK
 QMT_HOST=127.0.0.1
@@ -116,7 +116,7 @@ QMT_API_TOKEN=
   "ok": true,
   "xtquant": {
     "ok": true,
-    "path": "C:\\Workspace\\qmtserver\\.venv\\Lib\\site-packages\\xtquant"
+    "path": ".venv\\Lib\\site-packages\\xtquant"
   },
   "quote": {
     "connected": true
@@ -339,7 +339,7 @@ uv run qmtserver serve --host 127.0.0.1 --port 8000
 真实环境手动测试：
 
 ```powershell
-uv run qmtserver serve --userdata "C:\国金证券QMT交易端\userdata_mini" --account-id "你的资金账号"
+uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "你的资金账号"
 ```
 
 然后调用：

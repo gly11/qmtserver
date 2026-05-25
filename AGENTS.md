@@ -34,7 +34,7 @@ uv run ty check
 连接真实 MiniQMT 时：
 
 ```powershell
-uv run qmtserver check --userdata "C:\国金证券QMT交易端\userdata_mini" --account-id "资金账号"
+uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
 ```
 
 ## 质量门禁

@@ -171,7 +171,7 @@ QMT_WS_CLIENT_QUEUE_SIZE=1000
 真实环境手动测试：
 
 ```powershell
-uv run qmtserver serve --userdata "C:\国金证券QMT交易端\userdata_mini" --account-id "你的资金账号"
+uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "你的资金账号"
 ```
 
 连接：

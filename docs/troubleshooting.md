@@ -21,7 +21,7 @@ uv sync --extra xtquant
 先启动并登录 MiniQMT，再运行：
 
 ```powershell
-uv run qmtserver check --userdata "C:\国金证券QMT交易端\userdata_mini" --account-id "资金账号"
+uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
 ```
 
 ## userdata 路径错误

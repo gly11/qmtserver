@@ -268,7 +268,7 @@ for event in client.events():
 Windows 启动脚本：
 
 ```powershell
-.\scripts\run-server.ps1 -Userdata "C:\国金证券QMT交易端\userdata_mini" -AccountId "资金账号"
+.\scripts\run-server.ps1 -Userdata "D:\path\to\MiniQMT\userdata_mini" -AccountId "资金账号"
 .\scripts\check.ps1
 ```
 
@@ -314,4 +314,4 @@ uv run python -c "import qmtserver, xtquant; print(qmtserver.__file__); print(xt
 
 ## 许可证
 
-尚未选择许可证。准备开源发布前，请先补充 `LICENSE` 文件。
+本项目使用 MIT License，详见 [LICENSE](LICENSE)。
