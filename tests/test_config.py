@@ -17,7 +17,14 @@ class SettingsTests(unittest.TestCase):
         self.assertTrue(settings.trading_dry_run)
         self.assertEqual(settings.max_order_volume, 100000)
         self.assertEqual(settings.max_order_amount, 1000000)
+        self.assertEqual(settings.daily_max_order_volume, 1000000)
+        self.assertEqual(settings.daily_max_order_amount, 5000000)
+        self.assertTrue(settings.require_trade_confirmation)
+        self.assertEqual(settings.trade_confirmation_text, "I_UNDERSTAND_REAL_TRADING")
+        self.assertTrue(settings.trade_audit_log)
         self.assertEqual(settings.trading_allowed_accounts(), set())
+        self.assertEqual(settings.trading_allowed_symbols(), set())
+        self.assertEqual(settings.trading_blocked_symbols(), set())
         self.assertEqual(settings.log_level, "INFO")
         self.assertEqual(settings.log_dir, Path("logs"))
         self.assertFalse(settings.log_json)
@@ -48,6 +55,15 @@ class SettingsTests(unittest.TestCase):
         settings = load_settings(account_id="10001", allowed_accounts="10002, 10003")
 
         self.assertEqual(settings.trading_allowed_accounts(), {"10002", "10003"})
+
+    def test_trading_symbol_lists_parse_comma_lists(self) -> None:
+        settings = load_settings(
+            allowed_symbols="000001.SZ, 600000.SH",
+            blocked_symbols="300001.SZ",
+        )
+
+        self.assertEqual(settings.trading_allowed_symbols(), {"000001.SZ", "600000.SH"})
+        self.assertEqual(settings.trading_blocked_symbols(), {"300001.SZ"})
 
 
 if __name__ == "__main__":

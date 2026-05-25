@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     max_order_volume: int = Field(default=100000, ge=1)
     max_order_amount: float = Field(default=1000000, ge=0)
     allowed_accounts: str | None = None
+    allowed_symbols: str | None = None
+    blocked_symbols: str | None = None
+    daily_max_order_volume: int = Field(default=1000000, ge=1)
+    daily_max_order_amount: float = Field(default=5000000, ge=0)
+    require_trade_confirmation: bool = True
+    trade_confirmation_text: str = "I_UNDERSTAND_REAL_TRADING"
+    trade_audit_log: bool = True
     ws_heartbeat_seconds: float = Field(default=15, gt=0)
     ws_client_queue_size: int = Field(default=1000, ge=1)
     log_level: str = "INFO"
@@ -50,14 +57,24 @@ class Settings(BaseSettings):
 
     def trading_allowed_accounts(self) -> set[str]:
         if self.allowed_accounts:
-            return {
-                account.strip() for account in self.allowed_accounts.split(",") if account.strip()
-            }
+            return _split_csv(self.allowed_accounts)
         if self.account_id:
             return {self.account_id}
         return set()
+
+    def trading_allowed_symbols(self) -> set[str]:
+        return _split_csv(self.allowed_symbols)
+
+    def trading_blocked_symbols(self) -> set[str]:
+        return _split_csv(self.blocked_symbols)
 
 
 def load_settings(**overrides: Any) -> Settings:
     values = {key: value for key, value in overrides.items() if value is not None}
     return Settings(**values)
+
+
+def _split_csv(value: str | None) -> set[str]:
+    if not value:
+        return set()
+    return {item.strip() for item in value.split(",") if item.strip()}

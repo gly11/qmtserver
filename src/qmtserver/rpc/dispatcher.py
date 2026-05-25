@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import Any, Protocol
 
-from qmtserver.audit import audit_rpc_call
+from qmtserver.audit import audit_rpc_call, audit_trade_call
 from qmtserver.config import Settings
 from qmtserver.errors import QmtServerError, QmtTradingDisabledError
 from qmtserver.rpc.registry import get_method_spec
@@ -37,6 +37,8 @@ class RpcDispatcher:
         spec = get_method_spec(call.target, call.method)
         result: dict[str, Any]
         dry_run: bool | None = None
+        trading_details: dict[str, object] | None = None
+        real_trading_call = False
 
         try:
             if spec is None:
@@ -62,8 +64,13 @@ class RpcDispatcher:
                 return result
 
             if spec.level == "trading":
-                trading_plan = prepare_trading_call(self.service.settings, call)
+                trading_plan = prepare_trading_call(
+                    self.service.settings,
+                    call,
+                    getattr(self.service, "daily_trading_limits", None),
+                )
                 dry_run = trading_plan.dry_run
+                trading_details = trading_plan.details
                 if trading_plan.dry_run:
                     result = {
                         "ok": True,
@@ -72,6 +79,9 @@ class RpcDispatcher:
                         "meta": _meta(call, started_at, spec.level),
                     }
                     return result
+                kwargs_for_handler = trading_plan.kwargs
+            else:
+                kwargs_for_handler = call.kwargs
 
             target = self.service.get_target(call.target)
             handler = getattr(target, call.method, None)
@@ -86,8 +96,13 @@ class RpcDispatcher:
                 return result
 
             args = [convert_input(arg) for arg in call.args]
-            kwargs = {key: convert_input(value) for key, value in call.kwargs.items()}
+            kwargs = {key: convert_input(value) for key, value in kwargs_for_handler.items()}
+            real_trading_call = spec.level == "trading"
             handler_result = handler(*args, **kwargs)
+            if real_trading_call and trading_details is not None:
+                daily_limits = getattr(self.service, "daily_trading_limits", None)
+                if daily_limits is not None:
+                    daily_limits.record_order(trading_details)
             result = {
                 "ok": True,
                 "data": to_jsonable(handler_result),
@@ -129,6 +144,17 @@ class RpcDispatcher:
                 elapsed_ms=elapsed_ms,
                 dry_run=dry_run,
             )
+            if spec is not None and spec.level == "trading":
+                audit_trade_call(
+                    settings=self.service.settings,
+                    target=call.target,
+                    method=call.method,
+                    details=trading_details,
+                    dry_run=dry_run,
+                    real_call=real_trading_call,
+                    ok=ok,
+                    error_code=error.get("code") if isinstance(error, dict) else None,
+                )
             metrics = getattr(self.service, "metrics", None)
             if metrics is not None:
                 metrics.record_rpc(ok=ok, elapsed_ms=elapsed_ms)

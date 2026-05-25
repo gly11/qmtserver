@@ -8,6 +8,7 @@ from qmtserver.errors import QmtTargetNotConnectedError
 from qmtserver.rpc import RpcDispatcher, allowed_methods, is_method_allowed, method_specs
 from qmtserver.rpc.dispatcher import RpcCall
 from qmtserver.rpc.serializers import convert_input, to_jsonable
+from qmtserver.trading import DailyTradingLimits
 
 
 class FakeTarget:
@@ -40,6 +41,11 @@ class FakeService:
         account_id: str | None = None,
         max_order_volume: int = 100000,
         max_order_amount: float = 1000000,
+        allowed_symbols: str | None = None,
+        blocked_symbols: str | None = None,
+        daily_max_order_volume: int = 1000000,
+        daily_max_order_amount: float = 5000000,
+        require_trade_confirmation: bool = True,
     ) -> None:
         self.settings = load_settings(
             auto_connect=False,
@@ -48,8 +54,14 @@ class FakeService:
             account_id=account_id,
             max_order_volume=max_order_volume,
             max_order_amount=max_order_amount,
+            allowed_symbols=allowed_symbols,
+            blocked_symbols=blocked_symbols,
+            daily_max_order_volume=daily_max_order_volume,
+            daily_max_order_amount=daily_max_order_amount,
+            require_trade_confirmation=require_trade_confirmation,
         )
         self.trader = FakeTrader()
+        self.daily_trading_limits = DailyTradingLimits()
 
     def get_target(self, target: str) -> object:
         if target == "trader":
@@ -161,13 +173,161 @@ class RpcTests(unittest.TestCase):
                     5,
                     10.5,
                 ],
-                kwargs={},
+                kwargs={"confirm": "I_UNDERSTAND_REAL_TRADING"},
             )
         )
 
         self.assertTrue(result["ok"])
         self.assertEqual(result["data"], 10001)
         self.assertEqual(service.trader.calls[0][0], "order_stock")
+        self.assertEqual(len(service.trader.calls[0][1]), 6)
+
+    def test_real_trading_requires_confirmation(self) -> None:
+        service = FakeService(enable_trading=True, trading_dry_run=False, account_id="10001")
+        dispatcher = RpcDispatcher(service)
+        result = dispatcher.dispatch(
+            RpcCall(
+                target="trader",
+                method="order_stock",
+                args=[
+                    {"__type__": "StockAccount", "account_id": "10001"},
+                    "000001.SZ",
+                    23,
+                    100,
+                    5,
+                    10.5,
+                ],
+                kwargs={},
+            )
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"]["code"], "TRADE_CONFIRMATION_REQUIRED")
+        self.assertEqual(service.trader.calls, [])
+
+    def test_dry_run_does_not_require_confirmation(self) -> None:
+        service = FakeService(enable_trading=True, trading_dry_run=True, account_id="10001")
+        dispatcher = RpcDispatcher(service)
+        result = dispatcher.dispatch(
+            RpcCall(
+                target="trader",
+                method="order_stock",
+                args=[
+                    {"__type__": "StockAccount", "account_id": "10001"},
+                    "000001.SZ",
+                    23,
+                    100,
+                    5,
+                    10.5,
+                ],
+                kwargs={},
+            )
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["data"]["dry_run"], True)
+
+    def test_allowed_symbol_list_rejects_unknown_symbol(self) -> None:
+        dispatcher = RpcDispatcher(
+            FakeService(enable_trading=True, account_id="10001", allowed_symbols="600000.SH")
+        )
+        result = dispatcher.dispatch(
+            RpcCall(
+                target="trader",
+                method="order_stock",
+                args=[
+                    {"__type__": "StockAccount", "account_id": "10001"},
+                    "000001.SZ",
+                    23,
+                    100,
+                    5,
+                    10.5,
+                ],
+                kwargs={},
+            )
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"]["code"], "SYMBOL_NOT_ALLOWED")
+
+    def test_blocked_symbol_list_rejects_symbol(self) -> None:
+        dispatcher = RpcDispatcher(
+            FakeService(enable_trading=True, account_id="10001", blocked_symbols="000001.SZ")
+        )
+        result = dispatcher.dispatch(
+            RpcCall(
+                target="trader",
+                method="order_stock",
+                args=[
+                    {"__type__": "StockAccount", "account_id": "10001"},
+                    "000001.SZ",
+                    23,
+                    100,
+                    5,
+                    10.5,
+                ],
+                kwargs={},
+            )
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"]["code"], "SYMBOL_NOT_ALLOWED")
+
+    def test_rejects_daily_volume_limit(self) -> None:
+        service = FakeService(
+            enable_trading=True,
+            trading_dry_run=False,
+            account_id="10001",
+            daily_max_order_volume=150,
+        )
+        dispatcher = RpcDispatcher(service)
+        call = RpcCall(
+            target="trader",
+            method="order_stock",
+            args=[
+                {"__type__": "StockAccount", "account_id": "10001"},
+                "000001.SZ",
+                23,
+                100,
+                5,
+                10.5,
+            ],
+            kwargs={"confirm": "I_UNDERSTAND_REAL_TRADING"},
+        )
+
+        self.assertTrue(dispatcher.dispatch(call)["ok"])
+        rejected = dispatcher.dispatch(call)
+
+        self.assertFalse(rejected["ok"])
+        self.assertEqual(rejected["error"]["code"], "DAILY_LIMIT_EXCEEDED")
+
+    def test_rejects_daily_amount_limit(self) -> None:
+        service = FakeService(
+            enable_trading=True,
+            trading_dry_run=False,
+            account_id="10001",
+            daily_max_order_amount=1500,
+        )
+        dispatcher = RpcDispatcher(service)
+        call = RpcCall(
+            target="trader",
+            method="order_stock",
+            args=[
+                {"__type__": "StockAccount", "account_id": "10001"},
+                "000001.SZ",
+                23,
+                100,
+                5,
+                10.5,
+            ],
+            kwargs={"confirm": "I_UNDERSTAND_REAL_TRADING"},
+        )
+
+        self.assertTrue(dispatcher.dispatch(call)["ok"])
+        rejected = dispatcher.dispatch(call)
+
+        self.assertFalse(rejected["ok"])
+        self.assertEqual(rejected["error"]["code"], "DAILY_LIMIT_EXCEEDED")
 
     def test_rejects_non_allowed_account(self) -> None:
         dispatcher = RpcDispatcher(FakeService(enable_trading=True, account_id="10001"))
@@ -254,6 +414,33 @@ class RpcTests(unittest.TestCase):
         self.assertIn("method=get_full_tick", output)
         self.assertIn("level=readonly", output)
         self.assertIn("ok=True", output)
+
+    def test_trade_audit_log_masks_account(self) -> None:
+        dispatcher = RpcDispatcher(
+            FakeService(enable_trading=True, trading_dry_run=True, account_id="123456789")
+        )
+
+        with self.assertLogs("qmtserver.trade", level="INFO") as logs:
+            dispatcher.dispatch(
+                RpcCall(
+                    target="trader",
+                    method="order_stock",
+                    args=[
+                        {"__type__": "StockAccount", "account_id": "123456789"},
+                        "000001.SZ",
+                        23,
+                        100,
+                        5,
+                        10.5,
+                    ],
+                    kwargs={},
+                )
+            )
+
+        output = "\n".join(logs.output)
+        self.assertIn("method=order_stock", output)
+        self.assertIn("account_id=123****789", output)
+        self.assertNotIn("123456789", output)
 
     def test_returns_stable_target_error_code(self) -> None:
         dispatcher = RpcDispatcher(DisconnectedTraderService())

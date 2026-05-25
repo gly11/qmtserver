@@ -2,6 +2,8 @@
 
 Milestone 9 的目标是在已有交易开关、dry-run、账号白名单和单笔限额基础上，进一步降低真实交易误触发和误配置风险。
 
+状态：已完成。
+
 ## 目标
 
 完成后应支持：
@@ -12,6 +14,15 @@ Milestone 9 的目标是在已有交易开关、dry-run、账号白名单和单�
 - 交易审计单独 logger 或单独文件。
 - 更明确的真实交易运行模式。
 - SDK 对交易错误给出更清晰异常。
+
+已落地：
+
+- `QMT_ALLOWED_SYMBOLS` / `QMT_BLOCKED_SYMBOLS` 控制交易证券代码。
+- `QMT_DAILY_MAX_ORDER_VOLUME` / `QMT_DAILY_MAX_ORDER_AMOUNT` 提供进程级日内限制。
+- `QMT_REQUIRE_TRADE_CONFIRMATION` 和 `QMT_TRADE_CONFIRMATION_TEXT` 要求真实交易确认。
+- dispatcher 调用真实 xtquant 方法前剥离内部 `confirm` 参数。
+- 新增 `qmtserver.trade` 交易审计日志，账号脱敏，不记录 token。
+- 新增交易安全错误码：`SYMBOL_NOT_ALLOWED`、`DAILY_LIMIT_EXCEEDED`、`TRADE_CONFIRMATION_REQUIRED`。
 
 ## 非目标
 
@@ -122,6 +133,10 @@ Milestone 9 完成时必须满足：
 3. 交易审计独立清晰。
 4. SDK 对交易拒绝错误可读。
 5. 自动化测试通过。
+
+## 实际提交
+
+代码、测试和文档随 Milestone 9 完成提交。
 
 ## 风险与应对
 

@@ -7,6 +7,7 @@ from qmtserver.config import Settings
 from qmtserver.rpc.registry import RpcMethodSpec
 
 AUDIT_LOGGER_NAME = "qmtserver.audit"
+TRADE_LOGGER_NAME = "qmtserver.trade"
 
 
 def audit_rpc_call(
@@ -41,6 +42,40 @@ def audit_rpc_call(
         elapsed_ms,
         dry_run_summary,
         args_summary,
+    )
+
+
+def audit_trade_call(
+    *,
+    settings: Settings,
+    target: str,
+    method: str,
+    details: dict[str, object] | None,
+    dry_run: bool | None,
+    real_call: bool,
+    ok: bool,
+    error_code: str | None,
+) -> None:
+    if not settings.trade_audit_log:
+        return
+
+    detail = details or {}
+    account_id = detail.get("account_id")
+    masked_account = _mask_account(str(account_id)) if account_id is not None else None
+    logging.getLogger(TRADE_LOGGER_NAME).info(
+        "trade target=%s method=%s account_id=%s stock_code=%s order_type=%s "
+        "volume=%s price=%s dry_run=%s real_call=%s ok=%s error=%s",
+        target,
+        method,
+        masked_account,
+        detail.get("stock_code"),
+        detail.get("order_type"),
+        detail.get("order_volume"),
+        detail.get("price"),
+        dry_run,
+        real_call,
+        ok,
+        error_code,
     )
 
 

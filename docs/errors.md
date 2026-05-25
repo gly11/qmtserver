@@ -12,7 +12,10 @@ qmtserver 的错误码集中定义在 `qmtserver.errors.ERROR_CODES`。客户端
 | `TRADING_DISABLED` | Trading RPC methods are disabled by configuration. |
 | `TRADING_VALIDATION_ERROR` | Trading request failed validation. |
 | `ACCOUNT_NOT_ALLOWED` | Trading account is not in the allowed account set. |
+| `SYMBOL_NOT_ALLOWED` | Trading symbol is not allowed by safety settings. |
 | `ORDER_LIMIT_EXCEEDED` | Order volume or amount exceeded configured limits. |
+| `DAILY_LIMIT_EXCEEDED` | Daily process-level trading limit would be exceeded. |
+| `TRADE_CONFIRMATION_REQUIRED` | Real trading requires an explicit confirmation. |
 | `RPC_ERROR` | Client-side wrapper for an RPC error response. |
 | `QMT_SERVER_ERROR` | Generic qmtserver error. |
 

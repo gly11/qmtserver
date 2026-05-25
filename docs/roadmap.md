@@ -226,7 +226,7 @@ client.rpc("trader", "query_stock_asset", [{"__type__": "StockAccount", "account
 
 目标：在真实交易前进一步降低误触发、误配置和超限交易风险。
 
-状态：计划中。
+状态：已完成。
 
 详细计划见 [Milestone 9: Trading Safety Hardening](milestone-9-trading-safety.md)。
 
