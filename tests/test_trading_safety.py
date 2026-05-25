@@ -4,7 +4,7 @@ import unittest
 
 from qmtserver.rpc import RpcDispatcher
 from qmtserver.rpc.dispatcher import RpcCall
-from tests.fakes import FakeService
+from tests.fakes import FakeService, rpc_error_code
 
 
 def order_call(
@@ -50,7 +50,7 @@ class TradingSafetyTests(unittest.TestCase):
         result = RpcDispatcher(service).dispatch(order_call())
 
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error"]["code"], "TRADE_CONFIRMATION_REQUIRED")
+        self.assertEqual(rpc_error_code(result), "TRADE_CONFIRMATION_REQUIRED")
         self.assertEqual(service.trader.calls, [])
 
     def test_dry_run_does_not_require_confirmation(self) -> None:
@@ -67,7 +67,7 @@ class TradingSafetyTests(unittest.TestCase):
         result = dispatcher.dispatch(order_call())
 
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error"]["code"], "SYMBOL_NOT_ALLOWED")
+        self.assertEqual(rpc_error_code(result), "SYMBOL_NOT_ALLOWED")
 
     def test_blocked_symbol_list_rejects_symbol(self) -> None:
         dispatcher = RpcDispatcher(
@@ -76,7 +76,7 @@ class TradingSafetyTests(unittest.TestCase):
         result = dispatcher.dispatch(order_call())
 
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error"]["code"], "SYMBOL_NOT_ALLOWED")
+        self.assertEqual(rpc_error_code(result), "SYMBOL_NOT_ALLOWED")
 
     def test_rejects_daily_volume_limit(self) -> None:
         service = FakeService(
@@ -92,7 +92,7 @@ class TradingSafetyTests(unittest.TestCase):
         rejected = dispatcher.dispatch(call)
 
         self.assertFalse(rejected["ok"])
-        self.assertEqual(rejected["error"]["code"], "DAILY_LIMIT_EXCEEDED")
+        self.assertEqual(rpc_error_code(rejected), "DAILY_LIMIT_EXCEEDED")
 
     def test_rejects_daily_amount_limit(self) -> None:
         service = FakeService(
@@ -108,14 +108,14 @@ class TradingSafetyTests(unittest.TestCase):
         rejected = dispatcher.dispatch(call)
 
         self.assertFalse(rejected["ok"])
-        self.assertEqual(rejected["error"]["code"], "DAILY_LIMIT_EXCEEDED")
+        self.assertEqual(rpc_error_code(rejected), "DAILY_LIMIT_EXCEEDED")
 
     def test_rejects_non_allowed_account(self) -> None:
         dispatcher = RpcDispatcher(FakeService(enable_trading=True, account_id="10002"))
         result = dispatcher.dispatch(order_call())
 
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error"]["code"], "ACCOUNT_NOT_ALLOWED")
+        self.assertEqual(rpc_error_code(result), "ACCOUNT_NOT_ALLOWED")
 
     def test_rejects_order_volume_limit(self) -> None:
         dispatcher = RpcDispatcher(
@@ -124,7 +124,7 @@ class TradingSafetyTests(unittest.TestCase):
         result = dispatcher.dispatch(order_call())
 
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error"]["code"], "ORDER_LIMIT_EXCEEDED")
+        self.assertEqual(rpc_error_code(result), "ORDER_LIMIT_EXCEEDED")
 
     def test_rejects_order_amount_limit(self) -> None:
         dispatcher = RpcDispatcher(
@@ -133,7 +133,7 @@ class TradingSafetyTests(unittest.TestCase):
         result = dispatcher.dispatch(order_call())
 
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error"]["code"], "ORDER_LIMIT_EXCEEDED")
+        self.assertEqual(rpc_error_code(result), "ORDER_LIMIT_EXCEEDED")
 
     def test_trade_audit_log_masks_account(self) -> None:
         dispatcher = RpcDispatcher(

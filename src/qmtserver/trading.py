@@ -18,6 +18,8 @@ from qmtserver.errors import (
 ORDER_METHODS = {"order_stock", "order_stock_async"}
 CANCEL_METHODS = {"cancel_order_stock", "cancel_order_stock_async"}
 ALLOWED_ORDER_TYPES = {23, 24}
+type TradingDetails = dict[str, object]
+type TradingKwargs = dict[str, Any]
 
 
 class TradingCall(Protocol):
@@ -30,9 +32,9 @@ class TradingCall(Protocol):
 @dataclass(frozen=True)
 class TradingPlan:
     dry_run: bool
-    details: dict[str, object]
-    kwargs: dict[str, Any]
-    data: dict[str, object] | None = None
+    details: TradingDetails
+    kwargs: TradingKwargs
+    data: TradingDetails | None = None
 
 
 class DailyTradingLimits:
@@ -42,7 +44,7 @@ class DailyTradingLimits:
         self.order_volume = 0
         self.order_amount = 0.0
 
-    def check_order(self, settings: Settings, details: dict[str, object]) -> None:
+    def check_order(self, settings: Settings, details: TradingDetails) -> None:
         volume = _detail_int(details, "order_volume")
         amount = _detail_float(details, "amount")
         with self._lock:
@@ -58,7 +60,7 @@ class DailyTradingLimits:
                     f"{settings.daily_max_order_amount}"
                 )
 
-    def record_order(self, details: dict[str, object]) -> None:
+    def record_order(self, details: TradingDetails) -> None:
         volume = _detail_int(details, "order_volume")
         amount = _detail_float(details, "amount")
         with self._lock:
@@ -119,7 +121,7 @@ def prepare_trading_call(
     return TradingPlan(dry_run=False, details=detail, kwargs=call_kwargs)
 
 
-def _validate_order(settings: Settings, args: list[Any]) -> dict[str, object]:
+def _validate_order(settings: Settings, args: list[Any]) -> TradingDetails:
     if len(args) < 6:
         raise QmtTradingValidationError(
             "order_stock requires account, stock_code, order_type, volume, price_type, price"
@@ -169,7 +171,7 @@ def _validate_symbol(settings: Settings, stock_code: str) -> None:
         raise QmtSymbolNotAllowedError(f"Trading symbol is not allowed: {stock_code}")
 
 
-def _validate_confirmation(settings: Settings, kwargs: dict[str, Any]) -> None:
+def _validate_confirmation(settings: Settings, kwargs: TradingKwargs) -> None:
     confirm = kwargs.pop("confirm", None)
     if not settings.require_trade_confirmation:
         return
@@ -177,7 +179,7 @@ def _validate_confirmation(settings: Settings, kwargs: dict[str, Any]) -> None:
         raise QmtTradeConfirmationRequiredError("Real trading requires confirmation text")
 
 
-def _validate_cancel(settings: Settings, args: list[Any]) -> dict[str, object]:
+def _validate_cancel(settings: Settings, args: list[Any]) -> TradingDetails:
     if len(args) < 2:
         raise QmtTradingValidationError("cancel_order_stock requires account and order_id")
 
@@ -189,7 +191,7 @@ def _validate_cancel(settings: Settings, args: list[Any]) -> dict[str, object]:
         order_id_value = args[2]
     order_id = _require_positive_int(order_id_value, "order_id")
 
-    detail: dict[str, object] = {
+    detail: TradingDetails = {
         "account_id": account_id,
         "order_id": order_id,
     }

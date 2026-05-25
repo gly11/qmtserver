@@ -4,7 +4,7 @@ import unittest
 
 from qmtserver.rpc import RpcDispatcher
 from qmtserver.rpc.dispatcher import RpcCall
-from tests.fakes import DisconnectedTraderService, FakeService
+from tests.fakes import DisconnectedTraderService, FakeService, rpc_error_code
 
 
 class RpcDispatcherTests(unittest.TestCase):
@@ -15,7 +15,7 @@ class RpcDispatcherTests(unittest.TestCase):
         )
 
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error"]["code"], "TRADING_DISABLED")
+        self.assertEqual(rpc_error_code(result), "TRADING_DISABLED")
 
     def test_dispatches_whitelisted_method(self) -> None:
         dispatcher = RpcDispatcher(FakeService())
@@ -52,7 +52,7 @@ class RpcDispatcherTests(unittest.TestCase):
         )
 
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error"]["code"], "TARGET_NOT_CONNECTED")
+        self.assertEqual(rpc_error_code(result), "TARGET_NOT_CONNECTED")
 
 
 if __name__ == "__main__":

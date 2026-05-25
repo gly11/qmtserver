@@ -9,6 +9,7 @@ from qmtserver.config import Settings
 from qmtserver.errors import QmtServerError, QmtTradingDisabledError
 from qmtserver.rpc.registry import get_method_spec
 from qmtserver.rpc.serializers import convert_input, to_jsonable
+from qmtserver.rpc.types import RpcMeta, RpcResponse
 from qmtserver.trading import prepare_trading_call
 
 
@@ -32,10 +33,10 @@ class RpcDispatcher:
     def __init__(self, service: RpcTargetProvider) -> None:
         self.service = service
 
-    def dispatch(self, call: RpcCall) -> dict[str, Any]:
+    def dispatch(self, call: RpcCall) -> RpcResponse:
         started_at = perf_counter()
         spec = get_method_spec(call.target, call.method)
-        result: dict[str, Any]
+        result: RpcResponse
         dry_run: bool | None = None
         trading_details: dict[str, object] | None = None
         real_trading_call = False
@@ -166,7 +167,7 @@ def _error_response(
     message: str,
     started_at: float,
     level: str | None = None,
-) -> dict[str, Any]:
+) -> RpcResponse:
     return {
         "ok": False,
         "data": None,
@@ -178,8 +179,8 @@ def _error_response(
     }
 
 
-def _meta(call: RpcCall, started_at: float, level: str | None = None) -> dict[str, Any]:
-    meta: dict[str, Any] = {
+def _meta(call: RpcCall, started_at: float, level: str | None = None) -> RpcMeta:
+    meta: RpcMeta = {
         "target": call.target,
         "method": call.method,
         "elapsed_ms": round((perf_counter() - started_at) * 1000, 3),

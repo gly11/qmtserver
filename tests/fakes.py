@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from qmtserver.config import load_settings
 from qmtserver.errors import QmtTargetNotConnectedError
+from qmtserver.rpc.types import RpcResponse
 from qmtserver.trading import DailyTradingLimits
 
 
@@ -95,3 +96,9 @@ class DisconnectedTraderService(FakeService):
         if target == "trader":
             raise QmtTargetNotConnectedError("target is not connected")
         return super().get_target(target)
+
+
+def rpc_error_code(response: RpcResponse) -> str:
+    error = response["error"]
+    assert error is not None
+    return error["code"]
