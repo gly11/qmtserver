@@ -10,6 +10,7 @@ from qmtserver.errors import QmtTargetNotConnectedError, QmtTargetNotFoundError
 from qmtserver.events import EventBus
 from qmtserver.miniqmt import MiniQmtCallback, check_xtquant_import
 from qmtserver.observability import Metrics
+from qmtserver.orders import OrderStore
 from qmtserver.trading import DailyTradingLimits
 
 
@@ -38,6 +39,7 @@ class QmtService:
     settings: Settings
     event_bus: EventBus | None = None
     metrics: Metrics | None = None
+    order_store: OrderStore | None = None
     daily_trading_limits: DailyTradingLimits = field(default_factory=DailyTradingLimits)
     quote_client: Any = None
     trader: Any = None
@@ -51,8 +53,10 @@ class QmtService:
     lifecycle: LifecycleState = field(default_factory=LifecycleState)
 
     def __post_init__(self) -> None:
+        if self.order_store is None:
+            self.order_store = OrderStore(max_records=self.settings.order_cache_size)
         if self.callback is None:
-            self.callback = MiniQmtCallback(self.event_bus)
+            self.callback = MiniQmtCallback(self.event_bus, self.order_store)
 
     def connect(self) -> dict[str, Any]:
         self.disconnect()

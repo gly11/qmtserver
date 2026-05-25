@@ -35,6 +35,18 @@ class EventBusTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual((await queue.get()).type, "second")
 
+    async def test_recent_events_filters_by_type(self) -> None:
+        bus = EventBus(cache_size=3)
+
+        await bus.publish("qmt_connected")
+        await bus.publish("stock_order", {"order_id": 1})
+        await bus.publish("stock_trade", {"trade_id": 2})
+
+        events = bus.recent_events(event_types={"stock_trade"})
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["type"], "stock_trade")
+
 
 class EventModelTests(unittest.TestCase):
     def test_event_is_json_friendly(self) -> None:

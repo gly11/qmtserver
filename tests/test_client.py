@@ -125,11 +125,35 @@ class ClientTests(unittest.TestCase):
             event_connect_factory=connect_factory,
         )
 
-        event = next(iter(client.events()))
+        event = next(iter(client.events(types=["stock_trade"])))
 
-        self.assertEqual(seen["url"], "ws://qmt.test/v1/ws/events?token=dev-token")
+        self.assertEqual(
+            seen["url"],
+            "ws://qmt.test/v1/ws/events?token=dev-token&types=stock_trade",
+        )
         self.assertEqual(seen["headers"], {"Authorization": "Bearer dev-token"})
         self.assertEqual(event["type"], "heartbeat")
+
+    def test_orders_trades_and_recent_events_helpers(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/v1/orders":
+                self.assertEqual(request.url.params["limit"], "1")
+                return httpx.Response(200, json={"ok": True, "data": [{"order_id": 1}]})
+            if request.url.path == "/v1/orders/1":
+                return httpx.Response(200, json={"ok": True, "data": {"order_id": 1}})
+            if request.url.path == "/v1/trades":
+                return httpx.Response(200, json={"ok": True, "data": [{"trade_id": 2}]})
+            if request.url.path == "/v1/events/recent":
+                self.assertEqual(request.url.params["types"], "stock_trade")
+                return httpx.Response(200, json={"ok": True, "data": [{"type": "stock_trade"}]})
+            raise AssertionError(request.url.path)
+
+        client = QmtClient("http://qmt.test", transport=httpx.MockTransport(handler))
+
+        self.assertEqual(client.orders(limit=1), [{"order_id": 1}])
+        self.assertEqual(client.order("1"), {"order_id": 1})
+        self.assertEqual(client.trades(), [{"trade_id": 2}])
+        self.assertEqual(client.recent_events(types=["stock_trade"]), [{"type": "stock_trade"}])
 
     def test_build_ws_url_preserves_https(self) -> None:
         self.assertEqual(

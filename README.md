@@ -98,6 +98,9 @@ POST /v1/qmt/disconnect
 GET  /v1/metrics
 GET  /v1/rpc/methods
 POST /v1/rpc
+GET  /v1/orders
+GET  /v1/trades
+GET  /v1/events/recent
 WS   /v1/ws/events
 ```
 
@@ -161,6 +164,8 @@ QMT_AUDIT_LOG=true
 QMT_AUDIT_LOG_ARGS=true
 QMT_WS_HEARTBEAT_SECONDS=15
 QMT_WS_CLIENT_QUEUE_SIZE=1000
+QMT_ORDER_CACHE_SIZE=1000
+QMT_EVENT_CACHE_SIZE=1000
 QMT_LOG_LEVEL=INFO
 QMT_LOG_DIR=logs
 QMT_LOG_JSON=false

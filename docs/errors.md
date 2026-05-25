@@ -14,6 +14,7 @@ qmtserver 的错误码集中定义在 `qmtserver.errors.ERROR_CODES`。客户端
 | `ACCOUNT_NOT_ALLOWED` | Trading account is not in the allowed account set. |
 | `SYMBOL_NOT_ALLOWED` | Trading symbol is not allowed by safety settings. |
 | `ORDER_LIMIT_EXCEEDED` | Order volume or amount exceeded configured limits. |
+| `ORDER_NOT_FOUND` | Requested order is not in the in-memory order cache. |
 | `DAILY_LIMIT_EXCEEDED` | Daily process-level trading limit would be exceeded. |
 | `TRADE_CONFIRMATION_REQUIRED` | Real trading requires an explicit confirmation. |
 | `RPC_ERROR` | Client-side wrapper for an RPC error response. |

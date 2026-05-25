@@ -31,9 +31,10 @@ class EventStream:
         token: str | None,
         timeout: float,
         api_version: str | None = "v1",
+        types: list[str] | tuple[str, ...] | None = None,
         connect_factory: ConnectFactory | None = None,
     ) -> None:
-        self.url = build_ws_url(base_url, token, api_version=api_version)
+        self.url = build_ws_url(base_url, token, api_version=api_version, types=types)
         self.timeout = timeout
         self._headers = {"Authorization": f"Bearer {token}"} if token else {}
         self._connect_factory = connect_factory or _default_connect
@@ -53,6 +54,7 @@ def build_ws_url(
     token: str | None = None,
     *,
     api_version: str | None = "v1",
+    types: list[str] | tuple[str, ...] | None = None,
 ) -> str:
     parsed = urlsplit(base_url)
     scheme = "wss" if parsed.scheme == "https" else "ws"
@@ -60,6 +62,9 @@ def build_ws_url(
     if token:
         token_query = urlencode({"token": token})
         query = f"{query}&{token_query}" if query else token_query
+    if types:
+        types_query = urlencode({"types": ",".join(types)})
+        query = f"{query}&{types_query}" if query else types_query
     base_path = parsed.path.rstrip("/")
     if api_version:
         version_path = f"/{api_version.strip('/')}"

@@ -57,3 +57,19 @@ for event in client.events():
 ```text
 ws://127.0.0.1:8000/v1/ws/events
 ```
+
+过滤事件：
+
+```python
+for event in client.events(types=["stock_order", "stock_trade"]):
+    print(event)
+```
+
+查询缓存：
+
+```python
+client.orders(limit=20)
+client.order("123456")
+client.trades(limit=20)
+client.recent_events(types=["stock_trade"], limit=20)
+```

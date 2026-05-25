@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from collections import deque
 from typing import Any
 
 from qmtserver.events.models import Event
 
 
 class EventBus:
-    def __init__(self, *, queue_size: int = 1000) -> None:
+    def __init__(self, *, queue_size: int = 1000, cache_size: int = 1000) -> None:
         self.queue_size = queue_size
+        self.cache_size = cache_size
         self._subscribers: set[asyncio.Queue[Event]] = set()
+        self._events: deque[Event] = deque(maxlen=cache_size)
         self._sequence = 0
         self._loop: asyncio.AbstractEventLoop | None = None
         self._lock = asyncio.Lock()
@@ -37,6 +40,7 @@ class EventBus:
             if meta:
                 event_meta.update(meta)
             event = Event(event_type, data or {}, event_meta)
+            self._events.append(event)
 
         for queue in list(self._subscribers):
             _put_drop_oldest(queue, event)
@@ -68,6 +72,19 @@ class EventBus:
     @property
     def events_published(self) -> int:
         return self._sequence
+
+    def recent_events(
+        self,
+        *,
+        event_types: set[str] | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        events = list(self._events)
+        if event_types:
+            events = [event for event in events if event.type in event_types]
+        if limit is not None:
+            events = events[-limit:]
+        return [event.to_dict() for event in events]
 
     def _remember_loop(self) -> None:
         with contextlib.suppress(RuntimeError):

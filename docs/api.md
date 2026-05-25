@@ -13,6 +13,10 @@ POST /v1/qmt/disconnect
 GET  /v1/rpc/methods
 POST /v1/rpc
 GET  /v1/metrics
+GET  /v1/orders
+GET  /v1/orders/{order_id}
+GET  /v1/trades
+GET  /v1/events/recent
 WS   /v1/ws/events
 ```
 
@@ -74,6 +78,7 @@ HTTP 请求可以传入 `X-Request-ID`。服务会在响应头中回写同一个
 
 ```text
 ws://127.0.0.1:8000/v1/ws/events
+ws://127.0.0.1:8000/v1/ws/events?types=stock_order,stock_trade
 ```
 
 事件结构：
@@ -88,4 +93,15 @@ ws://127.0.0.1:8000/v1/ws/events
     "sequence": 1
   }
 }
+```
+
+## Order and Event Cache
+
+第一版订单和事件缓存是进程内存缓存，服务重启后清空。
+
+```text
+GET /v1/orders
+GET /v1/orders/{order_id}
+GET /v1/trades
+GET /v1/events/recent?types=stock_order,stock_trade
 ```

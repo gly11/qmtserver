@@ -249,7 +249,7 @@ client.rpc("trader", "query_stock_asset", [{"__type__": "StockAccount", "account
 
 目标：把下单、撤单、委托回报、成交回报和事件订阅串成手动运行时可观察的完整闭环。
 
-状态：计划中。
+状态：已完成。
 
 详细计划见 [Milestone 10: Order State and Event Loop](milestone-10-order-events.md)。
 

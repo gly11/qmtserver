@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from qmtserver.events import EventBus
+    from qmtserver.orders import OrderStore
 
 
 @dataclass(frozen=True)
@@ -30,9 +31,14 @@ class TraderCheckConfig:
 
 
 class MiniQmtCallback:
-    def __init__(self, event_bus: EventBus | None = None) -> None:
+    def __init__(
+        self,
+        event_bus: EventBus | None = None,
+        order_store: OrderStore | None = None,
+    ) -> None:
         self.events: list[str] = []
         self.event_bus = event_bus
+        self.order_store = order_store
 
     def on_connected(self) -> None:
         self.events.append("connected")
@@ -50,22 +56,34 @@ class MiniQmtCallback:
     def on_stock_order(self, order: Any) -> None:
         data = _to_plain(order)
         self.events.append(f"stock_order:{data}")
-        self._publish("stock_order", data)
+        payload = _dict_payload(data)
+        if self.order_store is not None:
+            self.order_store.record_order(payload)
+        self._publish("stock_order", payload)
 
     def on_stock_trade(self, trade: Any) -> None:
         data = _to_plain(trade)
         self.events.append(f"stock_trade:{data}")
-        self._publish("stock_trade", data)
+        payload = _dict_payload(data)
+        if self.order_store is not None:
+            self.order_store.record_trade(payload)
+        self._publish("stock_trade", payload)
 
     def on_order_error(self, order_error: Any) -> None:
         data = _to_plain(order_error)
         self.events.append(f"order_error:{data}")
-        self._publish("order_error", data)
+        payload = _dict_payload(data)
+        if self.order_store is not None:
+            self.order_store.record_error("order_error", payload)
+        self._publish("order_error", payload)
 
     def on_cancel_error(self, cancel_error: Any) -> None:
         data = _to_plain(cancel_error)
         self.events.append(f"cancel_error:{data}")
-        self._publish("cancel_error", data)
+        payload = _dict_payload(data)
+        if self.order_store is not None:
+            self.order_store.record_error("cancel_error", payload)
+        self._publish("cancel_error", payload)
 
     def _publish(self, event_type: str, data: Any = None) -> None:
         if self.event_bus is None:
@@ -231,3 +249,7 @@ def _to_plain(value: Any) -> Any:
             key: _to_plain(item) for key, item in vars(value).items() if not key.startswith("_")
         }
     return repr(value)
+
+
+def _dict_payload(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {"value": value}

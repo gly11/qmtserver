@@ -25,6 +25,8 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.trading_allowed_accounts(), set())
         self.assertEqual(settings.trading_allowed_symbols(), set())
         self.assertEqual(settings.trading_blocked_symbols(), set())
+        self.assertEqual(settings.order_cache_size, 1000)
+        self.assertEqual(settings.event_cache_size, 1000)
         self.assertEqual(settings.log_level, "INFO")
         self.assertEqual(settings.log_dir, Path("logs"))
         self.assertFalse(settings.log_json)

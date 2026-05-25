@@ -88,12 +88,42 @@ class QmtClient:
             )
         return response.get("data")
 
-    def events(self) -> EventStream:
+    def orders(self, limit: int | None = None) -> list[dict[str, Any]]:
+        params = {"limit": limit} if limit is not None else None
+        response = self._request("GET", "/orders", params=params)
+        return _response_list(response)
+
+    def order(self, order_id: str) -> dict[str, Any]:
+        response = self._request("GET", f"/orders/{order_id}")
+        data = response.get("data")
+        return data if isinstance(data, dict) else {}
+
+    def trades(self, limit: int | None = None) -> list[dict[str, Any]]:
+        params = {"limit": limit} if limit is not None else None
+        response = self._request("GET", "/trades", params=params)
+        return _response_list(response)
+
+    def recent_events(
+        self,
+        *,
+        types: list[str] | tuple[str, ...] | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {}
+        if types:
+            params["types"] = ",".join(types)
+        if limit is not None:
+            params["limit"] = limit
+        response = self._request("GET", "/events/recent", params=params or None)
+        return _response_list(response)
+
+    def events(self, *, types: list[str] | tuple[str, ...] | None = None) -> EventStream:
         return EventStream(
             base_url=self.base_url,
             token=self.token,
             timeout=self.timeout,
             api_version=self.api_version,
+            types=types,
             connect_factory=self._event_connect_factory,
         )
 
@@ -166,3 +196,8 @@ def _response_request_id(response: dict[str, Any]) -> str | None:
         request_id = meta.get("request_id")
         return str(request_id) if request_id is not None else None
     return None
+
+
+def _response_list(response: dict[str, Any]) -> list[dict[str, Any]]:
+    data = response.get("data", [])
+    return data if isinstance(data, list) else []

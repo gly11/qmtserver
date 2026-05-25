@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     trade_audit_log: bool = True
     ws_heartbeat_seconds: float = Field(default=15, gt=0)
     ws_client_queue_size: int = Field(default=1000, ge=1)
+    order_cache_size: int = Field(default=1000, ge=1)
+    event_cache_size: int = Field(default=1000, ge=1)
     log_level: str = "INFO"
     log_dir: Path = Path("logs")
     log_json: bool = False

@@ -2,6 +2,8 @@
 
 Milestone 10 的目标是把下单、撤单、委托回报、成交回报和事件订阅串成完整闭环，让手动运行时也能清楚看到交易后发生了什么。
 
+状态：已完成。
+
 ## 目标
 
 完成后应支持：
@@ -12,6 +14,15 @@ Milestone 10 的目标是把下单、撤单、委托回报、成交回报和事�
 - WebSocket 事件过滤。
 - SDK 事件回调或过滤订阅。
 - 下单返回值与后续回报能关联。
+
+已落地：
+
+- 新增 `OrderStore` 进程内存缓存，记录最近委托、成交和错误。
+- `EventBus` 维护最近事件缓存。
+- 新增 `/v1/orders`、`/v1/orders/{order_id}`、`/v1/trades`、`/v1/events/recent`，旧路径也保留。
+- WebSocket 支持 `types=stock_order,stock_trade` 过滤，heartbeat 不受过滤影响。
+- SDK 支持 `events(types=...)`、`orders()`、`order()`、`trades()`、`recent_events()`。
+- `MiniQmtCallback` 将委托、成交、下单错误和撤单错误写入缓存并发布事件。
 
 ## 非目标
 
@@ -126,6 +137,10 @@ Milestone 10 完成时必须满足：
 3. WebSocket 支持事件类型过滤。
 4. SDK 支持事件过滤和常用查询。
 5. 自动化测试通过。
+
+## 实际提交
+
+代码、测试和文档随 Milestone 10 完成提交。
 
 ## 风险与应对
 

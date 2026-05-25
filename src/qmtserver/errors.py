@@ -66,6 +66,7 @@ ERROR_CODES: tuple[ErrorCode, ...] = (
     ErrorCode("ACCOUNT_NOT_ALLOWED", "Trading account is not in the allowed account set."),
     ErrorCode("SYMBOL_NOT_ALLOWED", "Trading symbol is not allowed by safety settings."),
     ErrorCode("ORDER_LIMIT_EXCEEDED", "Order volume or amount exceeded configured limits."),
+    ErrorCode("ORDER_NOT_FOUND", "Requested order is not in the in-memory order cache."),
     ErrorCode("DAILY_LIMIT_EXCEEDED", "Daily process-level trading limit would be exceeded."),
     ErrorCode("TRADE_CONFIRMATION_REQUIRED", "Real trading requires an explicit confirmation."),
     ErrorCode("RPC_ERROR", "Client-side wrapper for an RPC error response."),
