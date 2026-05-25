@@ -16,6 +16,9 @@ uv run ty check
 - 测试放在 `tests`。
 - 与 MiniQMT 直接交互的逻辑优先集中在 `qmtserver.miniqmt`。
 - 后续服务端入口可以单独放在 `qmtserver.server` 或 `qmtserver.api`。
+- 单个 `.py` 文件建议控制在 300 行以内，超过 400 行应评估拆分，超过 500 行通常应拆分。
+- 单个函数建议控制在 50 行以内，超过 80 行通常应拆 helper 或领域服务。
+- API 路由保持轻薄，业务逻辑放入对应服务、交易、事件、订单或 RPC 模块。
 - 自动化 agent 和协作者规范见 `AGENTS.md`。
 
 ## Git 提交规范
