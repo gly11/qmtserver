@@ -14,6 +14,9 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.port, 8000)
         self.assertEqual(settings.account_type, "STOCK")
         self.assertFalse(settings.enable_trading)
+        self.assertTrue(settings.connect_on_startup)
+        self.assertTrue(settings.connect_quote)
+        self.assertTrue(settings.connect_trader)
 
     def test_overrides(self) -> None:
         settings = load_settings(userdata=Path("userdata_mini"), account_id="10001", port=9000)

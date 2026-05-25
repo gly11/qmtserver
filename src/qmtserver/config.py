@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     enable_trading: bool = False
     api_token: str | None = None
     auto_connect: bool = True
+    connect_on_startup: bool = True
+    connect_quote: bool = True
+    connect_trader: bool = True
     trader_timeout_ms: int = Field(default=5000, ge=1)
 
 
