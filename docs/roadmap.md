@@ -116,6 +116,10 @@ uv run qmtserver check --userdata "..." --account-id "..."
 
 目标：在保护机制下开放真实下单和撤单。
 
+状态：计划中。
+
+详细计划见 [Milestone 4: Trading RPC](milestone-4-trading-rpc.md)。
+
 范围：
 
 - 白名单加入 `order_stock`、`order_stock_async`。
@@ -134,6 +138,10 @@ uv run qmtserver check --userdata "..." --account-id "..."
 
 目标：支持实时事件，不再只依赖轮询。
 
+状态：计划中。
+
+详细计划见 [Milestone 5: WebSocket Events](milestone-5-websocket-events.md)。
+
 范围：
 
 - `WS /ws/events`。
@@ -150,6 +158,10 @@ uv run qmtserver check --userdata "..." --account-id "..."
 ## Milestone 6: 客户端 SDK
 
 目标：让其他 Python 项目调用 qmtserver 像调用本地库一样简单。
+
+状态：计划中。
+
+详细计划见 [Milestone 6: Python Client SDK](milestone-6-python-client-sdk.md)。
 
 范围：
 
@@ -168,6 +180,10 @@ client.rpc("trader", "query_stock_asset", [{"__type__": "StockAccount", "account
 ## Milestone 7: 可观测性与运维
 
 目标：服务长期运行时好排查、好监控。
+
+状态：计划中。
+
+详细计划见 [Milestone 7: Observability and Operations](milestone-7-observability-ops.md)。
 
 范围：
 

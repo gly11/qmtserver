@@ -7,6 +7,10 @@
 - [Milestone 1: Readonly RPC Gateway](milestone-1-readonly-rpc.md)：第一阶段详细计划。
 - [Milestone 2: Connection Lifecycle Management](milestone-2-connection-lifecycle.md)：第二阶段详细计划。
 - [Milestone 3: Security Boundary and Trading Guard](milestone-3-security-trading-guard.md)：第三阶段详细计划。
+- [Milestone 4: Trading RPC](milestone-4-trading-rpc.md)：第四阶段详细计划。
+- [Milestone 5: WebSocket Events](milestone-5-websocket-events.md)：第五阶段详细计划。
+- [Milestone 6: Python Client SDK](milestone-6-python-client-sdk.md)：第六阶段详细计划。
+- [Milestone 7: Observability and Operations](milestone-7-observability-ops.md)：第七阶段详细计划。
 
 原则：
 
