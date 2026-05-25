@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import unittest
 from pathlib import Path
 
@@ -7,7 +8,15 @@ from qmtserver.config import load_settings
 from qmtserver.rpc.serializers import convert_input, to_jsonable
 
 
+def _has_xtquant_xttype() -> bool:
+    try:
+        return importlib.util.find_spec("xtquant.xttype") is not None
+    except ModuleNotFoundError:
+        return False
+
+
 class RpcSerializerTests(unittest.TestCase):
+    @unittest.skipUnless(_has_xtquant_xttype(), "xtquant is not installed")
     def test_stock_account_conversion(self) -> None:
         account = convert_input(
             {

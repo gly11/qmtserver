@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib import import_module
 from pathlib import Path
 from typing import Any
 
@@ -8,8 +9,7 @@ def convert_input(value: Any) -> Any:
     if isinstance(value, dict):
         value_type = value.get("__type__")
         if value_type == "StockAccount":
-            from xtquant.xttype import StockAccount
-
+            StockAccount = _stock_account_class()
             return StockAccount(value["account_id"], value.get("account_type", "STOCK"))
         return {key: convert_input(item) for key, item in value.items()}
     if isinstance(value, list):
@@ -59,3 +59,11 @@ def _try_numpy(value: Any) -> Any:
     if module.startswith("numpy.") and hasattr(value, "item"):
         return value.item()
     return None
+
+
+def _stock_account_class() -> type[Any]:
+    try:
+        module = import_module("xtquant.xttype")
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("xtquant is required to build StockAccount values") from exc
+    return module.StockAccount

@@ -24,7 +24,7 @@ uv run python scripts/check_code_health.py
 uv run python scripts/check_code_health.py --enforce
 ```
 
-第一阶段先把脚本作为报告工具；CI 可在后续阶段加入严格模式。
+CI 已使用严格模式，提交或 PR 会运行同一套质量门禁。
 
 ## 当前基线
 
