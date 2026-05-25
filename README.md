@@ -72,6 +72,60 @@ uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata" --account-id "�
 
 连接成功时命令退出码为 `0`；失败时退出码为 `1`，终端会打印失败原因。
 
+## 启动只读 RPC 网关
+
+Milestone 1 提供本地 HTTP 只读 RPC 网关：
+
+```powershell
+uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata" --account-id "你的资金账号"
+```
+
+默认监听：
+
+```text
+http://127.0.0.1:8000
+```
+
+常用接口：
+
+```text
+GET  /health
+GET  /qmt/status
+POST /qmt/connect
+GET  /rpc/methods
+POST /rpc
+```
+
+RPC 请求示例：
+
+```json
+{
+  "target": "xtdata",
+  "method": "get_full_tick",
+  "args": [["000001.SZ"]],
+  "kwargs": {}
+}
+```
+
+交易账号查询示例：
+
+```json
+{
+  "target": "trader",
+  "method": "query_stock_asset",
+  "args": [
+    {
+      "__type__": "StockAccount",
+      "account_id": "你的资金账号",
+      "account_type": "STOCK"
+    }
+  ],
+  "kwargs": {}
+}
+```
+
+第一版只开放只读白名单方法。下单、撤单类方法默认不开放。
+
 ## 开发
 
 开发路线：

@@ -52,6 +52,8 @@ uv run qmtserver check --userdata "..." --account-id "..."
 
 目标：启动一个 HTTP 服务，通过统一 `/rpc` 转发白名单内的只读 `xtquant` API。
 
+状态：已完成。
+
 详细计划见 [Milestone 1: Readonly RPC](milestone-1-readonly-rpc.md)。
 
 预期能力：

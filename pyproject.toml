@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "MiniQMT bridge and connectivity checker."
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "fastapi>=0.136.3",
+    "pydantic-settings>=2.14.1",
+    "uvicorn[standard]>=0.48.0",
+]
 keywords = ["miniqmt", "qmt", "xtquant", "trading"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
@@ -59,6 +63,7 @@ python-platform = "win32"
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "ruff>=0.15.14",
     "ty>=0.0.39",
 ]

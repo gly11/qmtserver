@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any
 
+from .config import load_settings
 from .miniqmt import QuoteCheckConfig, TraderCheckConfig, build_connectivity_report
 
 
@@ -14,6 +16,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "check":
         return _run_check(args)
+    if args.command == "serve":
+        return _run_serve(args)
 
     parser.print_help()
     return 2
@@ -34,6 +38,15 @@ def _build_parser() -> argparse.ArgumentParser:
     check.add_argument("--quote-port", type=int, help="quote service port")
     check.add_argument("--skip-quote", action="store_true", help="skip quote connection check")
     check.add_argument("--json", action="store_true", help="print machine-readable JSON")
+
+    serve = subparsers.add_parser("serve", help="start readonly RPC gateway")
+    serve.add_argument("--userdata", type=Path, help="MiniQMT userdata directory")
+    serve.add_argument("--account-id", help="fund account id")
+    serve.add_argument("--account-type", help="account type")
+    serve.add_argument("--host", help="bind host")
+    serve.add_argument("--port", type=int, help="bind port")
+    serve.add_argument("--quote-code", help="default symbol for status checks")
+    serve.add_argument("--reload", action="store_true", help="enable uvicorn reload")
 
     return parser
 
@@ -93,3 +106,33 @@ def _print_summary(report: dict[str, Any]) -> None:
             print(f"- trader: FAILED ({trader.get('error', trader.get('connect_result'))})")
 
     print(f"- result: {'OK' if report['ok'] else 'FAILED'}")
+
+
+def _run_serve(args: argparse.Namespace) -> int:
+    _apply_serve_env(args)
+
+    import uvicorn
+
+    settings = load_settings()
+    uvicorn.run(
+        "qmtserver.main:create_app",
+        factory=True,
+        host=settings.host,
+        port=settings.port,
+        reload=args.reload,
+    )
+    return 0
+
+
+def _apply_serve_env(args: argparse.Namespace) -> None:
+    values = {
+        "QMT_USERDATA": str(args.userdata) if args.userdata else None,
+        "QMT_ACCOUNT_ID": args.account_id,
+        "QMT_ACCOUNT_TYPE": args.account_type,
+        "QMT_HOST": args.host,
+        "QMT_PORT": str(args.port) if args.port is not None else None,
+        "QMT_QUOTE_CODE": args.quote_code,
+    }
+    for key, value in values.items():
+        if value is not None:
+            os.environ[key] = value
