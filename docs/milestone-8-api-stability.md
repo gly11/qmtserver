@@ -2,6 +2,8 @@
 
 Milestone 8 的目标是把已经能跑的 HTTP RPC、WebSocket 和 Python SDK 固化成稳定契约，降低后续扩展时破坏外部调用方的风险。
 
+状态：已完成。
+
 ## 目标
 
 完成后应支持：
@@ -12,6 +14,15 @@ Milestone 8 的目标是把已经能跑的 HTTP RPC、WebSocket 和 Python SDK �
 - OpenAPI 文档能准确表达主要接口。
 - SDK 能识别服务端版本和兼容性。
 - 契约测试覆盖核心接口响应结构。
+
+已落地：
+
+- 新增 `/v1` HTTP 和 WebSocket 路由，同时保留旧路径。
+- RPC `meta` 增加 `request_id` 和 `version`。
+- 错误码集中定义在 `qmtserver.errors.ERROR_CODES`。
+- SDK 默认调用 `/v1`，可通过 `api_version=None` 使用旧路径。
+- SDK 错误对象保留 `code`、`message`、`request_id` 和原始响应。
+- 新增 `docs/api.md`、`docs/errors.md`、`docs/sdk.md`。
 
 ## 非目标
 
@@ -140,6 +151,10 @@ Milestone 8 完成时必须满足：
 4. SDK 默认使用稳定版本入口。
 5. OpenAPI/文档包含主要接口。
 6. 自动化测试通过。
+
+## 实际提交
+
+代码、测试和文档随 Milestone 8 完成提交。
 
 ## 风险与应对
 

@@ -81,9 +81,12 @@ class ApiTests(unittest.TestCase):
 
         with TestClient(app) as client:
             response = client.get("/health")
+            versioned = client.get("/v1/health")
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["ok"])
+        self.assertEqual(versioned.status_code, 200)
+        self.assertIn("v1", versioned.json()["api_versions"])
 
     def test_qmt_status_and_connect(self) -> None:
         app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
@@ -167,6 +170,42 @@ class ApiTests(unittest.TestCase):
         body = response.json()
         self.assertTrue(body["ok"])
         self.assertEqual(body["data"], {"codes": ["000001.SZ"]})
+
+    def test_v1_rpc_response_includes_contract_meta(self) -> None:
+        app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            response = client.post(
+                "/v1/rpc",
+                headers={"X-Request-ID": "contract-request"},
+                json={
+                    "target": "trader",
+                    "method": "order_stock",
+                    "args": [],
+                    "kwargs": {},
+                },
+            )
+
+        body = response.json()
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["error"]["code"], "TRADING_DISABLED")
+        self.assertEqual(body["meta"]["request_id"], "contract-request")
+        self.assertEqual(body["meta"]["version"], "v1")
+
+    def test_v1_methods_metrics_and_old_routes_are_available(self) -> None:
+        app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            old_methods = client.get("/rpc/methods")
+            versioned_methods = client.get("/v1/rpc/methods")
+            versioned_metrics = client.get("/v1/metrics")
+
+        self.assertEqual(old_methods.status_code, 200)
+        self.assertEqual(versioned_methods.status_code, 200)
+        self.assertIn("specs", versioned_methods.json())
+        self.assertTrue(versioned_metrics.json()["ok"])
 
     def test_rpc_rejects_trading_method(self) -> None:
         app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
@@ -316,6 +355,17 @@ class ApiTests(unittest.TestCase):
         )
 
         with TestClient(app) as client, client.websocket_connect("/ws/events") as websocket:
+            event = websocket.receive_json()
+
+        self.assertEqual(event["type"], "heartbeat")
+
+    def test_v1_websocket_receives_heartbeat(self) -> None:
+        app = create_app(
+            load_settings(auto_connect=False, ws_heartbeat_seconds=0.01),
+            connect_on_startup=False,
+        )
+
+        with TestClient(app) as client, client.websocket_connect("/v1/ws/events") as websocket:
             event = websocket.receive_json()
 
         self.assertEqual(event["type"], "heartbeat")

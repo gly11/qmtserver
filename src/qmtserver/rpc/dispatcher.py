@@ -18,6 +18,8 @@ class RpcCall:
     method: str
     args: list[Any]
     kwargs: dict[str, Any]
+    request_id: str | None = None
+    api_version: str | None = None
 
 
 class RpcTargetProvider(Protocol):
@@ -156,6 +158,10 @@ def _meta(call: RpcCall, started_at: float, level: str | None = None) -> dict[st
         "method": call.method,
         "elapsed_ms": round((perf_counter() - started_at) * 1000, 3),
     }
+    if call.request_id is not None:
+        meta["request_id"] = call.request_id
+    if call.api_version is not None:
+        meta["version"] = call.api_version
     if level is not None:
         meta["level"] = level
     return meta

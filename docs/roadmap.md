@@ -203,7 +203,7 @@ client.rpc("trader", "query_stock_asset", [{"__type__": "StockAccount", "account
 
 目标：把 HTTP RPC、WebSocket 和 SDK 固化成稳定契约，减少后续扩展时破坏调用方。
 
-状态：计划中。
+状态：已完成。
 
 详细计划见 [Milestone 8: API Stability and Compatibility](milestone-8-api-stability.md)。
 

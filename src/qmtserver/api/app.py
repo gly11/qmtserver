@@ -16,6 +16,8 @@ from qmtserver.events import EventBus
 from qmtserver.observability import Metrics, configure_logging
 from qmtserver.services import QmtService
 
+API_PREFIX = "/v1"
+
 
 def create_app(settings: Settings | None = None, *, connect_on_startup: bool = True) -> FastAPI:
     app_settings = settings or load_settings()
@@ -53,4 +55,9 @@ def create_app(settings: Settings | None = None, *, connect_on_startup: bool = T
     app.include_router(rpc_router)
     app.include_router(ws_router)
     app.include_router(metrics_router)
+    app.include_router(health_router, prefix=API_PREFIX)
+    app.include_router(qmt_router, prefix=API_PREFIX)
+    app.include_router(rpc_router, prefix=API_PREFIX)
+    app.include_router(ws_router, prefix=API_PREFIX)
+    app.include_router(metrics_router, prefix=API_PREFIX)
     return app

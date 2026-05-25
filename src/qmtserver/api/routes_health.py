@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from qmtserver import __version__
+from qmtserver.errors import API_VERSION
 
 router = APIRouter()
 
@@ -13,4 +14,5 @@ def health() -> dict[str, object]:
         "ok": True,
         "service": "qmtserver",
         "version": __version__,
+        "api_versions": [API_VERSION],
     }

@@ -4,6 +4,9 @@
 
 - [Architecture](architecture.md)：当前架构和后续服务端方向。
 - [Development Roadmap](roadmap.md)：整体开发路线和版本节奏。
+- [API Reference](api.md)：稳定 HTTP RPC 和 WebSocket 契约。
+- [Error Codes](errors.md)：错误码和错误响应结构。
+- [Python SDK](sdk.md)：客户端 SDK 使用说明。
 - [Milestone 1: Readonly RPC Gateway](milestone-1-readonly-rpc.md)：第一阶段详细计划。
 - [Milestone 2: Connection Lifecycle Management](milestone-2-connection-lifecycle.md)：第二阶段详细计划。
 - [Milestone 3: Security Boundary and Trading Guard](milestone-3-security-trading-guard.md)：第三阶段详细计划。

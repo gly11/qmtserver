@@ -30,9 +30,10 @@ class EventStream:
         base_url: str,
         token: str | None,
         timeout: float,
+        api_version: str | None = "v1",
         connect_factory: ConnectFactory | None = None,
     ) -> None:
-        self.url = build_ws_url(base_url, token)
+        self.url = build_ws_url(base_url, token, api_version=api_version)
         self.timeout = timeout
         self._headers = {"Authorization": f"Bearer {token}"} if token else {}
         self._connect_factory = connect_factory or _default_connect
@@ -47,14 +48,25 @@ class EventStream:
                 yield json.loads(websocket.recv())
 
 
-def build_ws_url(base_url: str, token: str | None = None) -> str:
+def build_ws_url(
+    base_url: str,
+    token: str | None = None,
+    *,
+    api_version: str | None = "v1",
+) -> str:
     parsed = urlsplit(base_url)
     scheme = "wss" if parsed.scheme == "https" else "ws"
     query = parsed.query
     if token:
         token_query = urlencode({"token": token})
         query = f"{query}&{token_query}" if query else token_query
-    return urlunsplit((scheme, parsed.netloc, "/ws/events", query, ""))
+    base_path = parsed.path.rstrip("/")
+    if api_version:
+        version_path = f"/{api_version.strip('/')}"
+        if not base_path.endswith(version_path):
+            base_path = f"{base_path}{version_path}" if base_path else version_path
+    path = f"{base_path}/ws/events" if base_path else "/ws/events"
+    return urlunsplit((scheme, parsed.netloc, path, query, ""))
 
 
 def _default_connect(*args: Any, **kwargs: Any) -> WebSocketLike:

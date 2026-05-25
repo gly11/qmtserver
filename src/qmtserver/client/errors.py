@@ -12,10 +12,21 @@ class QmtConnectionError(QmtClientError):
 
 
 class QmtHttpError(QmtClientError):
-    def __init__(self, status_code: int, message: str, response: Any = None) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        message: str,
+        response: Any = None,
+        *,
+        code: str | None = None,
+        request_id: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.code = code
+        self.message = message
         self.response = response
+        self.request_id = request_id
 
 
 class QmtAuthError(QmtHttpError):
@@ -31,6 +42,7 @@ class QmtRpcError(QmtClientError):
         target: str,
         method: str,
         response: dict[str, Any],
+        request_id: str | None = None,
     ) -> None:
         super().__init__(f"{code}: {message}")
         self.code = code
@@ -38,3 +50,4 @@ class QmtRpcError(QmtClientError):
         self.target = target
         self.method = method
         self.response = response
+        self.request_id = request_id

@@ -12,3 +12,4 @@
 - 增加 WebSocket 事件流、内存 EventBus、生命周期事件和交易回调事件。
 - 增加 Python 客户端 SDK、动态 RPC 代理和事件订阅示例。
 - 增加 request ID、`/metrics`、RPC 指标、日志轮转配置和 Windows 运维脚本。
+- 增加 `/v1` API、集中错误码、SDK 版本前缀和 API/SDK 文档。

@@ -90,16 +90,18 @@ http://127.0.0.1:8000
 常用接口：
 
 ```text
-GET  /health
-GET  /qmt/status
-POST /qmt/connect
-POST /qmt/reconnect
-POST /qmt/disconnect
-GET  /metrics
-GET  /rpc/methods
-POST /rpc
-WS   /ws/events
+GET  /v1/health
+GET  /v1/qmt/status
+POST /v1/qmt/connect
+POST /v1/qmt/reconnect
+POST /v1/qmt/disconnect
+GET  /v1/metrics
+GET  /v1/rpc/methods
+POST /v1/rpc
+WS   /v1/ws/events
 ```
+
+旧的无版本路径暂时保留；新代码建议使用 `/v1`。
 
 RPC 请求示例：
 
@@ -209,6 +211,9 @@ Windows 启动脚本：
 开发路线：
 
 - [Documentation Index](docs/README.md)
+- [API Reference](docs/api.md)
+- [Error Codes](docs/errors.md)
+- [Python SDK](docs/sdk.md)
 - [Development Roadmap](docs/roadmap.md)
 - [Milestone 1: Readonly RPC Gateway](docs/milestone-1-readonly-rpc.md)
 - [Milestone 2: Connection Lifecycle Management](docs/milestone-2-connection-lifecycle.md)
