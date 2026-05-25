@@ -31,6 +31,36 @@ WS   /v1/ws/events
 }
 ```
 
+## RPC Examples
+
+只读行情请求：
+
+```json
+{
+  "target": "xtdata",
+  "method": "get_full_tick",
+  "args": [["000001.SZ"]],
+  "kwargs": {}
+}
+```
+
+交易账号查询：
+
+```json
+{
+  "target": "trader",
+  "method": "query_stock_asset",
+  "args": [
+    {
+      "__type__": "StockAccount",
+      "account_id": "资金账号",
+      "account_type": "STOCK"
+    }
+  ],
+  "kwargs": {}
+}
+```
+
 ## RPC Success
 
 ```json

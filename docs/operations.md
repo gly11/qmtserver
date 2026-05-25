@@ -2,6 +2,31 @@
 
 qmtserver 默认面向本机运行，建议保持 `QMT_HOST=127.0.0.1`，先启动并登录 MiniQMT，再启动服务。
 
+## 连接检查
+
+先启动并登录 MiniQMT，再运行：
+
+```powershell
+uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini"
+```
+
+如果要同时验证交易账号订阅和资金查询：
+
+```powershell
+uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
+```
+
+常用参数：
+
+- `--userdata`：MiniQMT / QMT 交易端目录下的 `userdata_mini` 完整路径。
+- `--account-id`：资金账号；传入后会尝试 `subscribe` 和 `query_stock_asset`。
+- `--account-type`：账号类型，默认 `STOCK`。
+- `--quote-code`：用于验证行情接口的证券代码，默认 `000001.SZ`。
+- `--skip-quote`：只验证交易连接。
+- `--json`：输出完整 JSON，便于脚本消费。
+
+连接成功时命令退出码为 `0`；失败时退出码为 `1`，终端会打印失败原因。
+
 ## 启动
 
 开发模式：
@@ -31,11 +56,11 @@ uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-i
 常用端点：
 
 ```text
-GET /health
-GET /metrics
-GET /qmt/status
-GET /rpc/methods
-WS  /ws/events
+GET /v1/health
+GET /v1/metrics
+GET /v1/qmt/status
+GET /v1/rpc/methods
+WS  /v1/ws/events
 ```
 
 ## 日志
