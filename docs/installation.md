@@ -1,17 +1,17 @@
 # Installation
 
-qmtserver 服务端运行在 Windows 上，并依赖 Python 3.13、MiniQMT / QMT 客户端和
+qmtserver 服务端运行在 Windows 上，并依赖 Python 3.12/3.13、MiniQMT / QMT 客户端和
 `xtquant`。
 
 ## 环境要求
 
 - Windows
-- Python 3.13
+- Python 3.12 or 3.13
 - uv
 - 已启动并登录的 MiniQMT / QMT 客户端
 
 服务端支持范围由 `pyproject.toml` 的 `requires-python` 决定，当前为
-`>=3.13,<3.14`。这是因为 MiniQMT / QMT / `xtquant` 目前只面向 Windows，且
+`>=3.12,<3.14`。这是因为 MiniQMT / QMT / `xtquant` 目前只面向 Windows，且
 `xtquant` 暂不支持 Python 3.14。
 
 其他系统可以通过 HTTP、WebSocket 或 Python SDK 作为客户端访问 Windows 上运行的
@@ -32,7 +32,7 @@ CI 固定使用 Windows runner 并安装 `xtquant` extra；不规划 Linux/macOS
 
 ### 方式一：安装 PyPI 版本
 
-如果只想快速初始化，可以安装 PyPI 上的 `xtquant` 版本。Python 3.13 需要
+如果只想快速初始化，可以安装 PyPI 上的 `xtquant` 版本。Python 3.12/3.13 需要
 `xtquant>=250516.1.1`：
 
 ```powershell

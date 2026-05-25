@@ -6,8 +6,15 @@ on:
 
 jobs:
   quality:
-    name: Quality gates
+    name: Windows / Python ${{ matrix.python-version }}
     runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.13"
 
     steps:
       - name: Check out repository
@@ -16,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5

@@ -3,7 +3,7 @@ name = "qmtserver"
 version = "0.1.0"
 description = "Windows MiniQMT gateway server."
 readme = "README.md"
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.12,<3.14"
 license = "MIT"
 authors = [
     { name = "gly11" },
@@ -25,6 +25,7 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Office/Business :: Financial",
     "Typing :: Typed",
@@ -53,7 +54,7 @@ packages = ["src/qmtserver"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py312"
 src = ["src", "tests"]
 extend-exclude = [
     ".venv",
@@ -81,7 +82,7 @@ line-ending = "auto"
 [tool.ty.environment]
 root = ["./src", "."]
 python = ".venv"
-python-version = "3.13"
+python-version = "3.12"
 python-platform = "win32"
 
 [dependency-groups]
