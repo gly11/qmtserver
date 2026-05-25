@@ -58,7 +58,7 @@ indent-style = "space"
 line-ending = "auto"
 
 [tool.ty.environment]
-root = ["./src", "./tests"]
+root = ["./src", "."]
 python = ".venv"
 python-version = "3.13"
 python-platform = "win32"
