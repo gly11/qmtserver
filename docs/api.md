@@ -22,6 +22,9 @@ WS   /v1/ws/events
 
 ## RPC Request
 
+`0.1.0` 的 RPC 是白名单 RPC，不是全透明 `xtquant` 代理。白名单外方法会返回
+`METHOD_NOT_ALLOWED`。计划中的透明 RPC 模式见 [Transparent RPC](transparent-rpc.md)。
+
 ```json
 {
   "target": "xtdata",

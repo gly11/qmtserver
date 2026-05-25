@@ -19,6 +19,9 @@ Windows 本机运行的 MiniQMT 能力封装为 HTTP、WebSocket 和 Python SDK�
 - WebSocket 事件：推送连接状态、委托回报、成交回报和错误事件。
 - Python 客户端 SDK：其他 Python 项目可以不直接依赖 `xtquant`。
 
+当前已完成版本为 `0.1.0`。后续 `0.2.0` 计划增加默认关闭的透明 RPC 实验模式，用于
+白名单外 `xtquant` API 探索；该模式不会作为默认安全路径。
+
 ## 快速开始
 
 安装项目依赖和 PyPI 版 `xtquant`：
@@ -78,6 +81,8 @@ print(client.xtdata.get_full_tick(["000001.SZ"]))
 - [Operations](docs/operations.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Development Roadmap](docs/roadmap.md)
+- [Release Plan](docs/release-plan.md)
+- [Transparent RPC](docs/transparent-rpc.md)
 - [Documentation Index](docs/README.md)
 
 ## 开发

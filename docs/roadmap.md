@@ -17,7 +17,7 @@ MiniQMT
 
 ## 当前能力
 
-当前 `0.1.x` 版本已经具备以下基础能力：
+当前 `0.1.0` 已经完成安全远程网关 MVP，具备以下基础能力：
 
 - CLI 连接检查：验证行情连接、交易连接、账号订阅和资金查询。
 - 本地 FastAPI 服务：提供 `/v1` HTTP API、RPC 网关和健康检查。
@@ -40,6 +40,9 @@ MiniQMT
 
 这些方向不急于一次性完成，建议根据真实使用反馈逐步推进：
 
+- 透明 RPC：默认关闭，用于白名单外 `xtquant` API 探索和远程策略开发。
+- 远程运行体验：网关机启动、防火墙、远程诊断和 SDK 重连体验。
+- 策略测试工具：fake client、JSON fixture 和事件回放。
 - 发布与安装：PyPI 发布、TestPyPI 验证、可信发布流程。
 - Windows 守护：计划任务、NSSM、MiniQMT 进程检测和自动重启。
 - 客户端拆包：稳定后将跨平台客户端拆成独立 `qmtclient` 包。
@@ -51,13 +54,12 @@ MiniQMT
 ## 版本节奏
 
 ```text
-v0.1  Windows MiniQMT gateway preview
-v0.2  PyPI packaging and release workflow
-v0.3  Windows service/daemon deployment
-v0.4  qmtclient package split
-v0.5  data export and integration examples
-v1.0  stable API and operational contract
+0.1.0  已完成  安全远程网关 MVP
+0.2.0  计划中  透明 RPC 实验模式
+1.0.0  远期    稳定版本
 ```
+
+详细发布节奏见 [Release Plan](release-plan.md)。
 
 ## 历史计划
 

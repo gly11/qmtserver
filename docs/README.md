@@ -5,9 +5,11 @@
 - [Architecture](architecture.md)：当前架构和后续服务端方向。
 - [Installation](installation.md)：Windows、Python 和 `xtquant` 安装说明。
 - [Development Roadmap](roadmap.md)：整体开发路线和版本节奏。
+- [Release Plan](release-plan.md)：版本定位、发布门禁和后续节奏。
 - [API Reference](api.md)：稳定 HTTP RPC 和 WebSocket 契约。
 - [Error Codes](errors.md)：错误码和错误响应结构。
 - [Python SDK](sdk.md)：客户端 SDK 使用说明。
+- [Transparent RPC](transparent-rpc.md)：`0.2.0` 计划中的透明 RPC 模式和风险边界。
 - [Code Quality Track](code-quality.md)：代码健康基线、阈值和优化路线。
 - [Operations](operations.md)：本机运行、日志和健康检查。
 - [Troubleshooting](troubleshooting.md)：常见连接、鉴权和事件问题排查。
