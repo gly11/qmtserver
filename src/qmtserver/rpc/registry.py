@@ -47,12 +47,7 @@ for _target, _methods in READONLY_METHODS.items():
         RPC_METHODS[(_target, _method)] = RpcMethodSpec(_target, _method, "readonly")
 for _target, _methods in TRADING_METHODS.items():
     for _method in _methods:
-        RPC_METHODS[(_target, _method)] = RpcMethodSpec(
-            _target,
-            _method,
-            "trading",
-            enabled=False,
-        )
+        RPC_METHODS[(_target, _method)] = RpcMethodSpec(_target, _method, "trading")
 
 
 def allowed_methods(*, include_disabled: bool = False) -> dict[str, list[str]]:

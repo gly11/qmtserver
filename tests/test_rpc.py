@@ -15,14 +15,55 @@ class FakeTarget:
         return {"codes": codes}
 
 
-class FakeService:
-    def __init__(self, *, enable_trading: bool = False) -> None:
-        self.settings = load_settings(auto_connect=False, enable_trading=enable_trading)
+class FakeTrader:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, tuple[object, ...]]] = []
 
-    def get_target(self, target: str) -> FakeTarget:
+    def query_stock_asset(self, account: object) -> dict[str, object]:
+        return {"account_id": getattr(account, "account_id", None)}
+
+    def order_stock(self, *args: object) -> int:
+        self.calls.append(("order_stock", args))
+        return 10001
+
+    def cancel_order_stock(self, *args: object) -> int:
+        self.calls.append(("cancel_order_stock", args))
+        return 0
+
+
+class FakeService:
+    def __init__(
+        self,
+        *,
+        enable_trading: bool = False,
+        trading_dry_run: bool = True,
+        account_id: str | None = None,
+        max_order_volume: int = 100000,
+        max_order_amount: float = 1000000,
+    ) -> None:
+        self.settings = load_settings(
+            auto_connect=False,
+            enable_trading=enable_trading,
+            trading_dry_run=trading_dry_run,
+            account_id=account_id,
+            max_order_volume=max_order_volume,
+            max_order_amount=max_order_amount,
+        )
+        self.trader = FakeTrader()
+
+    def get_target(self, target: str) -> object:
+        if target == "trader":
+            return self.trader
         if target != "xtdata":
             raise QmtTargetNotConnectedError("target is not connected")
         return FakeTarget()
+
+
+class DisconnectedTraderService(FakeService):
+    def get_target(self, target: str) -> object:
+        if target == "trader":
+            raise QmtTargetNotConnectedError("target is not connected")
+        return super().get_target(target)
 
 
 class RpcTests(unittest.TestCase):
@@ -71,24 +112,129 @@ class RpcTests(unittest.TestCase):
 
     def test_method_allowlist(self) -> None:
         self.assertTrue(is_method_allowed("xtdata", "get_full_tick"))
-        self.assertFalse(is_method_allowed("trader", "order_stock"))
+        self.assertTrue(is_method_allowed("trader", "order_stock"))
+        self.assertFalse(is_method_allowed("trader", "unknown_method"))
 
     def test_method_specs_include_trading_metadata(self) -> None:
         specs = method_specs()
         trader_specs = {item["method"]: item for item in specs["trader"]}
 
         self.assertEqual(trader_specs["order_stock"]["level"], "trading")
-        self.assertFalse(trader_specs["order_stock"]["enabled"])
-        self.assertNotIn("order_stock", allowed_methods()["trader"])
+        self.assertTrue(trader_specs["order_stock"]["enabled"])
+        self.assertIn("order_stock", allowed_methods()["trader"])
 
-    def test_trading_method_remains_blocked_when_trading_enabled_but_disabled(self) -> None:
-        dispatcher = RpcDispatcher(FakeService(enable_trading=True))
+    def test_trading_dry_run_does_not_call_trader(self) -> None:
+        service = FakeService(enable_trading=True, trading_dry_run=True, account_id="10001")
+        dispatcher = RpcDispatcher(service)
         result = dispatcher.dispatch(
-            RpcCall(target="trader", method="order_stock", args=[], kwargs={})
+            RpcCall(
+                target="trader",
+                method="order_stock",
+                args=[
+                    {"__type__": "StockAccount", "account_id": "10001"},
+                    "000001.SZ",
+                    23,
+                    100,
+                    5,
+                    10.5,
+                ],
+                kwargs={},
+            )
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["data"]["dry_run"], True)
+        self.assertEqual(service.trader.calls, [])
+
+    def test_real_trading_path_calls_trader_when_enabled_and_not_dry_run(self) -> None:
+        service = FakeService(enable_trading=True, trading_dry_run=False, account_id="10001")
+        dispatcher = RpcDispatcher(service)
+        result = dispatcher.dispatch(
+            RpcCall(
+                target="trader",
+                method="order_stock",
+                args=[
+                    {"__type__": "StockAccount", "account_id": "10001"},
+                    "000001.SZ",
+                    23,
+                    100,
+                    5,
+                    10.5,
+                ],
+                kwargs={},
+            )
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["data"], 10001)
+        self.assertEqual(service.trader.calls[0][0], "order_stock")
+
+    def test_rejects_non_allowed_account(self) -> None:
+        dispatcher = RpcDispatcher(FakeService(enable_trading=True, account_id="10001"))
+        result = dispatcher.dispatch(
+            RpcCall(
+                target="trader",
+                method="order_stock",
+                args=[
+                    {"__type__": "StockAccount", "account_id": "10002"},
+                    "000001.SZ",
+                    23,
+                    100,
+                    5,
+                    10.5,
+                ],
+                kwargs={},
+            )
         )
 
         self.assertFalse(result["ok"])
-        self.assertEqual(result["error"]["code"], "METHOD_NOT_ALLOWED")
+        self.assertEqual(result["error"]["code"], "ACCOUNT_NOT_ALLOWED")
+
+    def test_rejects_order_volume_limit(self) -> None:
+        dispatcher = RpcDispatcher(
+            FakeService(enable_trading=True, account_id="10001", max_order_volume=50)
+        )
+        result = dispatcher.dispatch(
+            RpcCall(
+                target="trader",
+                method="order_stock",
+                args=[
+                    {"__type__": "StockAccount", "account_id": "10001"},
+                    "000001.SZ",
+                    23,
+                    100,
+                    5,
+                    10.5,
+                ],
+                kwargs={},
+            )
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"]["code"], "ORDER_LIMIT_EXCEEDED")
+
+    def test_rejects_order_amount_limit(self) -> None:
+        dispatcher = RpcDispatcher(
+            FakeService(enable_trading=True, account_id="10001", max_order_amount=100)
+        )
+        result = dispatcher.dispatch(
+            RpcCall(
+                target="trader",
+                method="order_stock",
+                args=[
+                    {"__type__": "StockAccount", "account_id": "10001"},
+                    "000001.SZ",
+                    23,
+                    100,
+                    5,
+                    10.5,
+                ],
+                kwargs={},
+            )
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"]["code"], "ORDER_LIMIT_EXCEEDED")
 
     def test_audit_log_records_rpc_summary(self) -> None:
         dispatcher = RpcDispatcher(FakeService())
@@ -110,7 +256,7 @@ class RpcTests(unittest.TestCase):
         self.assertIn("ok=True", output)
 
     def test_returns_stable_target_error_code(self) -> None:
-        dispatcher = RpcDispatcher(FakeService())
+        dispatcher = RpcDispatcher(DisconnectedTraderService())
         result = dispatcher.dispatch(
             RpcCall(target="trader", method="query_stock_asset", args=[], kwargs={})
         )

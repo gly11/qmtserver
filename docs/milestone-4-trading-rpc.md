@@ -2,6 +2,8 @@
 
 Milestone 4 的目标是在 Milestone 3 的安全边界之上，受控开放真实下单和撤单能力。这个阶段的核心不是“把所有交易 API 都暴露出去”，而是让最小可用交易闭环安全落地：下单、撤单、dry-run、参数校验、交易审计。
 
+状态：已完成。
+
 ## 目标
 
 完成后应支持：
@@ -13,6 +15,15 @@ Milestone 4 的目标是在 Milestone 3 的安全边界之上，受控开放真�
 - 下单前进行基础参数校验。
 - 支持单笔最大数量、单笔最大金额等保护阈值。
 - 所有交易请求必须进入审计日志。
+
+已落地：
+
+- `order_stock`、`order_stock_async`、`cancel_order_stock`、`cancel_order_stock_async` 注册为 trading RPC。
+- `QMT_ENABLE_TRADING=false` 时返回 `TRADING_DISABLED`。
+- `QMT_TRADING_DRY_RUN=true` 时返回模拟结果，不调用 xtquant trader。
+- 校验 StockAccount、账号白名单、股票代码、交易方向、数量、价格类型、价格、单笔数量和金额限制。
+- `QMT_ALLOWED_ACCOUNTS` 为空时使用 `QMT_ACCOUNT_ID` 作为默认允许账号。
+- 交易 RPC 沿用 `qmtserver.audit` 审计日志，记录 dry-run 状态和调用摘要。
 
 ## 非目标
 
@@ -224,16 +235,9 @@ Milestone 4 完成时必须满足：
 7. 交易审计日志存在且不泄露 token。
 8. 自动化测试通过。
 
-## 建议提交顺序
+## 实际提交
 
-```text
-feat(trading): add trading guard settings
-feat(rpc): register trading methods
-feat(trading): validate order requests
-feat(trading): add dry-run execution
-test(trading): cover guarded trading rpc
-docs(milestone): document trading rpc completion
-```
+代码、测试和文档随 Milestone 4 完成提交。
 
 ## 风险与应对
 

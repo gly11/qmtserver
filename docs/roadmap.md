@@ -116,7 +116,7 @@ uv run qmtserver check --userdata "..." --account-id "..."
 
 目标：在保护机制下开放真实下单和撤单。
 
-状态：计划中。
+状态：已完成。
 
 详细计划见 [Milestone 4: Trading RPC](milestone-4-trading-rpc.md)。
 

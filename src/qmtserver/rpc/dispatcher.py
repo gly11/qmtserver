@@ -9,6 +9,7 @@ from qmtserver.config import Settings
 from qmtserver.errors import QmtServerError, QmtTradingDisabledError
 from qmtserver.rpc.registry import get_method_spec
 from qmtserver.rpc.serializers import convert_input, to_jsonable
+from qmtserver.trading import prepare_trading_call
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,7 @@ class RpcDispatcher:
         started_at = perf_counter()
         spec = get_method_spec(call.target, call.method)
         result: dict[str, Any]
+        dry_run: bool | None = None
 
         try:
             if spec is None:
@@ -56,6 +58,18 @@ class RpcDispatcher:
                     spec.level,
                 )
                 return result
+
+            if spec.level == "trading":
+                trading_plan = prepare_trading_call(self.service.settings, call)
+                dry_run = trading_plan.dry_run
+                if trading_plan.dry_run:
+                    result = {
+                        "ok": True,
+                        "data": trading_plan.data,
+                        "error": None,
+                        "meta": _meta(call, started_at, spec.level),
+                    }
+                    return result
 
             target = self.service.get_target(call.target)
             handler = getattr(target, call.method, None)
@@ -111,6 +125,7 @@ class RpcDispatcher:
                 ok=ok,
                 error_code=error.get("code") if isinstance(error, dict) else None,
                 elapsed_ms=elapsed_ms,
+                dry_run=dry_run,
             )
 
 

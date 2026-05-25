@@ -143,11 +143,15 @@ Authorization: Bearer <token>
 QMT_API_TOKEN=
 QMT_REQUIRE_TOKEN=false
 QMT_ENABLE_TRADING=false
+QMT_TRADING_DRY_RUN=true
+QMT_MAX_ORDER_VOLUME=100000
+QMT_MAX_ORDER_AMOUNT=1000000
+QMT_ALLOWED_ACCOUNTS=
 QMT_AUDIT_LOG=true
 QMT_AUDIT_LOG_ARGS=true
 ```
 
-`QMT_ENABLE_TRADING=false` 是默认保护。即使 registry 中已预留交易方法，交易类 RPC 也会先被交易开关拦截；真实下单和撤单会在后续 milestone 中单独开放。
+`QMT_ENABLE_TRADING=false` 是第一层保护，`QMT_TRADING_DRY_RUN=true` 是第二层保护。只有显式开启交易并关闭 dry-run 后，交易类 RPC 才会调用 xtquant。
 
 ## 开发
 

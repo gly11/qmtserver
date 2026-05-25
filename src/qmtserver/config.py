@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     port: int = 8000
     quote_code: str = "000001.SZ"
     enable_trading: bool = False
+    trading_dry_run: bool = True
+    max_order_volume: int = Field(default=100000, ge=1)
+    max_order_amount: float = Field(default=1000000, ge=0)
+    allowed_accounts: str | None = None
     api_token: str | None = None
     require_token: bool = False
     audit_log: bool = True
@@ -36,6 +40,15 @@ class Settings(BaseSettings):
         if self.require_token and not self.api_token:
             raise ValueError("QMT_REQUIRE_TOKEN=true requires QMT_API_TOKEN to be set")
         return self
+
+    def trading_allowed_accounts(self) -> set[str]:
+        if self.allowed_accounts:
+            return {
+                account.strip() for account in self.allowed_accounts.split(",") if account.strip()
+            }
+        if self.account_id:
+            return {self.account_id}
+        return set()
 
 
 def load_settings(**overrides: Any) -> Settings:

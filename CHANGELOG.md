@@ -8,3 +8,4 @@
 - 增加只读 HTTP RPC 网关、方法白名单、JSON 序列化和 `serve` 命令。
 - 增加 MiniQMT 连接生命周期状态、重连、断开和稳定 RPC target 错误码。
 - 增加 bearer token 鉴权、RPC 方法分级、交易保护开关和审计日志。
+- 增加受控交易 RPC、dry-run、账号白名单和下单参数限制。

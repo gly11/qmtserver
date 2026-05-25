@@ -19,3 +19,15 @@ class QmtUnauthorizedError(QmtServerError):
 
 class QmtTradingDisabledError(QmtServerError):
     code = "TRADING_DISABLED"
+
+
+class QmtTradingValidationError(QmtServerError):
+    code = "TRADING_VALIDATION_ERROR"
+
+
+class QmtAccountNotAllowedError(QmtServerError):
+    code = "ACCOUNT_NOT_ALLOWED"
+
+
+class QmtOrderLimitExceededError(QmtServerError):
+    code = "ORDER_LIMIT_EXCEEDED"

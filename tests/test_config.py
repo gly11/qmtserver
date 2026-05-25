@@ -14,6 +14,10 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.port, 8000)
         self.assertEqual(settings.account_type, "STOCK")
         self.assertFalse(settings.enable_trading)
+        self.assertTrue(settings.trading_dry_run)
+        self.assertEqual(settings.max_order_volume, 100000)
+        self.assertEqual(settings.max_order_amount, 1000000)
+        self.assertEqual(settings.trading_allowed_accounts(), set())
         self.assertFalse(settings.require_token)
         self.assertTrue(settings.audit_log)
         self.assertTrue(settings.audit_log_args)
@@ -31,6 +35,16 @@ class SettingsTests(unittest.TestCase):
     def test_require_token_requires_api_token(self) -> None:
         with self.assertRaises(ValueError):
             load_settings(require_token=True, api_token="")
+
+    def test_trading_allowed_accounts_falls_back_to_account_id(self) -> None:
+        settings = load_settings(account_id="10001")
+
+        self.assertEqual(settings.trading_allowed_accounts(), {"10001"})
+
+    def test_trading_allowed_accounts_parses_comma_list(self) -> None:
+        settings = load_settings(account_id="10001", allowed_accounts="10002, 10003")
+
+        self.assertEqual(settings.trading_allowed_accounts(), {"10002", "10003"})
 
 
 if __name__ == "__main__":

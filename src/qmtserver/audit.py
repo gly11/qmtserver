@@ -20,6 +20,7 @@ def audit_rpc_call(
     ok: bool,
     error_code: str | None,
     elapsed_ms: float,
+    dry_run: bool | None = None,
 ) -> None:
     if not settings.audit_log:
         return
@@ -28,15 +29,17 @@ def audit_rpc_call(
     args_summary = ""
     if settings.audit_log_args:
         args_summary = f" args={summarize_value(args)} kwargs={summarize_value(kwargs)}"
+    dry_run_summary = "" if dry_run is None else f" dry_run={dry_run}"
 
     logging.getLogger(AUDIT_LOGGER_NAME).info(
-        "rpc target=%s method=%s level=%s ok=%s error=%s elapsed_ms=%.3f%s",
+        "rpc target=%s method=%s level=%s ok=%s error=%s elapsed_ms=%.3f%s%s",
         target,
         method,
         level,
         ok,
         error_code,
         elapsed_ms,
+        dry_run_summary,
         args_summary,
     )
 

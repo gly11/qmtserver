@@ -14,14 +14,33 @@ class FakeTarget:
 
 
 class FakeTrader:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, tuple[object, ...]]] = []
+
     def query_stock_asset(self, account: object) -> dict[str, object]:
         return {"account_id": getattr(account, "account_id", None)}
 
+    def order_stock(self, *args: object) -> int:
+        self.calls.append(("order_stock", args))
+        return 10001
+
 
 class FakeService:
-    def __init__(self, *, enable_trading: bool = False) -> None:
-        self.settings = load_settings(auto_connect=False, enable_trading=enable_trading)
+    def __init__(
+        self,
+        *,
+        enable_trading: bool = False,
+        trading_dry_run: bool = True,
+        account_id: str | None = None,
+    ) -> None:
+        self.settings = load_settings(
+            auto_connect=False,
+            enable_trading=enable_trading,
+            trading_dry_run=trading_dry_run,
+            account_id=account_id,
+        )
         self.connected = False
+        self.trader = FakeTrader()
 
     def status(self) -> dict[str, object]:
         return {
@@ -50,7 +69,7 @@ class FakeService:
         if target == "xtdata":
             return FakeTarget()
         if target == "trader":
-            return FakeTrader()
+            return self.trader
         return FakeTarget()
 
 
@@ -134,6 +153,41 @@ class ApiTests(unittest.TestCase):
         body = response.json()
         self.assertFalse(body["ok"])
         self.assertEqual(body["error"]["code"], "TRADING_DISABLED")
+
+    def test_rpc_trading_dry_run(self) -> None:
+        app = create_app(
+            load_settings(auto_connect=False, account_id="10001"),
+            connect_on_startup=False,
+        )
+
+        with TestClient(app) as client:
+            service = FakeService(enable_trading=True, trading_dry_run=True, account_id="10001")
+            app.state.qmt_service = service
+            response = client.post(
+                "/rpc",
+                json={
+                    "target": "trader",
+                    "method": "order_stock",
+                    "args": [
+                        {
+                            "__type__": "StockAccount",
+                            "account_id": "10001",
+                            "account_type": "STOCK",
+                        },
+                        "000001.SZ",
+                        23,
+                        100,
+                        5,
+                        10.5,
+                    ],
+                    "kwargs": {},
+                },
+            )
+
+        body = response.json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["data"]["dry_run"], True)
+        self.assertEqual(service.trader.calls, [])
 
     def test_rpc_dispatches_trader_query_stock_asset(self) -> None:
         app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
