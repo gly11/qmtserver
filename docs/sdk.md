@@ -1,6 +1,10 @@
-# Python SDK
+# Built-in Client Compatibility
 
-`qmtserver.client.QmtClient` 默认调用 `/v1` API。
+qmtserver 仍保留 `qmtserver.client.QmtClient`，用于随服务端一起验证 `/v1` API 契约。
+
+新的策略项目建议使用独立客户端包 qmtclient。qmtserver 文档只说明内置兼容客户端的基础行为。
+
+## Basic Usage
 
 ```python
 from qmtserver.client import QmtClient
@@ -14,19 +18,13 @@ print(client.xtdata.get_full_tick(["000001.SZ"]))
 
 ## Version Prefix
 
-默认：
+默认会调用 `/v1`：
 
 ```python
 QmtClient("http://127.0.0.1:8000")
 ```
 
-会调用：
-
-```text
-http://127.0.0.1:8000/v1/...
-```
-
-如果需要兼容旧路径：
+如果需要兼容旧路径，可以关闭版本前缀：
 
 ```python
 QmtClient("http://127.0.0.1:8000", api_version=None)
@@ -45,29 +43,12 @@ RPC `ok=false` 时抛 `QmtRpcError`，包含：
 
 HTTP 401 时抛 `QmtAuthError`。
 
-## Events
-
-```python
-for event in client.events():
-    print(event)
-```
-
-默认连接：
-
-```text
-ws://127.0.0.1:8000/v1/ws/events
-```
-
-过滤事件：
+## Events And Cache
 
 ```python
 for event in client.events(types=["stock_order", "stock_trade"]):
     print(event)
-```
 
-查询缓存：
-
-```python
 client.orders(limit=20)
 client.order("123456")
 client.trades(limit=20)

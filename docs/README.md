@@ -8,7 +8,7 @@
 - [Release Plan](release-plan.md)：版本定位、发布门禁和后续节奏。
 - [API Reference](api.md)：稳定 HTTP RPC 和 WebSocket 契约。
 - [Error Codes](errors.md)：错误码和错误响应结构。
-- [Python SDK](sdk.md)：客户端 SDK 使用说明。
+- [Built-in Client](sdk.md)：内置 Python 兼容客户端说明；独立客户端规划在 qmtclient 项目中维护。
 - [Transparent RPC](transparent-rpc.md)：`0.2.0` 计划中的透明 RPC 模式和风险边界。
 - [Code Quality Track](code-quality.md)：代码健康基线、阈值和优化路线。
 - [Operations](operations.md)：本机运行、日志和健康检查。

@@ -1,13 +1,12 @@
 # qmtserver
 
-qmtserver 是一个面向 MiniQMT / xtquant 的本地 Windows 网关服务。它把只能在
-Windows 本机运行的 MiniQMT 能力封装为 HTTP、WebSocket 和 Python SDK，方便其他平台、
-策略系统或自动化工具通过网络访问。
+qmtserver 是一个面向 MiniQMT / xtquant 的本地 Windows 网关服务。它把 MiniQMT 能力封装为
+HTTP RPC 和 WebSocket，方便其他机器通过网络访问。
 
 ## 重要说明
 
 - qmtserver 是非官方开源项目，不隶属于迅投、QMT、MiniQMT 或任何券商。
-- 服务端运行环境限定为 Windows + Python 3.13。
+- 服务端运行环境限定为 Windows + Python 3.12/3.13。
 - 交易相关接口默认关闭，并且默认 dry-run。
 - 本项目不提供投资建议；真实交易风险由使用者自行承担。
 
@@ -17,10 +16,9 @@ Windows 本机运行的 MiniQMT 能力封装为 HTTP、WebSocket 和 Python SDK�
 - 本地 HTTP RPC 网关：提供 `/v1/rpc` 和白名单方法转发。
 - 交易保护：token 鉴权、交易开关、dry-run、账号/代码/限额校验和审计日志。
 - WebSocket 事件：推送连接状态、委托回报、成交回报和错误事件。
-- Python 客户端 SDK：其他 Python 项目可以不直接依赖 `xtquant`。
+- 内置 Python 兼容客户端：用于验证 `/v1` API；独立客户端请使用 qmtclient。
 
-当前已完成版本为 `0.1.0`。后续 `0.2.0` 计划增加默认关闭的透明 RPC 实验模式，用于
-白名单外 `xtquant` API 探索；该模式不会作为默认安全路径。
+当前版本节奏见 [Release Plan](docs/release-plan.md)。
 
 ## 快速开始
 
@@ -62,7 +60,7 @@ POST /v1/rpc
 WS   /v1/ws/events
 ```
 
-## Python 客户端
+## 内置兼容客户端
 
 ```python
 from qmtserver.client import QmtClient
@@ -73,11 +71,13 @@ print(client.status())
 print(client.xtdata.get_full_tick(["000001.SZ"]))
 ```
 
+新的策略项目建议使用独立包 qmtclient；本仓库内置客户端主要用于服务端兼容性验证。
+
 ## 文档
 
 - [Installation](docs/installation.md)
 - [API Reference](docs/api.md)
-- [Python SDK](docs/sdk.md)
+- [Built-in Client](docs/sdk.md)
 - [Operations](docs/operations.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Development Roadmap](docs/roadmap.md)

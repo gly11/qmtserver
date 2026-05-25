@@ -1,16 +1,47 @@
 # Architecture
 
-qmtserver 当前分为三层：
+qmtserver is a Windows service wrapper around MiniQMT / `xtquant`. It exposes a small, controlled
+HTTP and WebSocket surface so other machines can access a logged-in MiniQMT client without importing
+`xtquant` locally.
 
-1. CLI 层：`qmtserver.cli`
-2. MiniQMT 适配层：`qmtserver.miniqmt`
-3. 第三方 SDK：`xtquant`
+```text
+remote tools / strategies / qmtclient
+        |
+HTTP RPC / WebSocket
+        |
+qmtserver
+        |
+xtquant
+        |
+MiniQMT
+```
 
-CLI 只负责参数解析和结果展示，MiniQMT 连接、检查和数据转换逻辑都放在适配层。后续扩展服务端时，可以在适配层之上新增 HTTP、WebSocket、RPC 或消息队列接口。
+## Runtime Layers
 
-## 后续方向
+- `cli`: command-line entry points such as `check` and `serve`.
+- `config`: environment and runtime settings.
+- `api`: FastAPI routes, request parsing, authentication, and response assembly.
+- `services`: MiniQMT connection lifecycle and shared runtime state.
+- `rpc`: method registry, dispatch, input conversion, and JSON serialization.
+- `trading`: trading validation, dry-run behavior, account/symbol/limit checks, and confirmation.
+- `events`: in-process event bus and WebSocket delivery.
+- `orders`: in-memory order, trade, and recent event caches.
+- `miniqmt`: direct MiniQMT / `xtquant` adapter code.
+- `client`: built-in compatibility client used to exercise the `/v1` contract.
 
-- 增加配置加载模块，支持 `.env` 和环境变量。
-- 增加服务端模块，封装连接生命周期。
-- 增加账号、行情、委托、成交等领域接口。
-- 增加结构化日志和健康检查端点。
+## Boundaries
+
+API routes should stay thin. They should parse requests, enforce authentication, call services, and
+assemble responses. Business logic belongs in service, RPC, trading, event, order, serialization, or
+audit modules.
+
+RPC is not an arbitrary `xtquant` proxy in `0.1.0`. Requests must pass through the method registry.
+Trading methods must also pass server-side trading guards.
+
+qmtclient is a separate client project. qmtserver documentation should describe the server API,
+runtime, security, and compatibility boundary; client-side SDK planning belongs in qmtclient.
+
+## Persistence
+
+The first server version keeps order, trade, and recent event state in memory. Restarting qmtserver
+clears these caches.

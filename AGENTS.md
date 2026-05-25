@@ -1,25 +1,53 @@
 # AGENTS.md
 
-本文件用于约束 qmtserver 项目中的自动化 agent 和协作者行为。改动代码前先读本文件，再读 `README.md`、`docs/README.md` 和相关源码。
+This file defines the working rules for automated agents and collaborators in the qmtserver
+repository. Before changing code, read this file, then read `README.md`, `docs/README.md`, and the
+relevant source files.
 
-## 项目目标
+## Project Purpose
 
-qmtserver 是本地 MiniQMT / xtquant 网关服务。当前已完成连接检查 CLI，后续按 `docs/roadmap.md` 逐步扩展为只读 RPC 网关、交易保护网关、WebSocket 推送和客户端 SDK。
+qmtserver is a local Windows gateway for MiniQMT / `xtquant`. A Windows machine with MiniQMT runs
+qmtserver; other tools, strategy systems, or automation scripts access it through HTTP RPC,
+WebSocket events, and client SDKs.
 
-## 目录规范
+The current `0.1.0` baseline is a safety-first remote gateway MVP:
 
-- 源码放在 `src/qmtserver/`。
-- 测试放在 `tests/`。
-- 架构、路线、阶段计划放在 `docs/`。
-- 示例脚本放在 `examples/`。
-- 根目录只放项目入口文档、配置和少量标准文件。
-- 不要把 `xtquant` 放回项目根目录；它应安装在 `.venv\Lib\site-packages\xtquant`。
-- PyPI 版 `xtquant` 只能作为可选依赖；不要放进主依赖，避免 CI 和纯客户端开发强制安装。
-- 不要提交 `.venv/`、缓存目录、MiniQMT 用户数据、行情数据或日志。
+- connection-check CLI;
+- `/v1` HTTP API;
+- allowlisted RPC forwarding;
+- bearer token authentication;
+- trading guards and dry-run behavior;
+- WebSocket events;
+- in-memory order, trade, and event caches;
+- built-in Python client SDK;
+- logs, metrics, request IDs, and Windows helper scripts.
 
-## 开发命令
+qmtclient is a separate client project. qmtserver documentation should focus on server API,
+runtime, security, trading protection, MiniQMT connectivity, and operational behavior.
 
-常用命令：
+## Repository Layout
+
+- Source code lives in `src/qmtserver/`.
+- Tests live in `tests/`.
+- Architecture, roadmap, release, and operational docs live in `docs/`.
+- Example scripts live in `examples/`.
+- Helper scripts live in `scripts/`.
+- Keep the repository root limited to entry-point docs, configuration, and standard project files.
+
+Do not vendor `xtquant` into the repository root. If needed locally, install the PyPI extra with:
+
+```powershell
+uv sync --extra xtquant
+```
+
+or place a downloaded package in the virtual environment, not in this repository.
+
+Do not commit `.venv/`, caches, MiniQMT userdata, market data, logs, real account IDs, tokens, or
+personal paths.
+
+## Development Commands
+
+Common commands:
 
 ```powershell
 uv sync
@@ -31,88 +59,105 @@ uv run ruff check .
 uv run ty check
 ```
 
-连接真实 MiniQMT 时：
+When checking a real MiniQMT connection:
 
 ```powershell
-uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
+uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "account-id"
 ```
 
-## 质量门禁
+## Quality Gate
 
-提交或交付前至少运行：
+Before handing off code or preparing a commit, run at least:
 
 ```powershell
 uv run python -m unittest discover
 uv run ruff check .
 uv run ruff format --check .
 uv run ty check
+git diff --check
 ```
 
-如果因为本地没有 MiniQMT 或账号无法运行真实连接检查，需要在回复中说明。
+If a real MiniQMT connection check cannot be run because the local machine has no MiniQMT or account
+access, say so explicitly in the handoff.
 
-## 代码风格
+## Coding Style
 
-- 使用 Python 3.13。
-- 保持 `src/` 布局，不从项目根目录导入源码。
-- 优先使用标准库；新增依赖必须有明确用途。
-- 对外接口返回 JSON 友好的基础类型。
-- xtquant 返回对象转换逻辑集中到适配/序列化层，不要散落在 API 路由里。
-- 后续服务端代码按 `api/`、`rpc/`、`services/` 分层。
-- 下单、撤单等交易方法默认禁止，必须通过显式配置开关和白名单开放。
+- Use Python 3.12 or 3.13 for qmtserver.
+- Keep the `src/` layout; do not import project source from the repository root.
+- Prefer the standard library unless a new dependency has a clear purpose.
+- Keep public API responses JSON-friendly.
+- Keep `xtquant` object conversion in adapter or serialization layers, not scattered through API
+  routes.
+- Keep API routes thin: request parsing, dependency injection, and response assembly only.
+- Put business logic in service, RPC, trading, event, order, serialization, or audit modules.
+- Trading methods such as order and cancel are disabled by default and must require explicit config
+  and allowlists.
 
-## 代码质量与拆分约束
+## Code Size And Structure
 
-- 单个 `.py` 文件尽量控制在 300 行以内。
-- 单个 `.py` 文件超过 400 行时，必须主动评估是否按职责拆分。
-- 单个 `.py` 文件超过 500 行时，除非是生成文件、纯常量表或非常明确的集中 registry，否则应拆分。
-- 单个函数尽量控制在 50 行以内。
-- 单个函数超过 80 行时，应优先拆成私有 helper、领域服务或独立模型。
-- 测试文件超过 500 行时，也应按功能拆分，例如 `test_trading_safety.py`、`test_order_events.py`。
-- API 路由只做请求解析、依赖注入和响应组装，不承载复杂业务逻辑。
-- RPC dispatcher 只负责调度流程，不堆叠交易校验、序列化、审计、缓存等细节。
-- 交易校验、订单缓存、事件分发、序列化、审计日志应放在各自领域模块。
-- 同一函数内嵌套超过 3 层时，优先用早返回或 helper 降低复杂度。
-- 一个改动如果同时涉及格式化、重构、功能和文档，应尽量拆成多个提交。
-- 新增公共行为必须有测试；交易相关改动必须覆盖失败路径。
+- Try to keep individual `.py` files under 300 lines.
+- If a `.py` file exceeds 400 lines, actively evaluate whether it should be split by responsibility.
+- If a `.py` file exceeds 500 lines, split it unless it is generated code, a constants table, or a
+  clearly justified registry.
+- Try to keep individual functions under 50 lines.
+- If a function exceeds 80 lines, prefer private helpers, domain services, or dedicated models.
+- Split large test files by feature when they approach 500 lines, for example
+  `test_trading_safety.py` or `test_order_events.py`.
+- The RPC dispatcher should coordinate dispatch only; do not pile trading validation,
+  serialization, audit, cache, or event logic into it.
+- Use early returns or helpers when nesting grows beyond three levels.
+- Avoid mixing formatting, refactoring, features, and docs in one change when they can be separated.
+- New public behavior needs tests. Trading-related changes must cover failure paths.
 
-## 文档规范
+## Documentation
 
-- 新增功能要同步更新 `README.md` 或 `docs/` 中对应文档。
-- 长期规划写入 `docs/roadmap.md`。
-- 单阶段详细计划写入独立 milestone 文档。
-- 协作规则更新写入本文件或 `CONTRIBUTING.md`。
+- Update `README.md` or the appropriate `docs/` page when adding or changing user-facing behavior.
+- Long-term server planning belongs in `docs/roadmap.md`.
+- Release cadence and release gates belong in `docs/release-plan.md`.
+- API, error, SDK, operation, and troubleshooting details belong in their corresponding docs pages.
+- Collaboration rules belong in this file or `CONTRIBUTING.md`.
+- Client-side qmtclient planning belongs in the qmtclient project, not in qmtserver.
 
-## 安全约束
+## Security And Trading Rules
 
-- 不要在仓库中写入真实账号、token、密码或个人路径。
-- `.env.example` 只能保留示例值。
-- 不要绕过 RPC 白名单直接暴露任意 xtquant 方法。
-- 交易能力默认关闭；真实下单能力必须有审计日志和显式开关。
+- Never write real account IDs, tokens, passwords, private keys, or personal paths into the
+  repository.
+- `.env.example` may contain example values only.
+- Do not expose arbitrary `xtquant` methods through RPC unless an explicit transparent RPC mode is
+  implemented, documented, tested, and disabled by default.
+- Trading capability is disabled by default.
+- Real trading must require explicit configuration, allowlists, limits, confirmation text, and audit
+  logs.
+- Do not bypass the RPC allowlist, transparent RPC settings, token authentication, or trading guards.
+- Do not make tests depend on real trading. Use fakes or mocks for dangerous paths.
 
-## Git 约束
+## Git Rules
 
-- 不要回滚用户未要求回滚的改动。
-- 不要提交 `.venv/` 或本地运行产物。
-- 大文件、日志、MiniQMT 数据目录应保持在 `.gitignore` 中。
-- 分支名建议使用 `codex/<short-topic>`、`feature/<short-topic>`、`fix/<short-topic>` 或 `docs/<short-topic>`。
-- 提交信息使用 Conventional Commits 风格：`type(scope): summary`。
-- `summary` 使用英文小写祈使句，不以句号结尾，长度建议不超过 72 个字符。
-- 不要把格式化、重构、功能、文档大杂烩塞进同一个提交；能拆就拆。
-- 提交前确认 `git diff --check` 没有空白错误。
-- 如果没有明确要求，不要替用户创建 commit；只准备好变更并说明验证结果。
+- Do not revert changes you did not make unless the user explicitly asks.
+- Do not commit `.venv/` or local runtime artifacts.
+- Keep large files, logs, MiniQMT userdata, and market data ignored.
+- Recommended branch names: `codex/<short-topic>`, `feature/<short-topic>`, `fix/<short-topic>`, or
+  `docs/<short-topic>`.
+- Use Conventional Commits: `type(scope): summary`.
+- Use an English lowercase imperative summary, no final period, preferably no longer than 72
+  characters.
+- Do not mix unrelated formatting, refactoring, feature, and documentation changes in one commit if
+  they can reasonably be split.
+- Run `git diff --check` before committing.
+- Do not create commits unless the user explicitly asks.
 
-提交类型：
+Commit types:
 
-- `feat`：新增用户可见功能。
-- `fix`：修复 bug。
-- `docs`：文档变更。
-- `test`：测试新增或调整。
-- `refactor`：不改变行为的代码结构调整。
-- `style`：仅格式化或非行为风格调整。
-- `chore`：工具、依赖、配置、维护任务。
-- `ci`：持续集成相关变更。
+- `feat`: user-visible functionality.
+- `fix`: bug fixes.
+- `docs`: documentation changes.
+- `test`: test additions or changes.
+- `refactor`: behavior-preserving code restructuring.
+- `style`: formatting or non-behavioral style changes.
+- `chore`: tooling, dependency, configuration, or maintenance work.
+- `ci`: continuous integration changes.
 
-示例：
+Examples:
 
 ```text
 feat(cli): add serve command
