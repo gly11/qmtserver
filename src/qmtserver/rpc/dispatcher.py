@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import Any, Protocol
 
+from qmtserver.errors import QmtServerError
 from qmtserver.rpc.registry import is_method_allowed
 from qmtserver.rpc.serializers import convert_input, to_jsonable
 
@@ -54,6 +55,13 @@ class RpcDispatcher:
                 "error": None,
                 "meta": _meta(call, started_at),
             }
+        except QmtServerError as exc:
+            return _error_response(
+                call,
+                exc.code,
+                str(exc),
+                started_at,
+            )
         except Exception as exc:
             return _error_response(
                 call,

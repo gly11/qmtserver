@@ -19,3 +19,13 @@ def status(service: QmtServiceDep) -> dict[str, object]:
 @router.post("/connect")
 def connect(service: QmtServiceDep) -> dict[str, object]:
     return service.connect()
+
+
+@router.post("/reconnect")
+def reconnect(service: QmtServiceDep) -> dict[str, object]:
+    return service.reconnect()
+
+
+@router.post("/disconnect")
+def disconnect(service: QmtServiceDep) -> dict[str, object]:
+    return service.disconnect()

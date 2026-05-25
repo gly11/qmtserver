@@ -20,7 +20,7 @@ def create_app(settings: Settings | None = None, *, connect_on_startup: bool = T
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.qmt_service = service
         app.state.settings = app_settings
-        if connect_on_startup and app_settings.auto_connect:
+        if connect_on_startup and app_settings.auto_connect and app_settings.connect_on_startup:
             service.connect()
         try:
             yield

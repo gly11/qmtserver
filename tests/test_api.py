@@ -27,11 +27,22 @@ class FakeService:
             "ok": True,
             "quote": {"connected": self.connected},
             "trader": {"connected": self.connected},
-            "last_error": None,
+            "lifecycle": {
+                "state": "connected" if self.connected else "disconnected",
+                "last_error": None,
+            },
         }
 
     def connect(self) -> dict[str, object]:
         self.connected = True
+        return self.status()
+
+    def reconnect(self) -> dict[str, object]:
+        self.connected = True
+        return self.status()
+
+    def disconnect(self) -> dict[str, object]:
+        self.connected = False
         return self.status()
 
     def get_target(self, target: str) -> object:
@@ -62,6 +73,18 @@ class ApiTests(unittest.TestCase):
 
         self.assertFalse(status.json()["quote"]["connected"])
         self.assertTrue(connected.json()["quote"]["connected"])
+
+    def test_qmt_reconnect_and_disconnect(self) -> None:
+        app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            reconnected = client.post("/qmt/reconnect")
+            disconnected = client.post("/qmt/disconnect")
+
+        self.assertTrue(reconnected.json()["quote"]["connected"])
+        self.assertFalse(disconnected.json()["quote"]["connected"])
+        self.assertEqual(disconnected.json()["lifecycle"]["state"], "disconnected")
 
     def test_rpc_methods(self) -> None:
         app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
