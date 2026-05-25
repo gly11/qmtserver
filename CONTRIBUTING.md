@@ -8,6 +8,7 @@ uv run python -m unittest discover
 uv run ruff check .
 uv run ruff format --check .
 uv run ty check
+uv run python scripts/check_code_health.py
 ```
 
 ## 代码风格
@@ -56,6 +57,12 @@ uv run ruff check .
 uv run ruff format --check .
 uv run ty check
 git diff --check
+```
+
+代码健康报告：
+
+```powershell
+uv run python scripts/check_code_health.py
 ```
 
 分支名建议使用：
