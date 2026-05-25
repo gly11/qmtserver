@@ -199,6 +199,84 @@ client.rpc("trader", "query_stock_asset", [{"__type__": "StockAccount", "account
 - 出问题能从日志定位。
 - 能知道服务是否健康、MiniQMT 是否在线、RPC 调用是否异常。
 
+## Milestone 8: API 稳定化与兼容性
+
+目标：把 HTTP RPC、WebSocket 和 SDK 固化成稳定契约，减少后续扩展时破坏调用方。
+
+状态：计划中。
+
+详细计划见 [Milestone 8: API Stability and Compatibility](milestone-8-api-stability.md)。
+
+范围：
+
+- 增加推荐 `/v1` API 入口，并保留旧路径兼容。
+- 统一错误码和错误响应结构。
+- 补充 API、错误码和 SDK 文档。
+- SDK 支持 API version 和服务端兼容性检查。
+- 增加契约测试。
+
+验收：
+
+- `/v1` 和旧路径都可用。
+- SDK 默认使用稳定版本入口。
+- 错误码集中定义并文档化。
+- 自动化测试通过。
+
+## Milestone 9: 交易安全增强
+
+目标：在真实交易前进一步降低误触发、误配置和超限交易风险。
+
+状态：计划中。
+
+详细计划见 [Milestone 9: Trading Safety Hardening](milestone-9-trading-safety.md)。
+
+范围：
+
+- 股票代码白名单/黑名单。
+- 单日下单数量和金额限制。
+- 真实交易二次确认。
+- 交易审计单独 logger 或文件。
+- SDK 交易错误增强。
+
+验收：
+
+- 真实交易需要通过开关、dry-run、账号、代码、限额和确认文本多重保护。
+- dry-run 仍然不触发真实 xtquant 方法。
+- 交易审计清晰且脱敏。
+- 自动化测试通过。
+
+## Milestone 10: 订单状态与事件闭环
+
+目标：把下单、撤单、委托回报、成交回报和事件订阅串成手动运行时可观察的完整闭环。
+
+状态：计划中。
+
+详细计划见 [Milestone 10: Order State and Event Loop](milestone-10-order-events.md)。
+
+范围：
+
+- 订单、成交、错误和最近事件内存缓存。
+- HTTP 查询最近订单、成交和事件。
+- WebSocket 事件类型过滤。
+- SDK 支持事件过滤和常用订单查询。
+- 下单返回值与后续回报关联。
+
+验收：
+
+- 回调事件能进入缓存。
+- 客户端可按类型订阅事件。
+- SDK 可查询订单/成交/最近事件。
+- 自动化测试通过。
+
+## Backlog: 可选后续方向
+
+这些方向暂不作为正式 milestone，等真实使用中出现明确需求再升级：
+
+- Windows 守护与自动重启：计划任务、NSSM、MiniQMT 进程检测。
+- 多平台接入层：REST 风格业务接口、Webhook、第三方平台示例。
+- 高性能数据输出：Arrow、大批量行情数据优化。
+- 强类型多语言协议：gRPC + Protobuf。
+
 ## 版本节奏
 
 ```text
@@ -209,7 +287,9 @@ v0.4  token + 白名单 + 交易保护
 v0.5  交易 RPC
 v0.6  WebSocket 推送
 v0.7  Python SDK
-v1.0  稳定 API、文档、测试、部署方案
+v0.8  API 稳定化与兼容性
+v0.9  交易安全增强
+v1.0  订单状态与事件闭环
 ```
 
-核心原则：先跑稳“稳定连接 + 只读转发 + 白名单 + JSON 响应”，再逐步增加交易、推送、SDK 和性能增强。
+核心原则：先跑稳“稳定连接 + 只读转发 + 白名单 + JSON 响应”，再逐步增加交易、推送、SDK、稳定 API 和订单事件闭环。

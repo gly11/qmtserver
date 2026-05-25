@@ -11,6 +11,9 @@
 - [Milestone 5: WebSocket Events](milestone-5-websocket-events.md)：第五阶段详细计划。
 - [Milestone 6: Python Client SDK](milestone-6-python-client-sdk.md)：第六阶段详细计划。
 - [Milestone 7: Observability and Operations](milestone-7-observability-ops.md)：第七阶段详细计划。
+- [Milestone 8: API Stability and Compatibility](milestone-8-api-stability.md)：第八阶段详细计划。
+- [Milestone 9: Trading Safety Hardening](milestone-9-trading-safety.md)：第九阶段详细计划。
+- [Milestone 10: Order State and Event Loop](milestone-10-order-events.md)：第十阶段详细计划。
 - [Operations](operations.md)：本机运行、日志和健康检查。
 - [Troubleshooting](troubleshooting.md)：常见连接、鉴权和事件问题排查。
 
