@@ -5,6 +5,7 @@
 - [Architecture](architecture.md)：当前架构和后续服务端方向。
 - [Development Roadmap](roadmap.md)：整体开发路线和版本节奏。
 - [Milestone 1: Readonly RPC Gateway](milestone-1-readonly-rpc.md)：第一阶段详细计划。
+- [Milestone 2: Connection Lifecycle Management](milestone-2-connection-lifecycle.md)：第二阶段详细计划。
 
 原则：
 

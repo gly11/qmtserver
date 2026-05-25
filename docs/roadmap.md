@@ -71,10 +71,14 @@ uv run qmtserver check --userdata "..." --account-id "..."
 
 目标：服务端能长期稳定运行，而不是只做一次性调用。
 
+状态：计划中。
+
+详细计划见 [Milestone 2: Connection Lifecycle Management](milestone-2-connection-lifecycle.md)。
+
 范围：
 
-- 增加 `QmtService`。
-- 启动时自动连接 MiniQMT。
+- 完善 `QmtService` 生命周期状态。
+- 启动时按配置自动连接 MiniQMT。
 - 支持手动 reconnect、disconnect、shutdown。
 - 维护 quote、trader、account 订阅状态。
 - 记录最近一次错误和最近一次成功调用时间。
