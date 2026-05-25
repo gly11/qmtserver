@@ -1,9 +1,9 @@
 [project]
 name = "qmtserver"
 version = "0.1.0"
-description = "MiniQMT bridge and connectivity checker."
+description = "Windows MiniQMT gateway server."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "fastapi>=0.136.3",
     "httpx>=0.28.1",
@@ -11,14 +11,28 @@ dependencies = [
     "uvicorn[standard]>=0.48.0",
     "websockets>=15.0.1",
 ]
+
 keywords = ["miniqmt", "qmt", "xtquant", "trading"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.13",
     "Topic :: Office/Business :: Financial",
 ]
+
+[project.optional-dependencies]
+xtquant = [
+    "xtquant>=250516.1.1,<260000",
+]
+
+[project.urls]
+Homepage = "https://github.com/gly11/qmtserver"
+Repository = "https://github.com/gly11/qmtserver"
+Issues = "https://github.com/gly11/qmtserver/issues"
+Documentation = "https://github.com/gly11/qmtserver/tree/master/docs"
 
 [project.scripts]
 qmtserver = "qmtserver.cli:main"

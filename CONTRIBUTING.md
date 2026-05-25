@@ -11,6 +11,12 @@ uv run ty check
 uv run python scripts/check_code_health.py
 ```
 
+如果需要在本机直连 MiniQMT 或运行依赖 `xtquant` 的检查，可以安装可选依赖：
+
+```powershell
+uv sync --extra xtquant
+```
+
 ## 代码风格
 
 - 源码放在 `src/qmtserver`。
@@ -75,4 +81,4 @@ docs/<short-topic>
 
 ## 注意事项
 
-`xtquant` 来自本地下载包，当前不从 PyPI 安装。重建 `.venv` 后，需要重新复制到 `.venv\Lib\site-packages\xtquant`。
+服务端运行环境限定为 Windows。`xtquant` 可以通过 `uv sync --extra xtquant` 安装 PyPI 版本，也可以从迅投下载页获取新版后覆盖到 `.venv\Lib\site-packages\xtquant`。不要把 `xtquant` 目录提交到项目根目录。

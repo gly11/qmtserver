@@ -10,6 +10,12 @@ uv run python -c "import xtquant; print(xtquant.__file__)"
 
 如果 `.venv` 被重建，需要重新把下载好的 `xtquant` 复制到 `.venv\Lib\site-packages\xtquant`。
 
+也可以安装 PyPI 版本：
+
+```powershell
+uv sync --extra xtquant
+```
+
 ## MiniQMT 未连接
 
 先启动并登录 MiniQMT，再运行：
@@ -20,7 +26,7 @@ uv run qmtserver check --userdata "C:\国金证券QMT交易端\userdata_mini" --
 
 ## userdata 路径错误
 
-确认传入的是 MiniQMT 的 `userdata_mini` 或 `userdata` 目录，不是安装根目录。
+确认传入的是 MiniQMT / QMT 交易端目录下的 `userdata_mini` 完整路径，不是安装根目录。
 
 ## 端口被占用
 
@@ -41,13 +47,13 @@ Authorization: Bearer <QMT_API_TOKEN>
 WebSocket 本地调试也可以使用：
 
 ```text
-ws://127.0.0.1:8000/ws/events?token=<QMT_API_TOKEN>
+ws://127.0.0.1:8000/v1/ws/events?token=<QMT_API_TOKEN>
 ```
 
 ## trader 未连接
 
-检查 `/qmt/status` 的 `trader.connected`、`account_subscribed` 和 `last_error` 字段。常见原因是 MiniQMT 未登录、账号不匹配、`userdata` 路径错误或交易端口未就绪。
+检查 `/qmt/status` 的 `trader.connected`、`account_subscribed` 和 `last_error` 字段。常见原因是 MiniQMT 未登录、账号不匹配、`userdata_mini` 路径错误或交易端口未就绪。
 
 ## WebSocket 收不到事件
 
-先确认 `/ws/events` 能收到 heartbeat；交易回报事件需要 trader 成功连接并触发对应 xtquant 回调。
+先确认 `/v1/ws/events` 能收到 heartbeat；交易回报事件需要 trader 成功连接并触发对应 xtquant 回调。

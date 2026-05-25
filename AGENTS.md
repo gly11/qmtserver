@@ -14,6 +14,7 @@ qmtserver 是本地 MiniQMT / xtquant 网关服务。当前已完成连接检查
 - 示例脚本放在 `examples/`。
 - 根目录只放项目入口文档、配置和少量标准文件。
 - 不要把 `xtquant` 放回项目根目录；它应安装在 `.venv\Lib\site-packages\xtquant`。
+- PyPI 版 `xtquant` 只能作为可选依赖；不要放进主依赖，避免 CI 和纯客户端开发强制安装。
 - 不要提交 `.venv/`、缓存目录、MiniQMT 用户数据、行情数据或日志。
 
 ## 开发命令
@@ -22,6 +23,7 @@ qmtserver 是本地 MiniQMT / xtquant 网关服务。当前已完成连接检查
 
 ```powershell
 uv sync
+uv sync --extra xtquant
 uv run qmtserver check --skip-quote
 uv run python -m unittest discover
 uv run ruff format .

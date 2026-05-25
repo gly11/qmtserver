@@ -28,7 +28,7 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     check = subparsers.add_parser("check", help="verify MiniQMT connectivity")
-    check.add_argument("--userdata", type=Path, help="MiniQMT userdata directory")
+    check.add_argument("--userdata", type=Path, help="MiniQMT userdata_mini directory")
     check.add_argument("--account-id", help="fund account id")
     check.add_argument("--account-type", default="STOCK", help="account type, default: STOCK")
     check.add_argument("--session-id", type=int, help="xtquant session id")
@@ -40,7 +40,7 @@ def _build_parser() -> argparse.ArgumentParser:
     check.add_argument("--json", action="store_true", help="print machine-readable JSON")
 
     serve = subparsers.add_parser("serve", help="start readonly RPC gateway")
-    serve.add_argument("--userdata", type=Path, help="MiniQMT userdata directory")
+    serve.add_argument("--userdata", type=Path, help="MiniQMT userdata_mini directory")
     serve.add_argument("--account-id", help="fund account id")
     serve.add_argument("--account-type", help="account type")
     serve.add_argument("--host", help="bind host")

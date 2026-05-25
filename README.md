@@ -1,10 +1,16 @@
 # qmtserver
 
-qmtserver 是一个面向 MiniQMT / xtquant 的本地 Python 项目。当前阶段提供连接验证入口，后续会扩展为服务端，作为其他平台和 MiniQMT 通信的中间桥梁。
+qmtserver 是一个面向 MiniQMT / xtquant 的本地 Windows 网关服务。它把只能在 Windows 本机运行的 MiniQMT 能力封装为 HTTP、WebSocket 和 Python SDK，方便其他平台、策略系统或自动化工具通过网络访问。
+
+## 重要说明
+
+- qmtserver 是非官方开源项目，不隶属于迅投、QMT、MiniQMT 或任何券商。
+- 交易相关接口默认关闭，并且默认 dry-run。真实交易必须显式开启交易、关闭 dry-run、通过账号/代码/限额校验并提供确认文本。
+- 本项目不提供投资建议。使用真实交易能力前，请先在模拟或极小规模环境中验证，交易风险由使用者自行承担。
 
 ## 特性
 
-- 使用 uv 管理 Python 3.13 环境。
+- 使用 uv 管理 Python 3.13 环境；服务端运行环境限定为 Windows。
 - 使用标准 `src/` 布局，避免本地路径污染导入结果。
 - 提供 CLI 连接检查命令，可验证行情连接、交易连接、账号订阅和资金查询。
 - 将 MiniQMT 连接逻辑集中在 `qmtserver.miniqmt`，方便后续封装 API 服务。
@@ -26,15 +32,66 @@ qmtserver/
 ## 环境
 
 - Python 3.13
+- Windows
 - uv
 - MiniQMT 客户端已启动并登录
-- 下载好的 `xtquant` 包已复制到当前 uv 虚拟环境的 `site-packages` 中
+- `xtquant` 可通过 PyPI 可选安装，或使用你下载的新版包手动复制到当前 uv 虚拟环境的 `site-packages` 中
 
-如果以后删除并重建 `.venv`，需要把下载好的 `xtquant` 包重新复制到：
+服务端支持范围由 `pyproject.toml` 的 `requires-python` 决定，当前为 `>=3.13,<3.14`。这是因为 qmtserver 服务端依赖 MiniQMT / QMT / `xtquant`，这些运行时目前只面向 Windows，且 `xtquant` 暂不支持 Python 3.14。其他系统可以通过 HTTP、WebSocket 或 Python SDK 作为客户端访问 Windows 上运行的 qmtserver。
+
+## 安装 xtquant
+
+qmtserver 默认不把 `xtquant` 放进主依赖，因为客户端 SDK 和部分开发任务不需要直连 MiniQMT。需要本机连接 MiniQMT 时，可以选择下面两种方式。
+
+CI 固定使用 Windows runner 并安装 `xtquant` extra；不规划 Linux/macOS 服务端 CI。
+
+### 方式一：安装 PyPI 版本
+
+如果只想快速初始化，可以安装 PyPI 上的 `xtquant` 版本。Python 3.13 需要 `xtquant>=250516.1.1`：
+
+```powershell
+uv sync --extra xtquant
+```
+
+### 方式二：下载新版并覆盖安装
+
+如果 PyPI 版本落后于券商客户端随附或迅投发布的版本，可以从迅投知识库下载新版：
+
+- [xtquant 版本下载](https://dict.thinktrader.net/nativeApi/download_xtquant.html)
+
+覆盖安装步骤：
+
+1. 正常同步项目环境：
+
+```powershell
+uv sync
+```
+
+2. 从上面的下载页下载需要的 `xtquant` 压缩包，并解压到临时目录。解压后应能看到 `xtquant` 文件夹。
+
+3. 将解压出来的 `xtquant` 文件夹复制到当前项目虚拟环境：
 
 ```text
 .venv\Lib\site-packages\xtquant
 ```
+
+如果该目录已经存在，先关闭正在运行的 Python、qmtserver、Notebook 等进程，然后用新版 `xtquant` 文件夹覆盖旧目录。
+
+也可以先安装 PyPI 版本，再用下载的新版本覆盖：
+
+```powershell
+uv sync --extra xtquant
+```
+
+4. 验证导入路径：
+
+```powershell
+uv run python -c "import xtquant; print(xtquant.__file__)"
+```
+
+输出路径应位于当前项目的 `.venv\Lib\site-packages\xtquant` 下。
+
+如果以后删除并重建 `.venv`，需要重新执行 PyPI 安装或覆盖安装步骤。
 
 ## 初始化
 
@@ -47,24 +104,24 @@ uv sync
 先启动并登录 MiniQMT，再运行：
 
 ```powershell
-uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata"
+uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini"
 ```
 
 也可以使用模块方式：
 
 ```powershell
-uv run python -m qmtserver check --userdata "D:\path\to\MiniQMT\userdata"
+uv run python -m qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini"
 ```
 
 如果要同时验证交易账号订阅和资金查询：
 
 ```powershell
-uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata" --account-id "你的资金账号"
+uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "你的资金账号"
 ```
 
 常用参数：
 
-- `--userdata`：MiniQMT 安装目录下的 `userdata` 目录，交易连接需要它。
+- `--userdata`：MiniQMT / QMT 交易端目录下的 `userdata_mini` 完整路径，交易连接需要它。
 - `--account-id`：资金账号；传入后会尝试 `subscribe` 和 `query_stock_asset`。
 - `--account-type`：账号类型，默认 `STOCK`。
 - `--quote-code`：用于验证行情接口的证券代码，默认 `000001.SZ`。
@@ -78,7 +135,7 @@ uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata" --account-id "�
 Milestone 1 提供本地 HTTP 只读 RPC 网关：
 
 ```powershell
-uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata" --account-id "你的资金账号"
+uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "你的资金账号"
 ```
 
 默认监听：
@@ -176,7 +233,7 @@ QMT_LOG_JSON=false
 WebSocket 事件流：
 
 ```text
-ws://127.0.0.1:8000/ws/events
+ws://127.0.0.1:8000/v1/ws/events
 ```
 
 配置 token 后可使用 `Authorization: Bearer <token>`，也可以在本地调试时使用 `?token=<token>`。
@@ -233,6 +290,10 @@ Windows 启动脚本：
 - [Milestone 5: WebSocket Events](docs/milestone-5-websocket-events.md)
 - [Milestone 6: Python Client SDK](docs/milestone-6-python-client-sdk.md)
 - [Milestone 7: Observability and Operations](docs/milestone-7-observability-ops.md)
+- [Milestone 8: API Stability and Compatibility](docs/milestone-8-api-stability.md)
+- [Milestone 9: Trading Safety Hardening](docs/milestone-9-trading-safety.md)
+- [Milestone 10: Order State and Event Loop](docs/milestone-10-order-events.md)
+- [Code Quality Track](docs/code-quality.md)
 - [Operations](docs/operations.md)
 - [Troubleshooting](docs/troubleshooting.md)
 

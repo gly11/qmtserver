@@ -177,7 +177,7 @@ uv run qmtserver serve --userdata "C:\国金证券QMT交易端\userdata_mini" --
 连接：
 
 ```text
-ws://127.0.0.1:8000/ws/events
+ws://127.0.0.1:8000/v1/ws/events
 ```
 
 观察连接、断开、账号状态或交易回报事件。
