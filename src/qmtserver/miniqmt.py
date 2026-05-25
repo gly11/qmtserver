@@ -7,7 +7,10 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from qmtserver.events import EventBus
 
 
 @dataclass(frozen=True)
@@ -27,23 +30,48 @@ class TraderCheckConfig:
 
 
 class MiniQmtCallback:
-    def __init__(self) -> None:
+    def __init__(self, event_bus: EventBus | None = None) -> None:
         self.events: list[str] = []
+        self.event_bus = event_bus
 
     def on_connected(self) -> None:
         self.events.append("connected")
+        self._publish("qmt_connected")
 
     def on_disconnected(self) -> None:
         self.events.append("disconnected")
+        self._publish("qmt_disconnected")
 
     def on_account_status(self, status: Any) -> None:
-        self.events.append(f"account_status:{_to_plain(status)}")
+        data = _to_plain(status)
+        self.events.append(f"account_status:{data}")
+        self._publish("account_status", data)
+
+    def on_stock_order(self, order: Any) -> None:
+        data = _to_plain(order)
+        self.events.append(f"stock_order:{data}")
+        self._publish("stock_order", data)
+
+    def on_stock_trade(self, trade: Any) -> None:
+        data = _to_plain(trade)
+        self.events.append(f"stock_trade:{data}")
+        self._publish("stock_trade", data)
 
     def on_order_error(self, order_error: Any) -> None:
-        self.events.append(f"order_error:{_to_plain(order_error)}")
+        data = _to_plain(order_error)
+        self.events.append(f"order_error:{data}")
+        self._publish("order_error", data)
 
     def on_cancel_error(self, cancel_error: Any) -> None:
-        self.events.append(f"cancel_error:{_to_plain(cancel_error)}")
+        data = _to_plain(cancel_error)
+        self.events.append(f"cancel_error:{data}")
+        self._publish("cancel_error", data)
+
+    def _publish(self, event_type: str, data: Any = None) -> None:
+        if self.event_bus is None:
+            return
+        payload = data if isinstance(data, dict) else {"value": data} if data is not None else {}
+        self.event_bus.publish_threadsafe(event_type, payload, {"source": "xtquant"})
 
 
 def build_connectivity_report(

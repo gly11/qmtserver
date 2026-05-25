@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import secrets
 
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, Request, WebSocket, status
 
 from qmtserver.config import Settings
 
@@ -29,6 +29,19 @@ def verify_bearer_token(authorization: str | None, settings: Settings) -> None:
 def authenticate_request(request: Request) -> None:
     settings: Settings = request.app.state.settings
     verify_bearer_token(request.headers.get("Authorization"), settings)
+
+
+def authenticate_websocket(websocket: WebSocket) -> bool:
+    settings: Settings = websocket.app.state.settings
+    token = websocket.query_params.get("token")
+    authorization = websocket.headers.get("Authorization")
+    if token and authorization is None:
+        authorization = f"Bearer {token}"
+    try:
+        verify_bearer_token(authorization, settings)
+    except HTTPException:
+        return False
+    return True
 
 
 def _unauthorized() -> HTTPException:

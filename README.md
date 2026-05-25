@@ -97,6 +97,7 @@ POST /qmt/reconnect
 POST /qmt/disconnect
 GET  /rpc/methods
 POST /rpc
+WS   /ws/events
 ```
 
 RPC 请求示例：
@@ -149,9 +150,19 @@ QMT_MAX_ORDER_AMOUNT=1000000
 QMT_ALLOWED_ACCOUNTS=
 QMT_AUDIT_LOG=true
 QMT_AUDIT_LOG_ARGS=true
+QMT_WS_HEARTBEAT_SECONDS=15
+QMT_WS_CLIENT_QUEUE_SIZE=1000
 ```
 
 `QMT_ENABLE_TRADING=false` 是第一层保护，`QMT_TRADING_DRY_RUN=true` 是第二层保护。只有显式开启交易并关闭 dry-run 后，交易类 RPC 才会调用 xtquant。
+
+WebSocket 事件流：
+
+```text
+ws://127.0.0.1:8000/ws/events
+```
+
+配置 token 后可使用 `Authorization: Bearer <token>`，也可以在本地调试时使用 `?token=<token>`。
 
 ## 开发
 

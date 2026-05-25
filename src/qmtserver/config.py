@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     max_order_volume: int = Field(default=100000, ge=1)
     max_order_amount: float = Field(default=1000000, ge=0)
     allowed_accounts: str | None = None
+    ws_heartbeat_seconds: float = Field(default=15, gt=0)
+    ws_client_queue_size: int = Field(default=1000, ge=1)
     api_token: str | None = None
     require_token: bool = False
     audit_log: bool = True

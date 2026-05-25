@@ -7,6 +7,7 @@ from typing import Any
 
 from qmtserver.config import Settings
 from qmtserver.errors import QmtTargetNotConnectedError, QmtTargetNotFoundError
+from qmtserver.events import EventBus
 from qmtserver.miniqmt import MiniQmtCallback, check_xtquant_import
 
 
@@ -33,9 +34,10 @@ class LifecycleState:
 @dataclass
 class QmtService:
     settings: Settings
+    event_bus: EventBus | None = None
     quote_client: Any = None
     trader: Any = None
-    callback: MiniQmtCallback = field(default_factory=MiniQmtCallback)
+    callback: MiniQmtCallback | None = None
     quote_connected: bool = False
     trader_connected: bool = False
     account_subscribed: bool = False
@@ -43,6 +45,10 @@ class QmtService:
     quote_address: str | None = None
     quote_data_dir: str | None = None
     lifecycle: LifecycleState = field(default_factory=LifecycleState)
+
+    def __post_init__(self) -> None:
+        if self.callback is None:
+            self.callback = MiniQmtCallback(self.event_bus)
 
     def connect(self) -> dict[str, Any]:
         self.disconnect()
@@ -57,8 +63,10 @@ class QmtService:
             if self.settings.connect_trader:
                 self._connect_trader()
             self._mark_success()
+            self._publish_lifecycle_event("qmt_connected")
         except Exception as exc:
             self._mark_error(exc)
+            self._publish_lifecycle_event("qmt_error", {"error": self.lifecycle.last_error})
 
         return self.status()
 
@@ -71,6 +79,7 @@ class QmtService:
         self._disconnect_quote()
         self.lifecycle.state = "disconnected"
         self.lifecycle.last_disconnect_at = _now()
+        self._publish_lifecycle_event("qmt_disconnected")
         return self.status()
 
     def shutdown(self) -> None:
@@ -169,6 +178,7 @@ class QmtService:
         from xtquant.xttype import StockAccount
 
         try:
+            assert self.callback is not None
             self.session_id = _session_id()
             self.trader = XtQuantTrader(str(userdata), self.session_id, self.callback)
             self.trader.set_timeout(self.settings.trader_timeout_ms)
@@ -205,6 +215,16 @@ class QmtService:
         )
         self.lifecycle.last_error = f"{type(exc).__name__}: {exc}"
         self.lifecycle.last_error_at = _now()
+
+    def _publish_lifecycle_event(
+        self,
+        event_type: str,
+        data: dict[str, Any] | None = None,
+    ) -> None:
+        if self.event_bus is None:
+            return
+        payload = data or {"status": self.status()}
+        self.event_bus.publish_threadsafe(event_type, payload, {"source": "qmtserver"})
 
 
 def _session_id() -> int:

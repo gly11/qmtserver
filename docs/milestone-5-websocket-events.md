@@ -2,6 +2,8 @@
 
 Milestone 5 的目标是提供实时事件通道，让外部平台不必轮询就能获得连接状态、账号状态、委托、成交和错误回报。
 
+状态：已完成。
+
 ## 目标
 
 完成后应支持：
@@ -14,6 +16,15 @@ Milestone 5 的目标是提供实时事件通道，让外部平台不必轮询�
 - 客户端断开不影响 MiniQMT 主连接。
 - 多个客户端可同时订阅事件。
 - 事件格式统一、JSON 可编码。
+
+已落地：
+
+- 新增内存 `EventBus`，支持多订阅者广播和慢客户端队列丢弃旧消息。
+- 新增 `WS /ws/events`，支持 bearer header 和 `?token=` 鉴权。
+- WebSocket 空闲时按 `QMT_WS_HEARTBEAT_SECONDS` 发送 heartbeat。
+- `QmtService` 发布连接、断开和错误事件。
+- `MiniQmtCallback` 发布账号状态、委托、成交、下单错误和撤单错误事件。
+- 事件统一为 `{type, ts, data, meta}` JSON 结构。
 
 ## 非目标
 
@@ -183,16 +194,9 @@ Milestone 5 完成时必须满足：
 6. 心跳事件可用。
 7. 自动化测试通过。
 
-## 建议提交顺序
+## 实际提交
 
-```text
-feat(events): add in-memory event bus
-feat(ws): add events websocket endpoint
-feat(qmt): publish lifecycle events
-feat(qmt): publish trader callback events
-test(ws): cover websocket event stream
-docs(milestone): document websocket completion
-```
+代码、测试和文档随 Milestone 5 完成提交。
 
 ## 风险与应对
 

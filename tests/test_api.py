@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from qmtserver.api import create_app
 from qmtserver.config import load_settings
@@ -275,6 +276,43 @@ class ApiTests(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 401)
+
+    def test_websocket_receives_heartbeat(self) -> None:
+        app = create_app(
+            load_settings(auto_connect=False, ws_heartbeat_seconds=0.01),
+            connect_on_startup=False,
+        )
+
+        with TestClient(app) as client, client.websocket_connect("/ws/events") as websocket:
+            event = websocket.receive_json()
+
+        self.assertEqual(event["type"], "heartbeat")
+
+    def test_websocket_receives_published_event(self) -> None:
+        app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
+
+        with TestClient(app) as client, client.websocket_connect("/ws/events") as websocket:
+            app.state.event_bus.publish_threadsafe("qmt_connected", {"ok": True})
+            event = websocket.receive_json()
+
+        self.assertEqual(event["type"], "qmt_connected")
+        self.assertEqual(event["data"], {"ok": True})
+
+    def test_websocket_requires_token_when_configured(self) -> None:
+        app = create_app(
+            load_settings(auto_connect=False, api_token="dev-token"),
+            connect_on_startup=False,
+        )
+
+        with TestClient(app) as client:
+            with self.assertRaises(WebSocketDisconnect), client.websocket_connect("/ws/events"):
+                pass
+
+            with client.websocket_connect("/ws/events?token=dev-token") as websocket:
+                app.state.event_bus.publish_threadsafe("qmt_connected", {"ok": True})
+                event = websocket.receive_json()
+
+        self.assertEqual(event["type"], "qmt_connected")
 
 
 if __name__ == "__main__":

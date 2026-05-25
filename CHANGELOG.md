@@ -9,3 +9,4 @@
 - 增加 MiniQMT 连接生命周期状态、重连、断开和稳定 RPC target 错误码。
 - 增加 bearer token 鉴权、RPC 方法分级、交易保护开关和审计日志。
 - 增加受控交易 RPC、dry-run、账号白名单和下单参数限制。
+- 增加 WebSocket 事件流、内存 EventBus、生命周期事件和交易回调事件。

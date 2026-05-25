@@ -138,7 +138,7 @@ uv run qmtserver check --userdata "..." --account-id "..."
 
 目标：支持实时事件，不再只依赖轮询。
 
-状态：计划中。
+状态：已完成。
 
 详细计划见 [Milestone 5: WebSocket Events](milestone-5-websocket-events.md)。
 
