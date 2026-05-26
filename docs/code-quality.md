@@ -31,26 +31,27 @@ CI 已使用严格模式，提交或 PR 会运行同一套质量门禁。
 截至本计划启动时，最大的源码文件：
 
 ```text
-263  src/qmtserver/trading.py
-255  src/qmtserver/miniqmt.py
+269  src/qmtserver/miniqmt.py
+265  src/qmtserver/trading.py
 254  src/qmtserver/services/qmt_service.py
-203  src/qmtserver/client/client.py
-193  src/qmtserver/rpc/dispatcher.py
+244  src/qmtserver/client/client.py
+201  src/qmtserver/trader/service.py
 ```
 
 最大的测试文件：
 
 ```text
-459  tests/test_rpc.py
-433  tests/test_api.py
-185  tests/test_client.py
+243  tests/test_client.py
+242  tests/fakes.py
+169  tests/test_trader_service.py
 ```
 
 结论：
 
-- 源码没有超过 300 行，暂不需要强制拆分。
-- `tests/test_rpc.py` 和 `tests/test_api.py` 已超过 400 行评估线，应优先拆分。
-- 后续如果 `trading.py`、`miniqmt.py` 或 `qmt_service.py` 继续增长，应按领域拆分。
+- 源码和测试文件都没有超过 300 行，暂不需要强制拆分。
+- `api.create_app`、`rpc.dispatcher.dispatch` 和 `miniqmt.check_trader_connection` 已超过 50 行，
+  后续继续增长时优先提取 helper。
+- 后续如果 `miniqmt.py`、`trading.py`、`qmt_service.py` 或 `client.py` 继续增长，应按领域拆分。
 
 ## 优化路线
 

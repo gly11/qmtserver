@@ -34,6 +34,7 @@ qmtserver 当前已经具备一个安全优先的本地网关基础：
 - 日志、metrics、request ID 和 Windows helper scripts。
 - 稳定行情 API、daily/intraday bars schema、snapshot/export、history job、diagnostics、
   reference 和 data quality endpoints。
+- 稳定只读交易查询 API：account status、asset、positions、orders 和 trades。
 
 ## Adapter Direction
 
@@ -42,7 +43,7 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 
 ### Readonly Trading Queries
 
-优先适配风险较低、价值较高的只读交易查询：
+继续完善风险较低、价值较高的只读交易查询：
 
 - 账号状态。
 - 资金资产。

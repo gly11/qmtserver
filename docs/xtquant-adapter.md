@@ -99,6 +99,40 @@ real smoke:
 Verify daily bars, intraday bars, snapshot creation, snapshot quality, and history jobs against a
 logged-in MiniQMT before release.
 
+### Readonly Trader Queries
+
+qmtserver surface:
+`GET /v1/trader/account-status`, `GET /v1/trader/asset`, `GET /v1/trader/positions`,
+`GET /v1/trader/orders`, and `GET /v1/trader/trades`.
+
+upstream:
+`XtQuantTrader.query_account_status`, `query_stock_asset`, `query_stock_positions`,
+`query_stock_orders`, and `query_stock_trades`.
+
+observed signature:
+Account-specific methods accept a `xtquant.xttype.StockAccount`. `query_stock_orders` also accepts a
+`cancelable_only` boolean.
+
+input conversion:
+qmtserver resolves `account_id` from the request, then `QMT_ACCOUNT_ID`. It converts the stable
+`account_id` and `account_type` pair to `StockAccount` at the service boundary.
+
+output normalization:
+Responses use `trader.readonly.v1`. Known fields are lifted into stable JSON keys. Additional public
+upstream fields are preserved under `extra`; private fields are dropped.
+
+error mapping:
+Missing account configuration maps to `TRADER_ACCOUNT_REQUIRED`. Disconnected trader targets map to
+`TARGET_NOT_CONNECTED`. Unexpected failures stay in the standard envelope as `QMT_SERVER_ERROR`.
+
+unit tests:
+`tests/test_trader_service.py`, `tests/test_api_trader.py`, and `tests/test_client.py`.
+
+real smoke:
+With MiniQMT logged in and a safe account configured, verify `/v1/trader/asset`,
+`/v1/trader/positions`, `/v1/trader/orders`, and `/v1/trader/trades`. Do not use real order or
+cancel methods for this smoke gate.
+
 ## Real MiniQMT Smoke Gate
 
 Before release, run the normal quality gate, then run a real MiniQMT check on a Windows machine with

@@ -16,6 +16,21 @@ print(client.rpc("xtdata", "get_full_tick", [["000001.SZ"]]))
 print(client.xtdata.get_full_tick(["000001.SZ"]))
 ```
 
+## Readonly Trader Helpers
+
+内置客户端提供少量稳定 trader 查询 helper，用于验证 qmtserver `/v1/trader` 契约：
+
+```python
+client.trader_account_status()
+client.trader_asset(account_id="10001")
+client.trader_positions(account_id="10001")
+client.trader_orders(account_id="10001", cancelable_only=True)
+client.trader_trades(account_id="10001")
+```
+
+这些 helper 调用稳定 HTTP API，不走动态 RPC 代理。`client.trader` 仍保留为 `trader`
+target 的 RPC proxy。
+
 ## Version Prefix
 
 默认会调用 `/v1`：

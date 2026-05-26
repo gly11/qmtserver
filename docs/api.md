@@ -10,6 +10,11 @@ GET  /v1/qmt/status
 POST /v1/qmt/connect
 POST /v1/qmt/reconnect
 POST /v1/qmt/disconnect
+GET  /v1/trader/account-status
+GET  /v1/trader/asset
+GET  /v1/trader/positions
+GET  /v1/trader/orders
+GET  /v1/trader/trades
 GET  /v1/market/capabilities
 GET  /v1/market/bars/daily
 GET  /v1/market/bars/intraday
@@ -36,6 +41,52 @@ GET  /v1/trades
 GET  /v1/events/recent
 WS   /v1/ws/events
 ```
+
+## Trader Readonly API
+
+`/v1/trader` exposes stable readonly account query endpoints. These endpoints do not require
+`QMT_ENABLE_TRADING=true` and do not place or cancel orders. They require the trader target to be
+connected. Account-specific endpoints resolve `account_id` from the query string first, then from
+`QMT_ACCOUNT_ID`.
+
+```text
+GET /v1/trader/account-status
+GET /v1/trader/asset?account_id=10001&account_type=STOCK
+GET /v1/trader/positions?account_id=10001
+GET /v1/trader/orders?account_id=10001&cancelable_only=true
+GET /v1/trader/trades?account_id=10001
+```
+
+All trader readonly responses use the `trader.readonly.v1` schema and the standard qmtserver
+envelope:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "asset": {
+      "account_id": "10001",
+      "cash": 1000.0,
+      "frozen_cash": 0.0,
+      "market_value": 2000.0,
+      "total_asset": 3000.0,
+      "fetch_balance": 1000.0,
+      "extra": {}
+    }
+  },
+  "error": null,
+  "meta": {
+    "schema": "trader.readonly.v1",
+    "qmtserver_version": "0.3.0",
+    "xtquant_version": null,
+    "account_id": "***",
+    "account_type": "STOCK"
+  }
+}
+```
+
+Missing account configuration returns `TRADER_ACCOUNT_REQUIRED`. A disconnected trader target
+returns `TARGET_NOT_CONNECTED`.
 
 ## Market Data API
 
