@@ -29,12 +29,12 @@ MiniQMT
 - 内置 Python 兼容客户端。
 - 日志、指标、request ID 和 Windows 启动脚本。
 
-## 0.2.0: 计划中
+## 0.2.0: 已完成
 
 `0.2.0` 聚焦透明 RPC 实验模式。该模式默认关闭，用于在明确授权后探索白名单外的公开
 `xtquant` 方法。
 
-详细计划见 [Transparent RPC](transparent-rpc.md)。
+详细设计和使用说明见 [Transparent RPC](transparent-rpc.md)。
 
 ## 1.0.0: 远期稳定版
 

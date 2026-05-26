@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-RpcMethodLevel = Literal["readonly", "trading", "admin"]
+RpcMethodLevel = Literal["readonly", "trading", "admin", "transparent"]
 
 
 @dataclass(frozen=True)

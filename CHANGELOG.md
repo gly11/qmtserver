@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+
+- 增加默认关闭的透明 RPC 实验模式。
+- 增加 `QMT_TRANSPARENT_RPC`、`QMT_TRANSPARENT_RPC_TARGETS`、
+  `QMT_TRANSPARENT_RPC_ALLOW_TRADER` 和 `QMT_TRANSPARENT_RPC_ALLOW_TRADING` 配置。
+- 透明 RPC 默认只允许 `xtdata`，默认拒绝 `trader` 白名单外方法。
+- 拒绝私有方法、dunder 方法、非法方法名和疑似交易方法。
+- 透明调用保留 token 鉴权、审计日志、metrics 和标准 RPC 响应结构。
+- 补充透明 RPC 文档、错误码和测试。
+
 ## 0.1.0
 
 - 初始化 uv / Python 3.13 项目。

@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     connect_quote: bool = True
     connect_trader: bool = True
     trader_timeout_ms: int = Field(default=5000, ge=1)
+    transparent_rpc: bool = False
+    transparent_rpc_targets: str = "xtdata"
+    transparent_rpc_allow_trader: bool = False
+    transparent_rpc_allow_trading: bool = False
 
     @model_validator(mode="after")
     def validate_token_requirement(self) -> Settings:
@@ -69,6 +73,9 @@ class Settings(BaseSettings):
 
     def trading_blocked_symbols(self) -> set[str]:
         return _split_csv(self.blocked_symbols)
+
+    def transparent_rpc_allowed_targets(self) -> set[str]:
+        return _split_csv(self.transparent_rpc_targets)
 
 
 def load_settings(**overrides: Any) -> Settings:

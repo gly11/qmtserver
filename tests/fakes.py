@@ -7,8 +7,16 @@ from qmtserver.trading import DailyTradingLimits
 
 
 class FakeTarget:
+    non_callable = "not callable"
+
     def get_full_tick(self, codes: list[str]) -> dict[str, object]:
         return {"codes": codes}
+
+    def get_sector_list(self) -> list[str]:
+        return ["沪深A股"]
+
+    def _private(self) -> str:
+        return "secret"
 
 
 class FakeTrader:
@@ -41,6 +49,10 @@ class FakeService:
         daily_max_order_volume: int = 1000000,
         daily_max_order_amount: float = 5000000,
         require_trade_confirmation: bool = True,
+        transparent_rpc: bool = False,
+        transparent_rpc_targets: str = "xtdata",
+        transparent_rpc_allow_trader: bool = False,
+        transparent_rpc_allow_trading: bool = False,
     ) -> None:
         self.settings = load_settings(
             auto_connect=False,
@@ -54,6 +66,10 @@ class FakeService:
             daily_max_order_volume=daily_max_order_volume,
             daily_max_order_amount=daily_max_order_amount,
             require_trade_confirmation=require_trade_confirmation,
+            transparent_rpc=transparent_rpc,
+            transparent_rpc_targets=transparent_rpc_targets,
+            transparent_rpc_allow_trader=transparent_rpc_allow_trader,
+            transparent_rpc_allow_trading=transparent_rpc_allow_trading,
         )
         self.connected = False
         self.trader = FakeTrader()

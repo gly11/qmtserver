@@ -23,7 +23,7 @@ class ApiSecurityTests(unittest.TestCase):
 
     def test_protected_routes_require_token_when_configured(self) -> None:
         app = create_app(
-            load_settings(auto_connect=False, api_token="dev-token"),
+            load_settings(auto_connect=False, api_token="dev-token", transparent_rpc=True),
             connect_on_startup=False,
         )
 
@@ -33,7 +33,7 @@ class ApiSecurityTests(unittest.TestCase):
             methods = client.get("/rpc/methods")
             rpc = client.post(
                 "/rpc",
-                json={"target": "xtdata", "method": "get_full_tick", "args": [], "kwargs": {}},
+                json={"target": "xtdata", "method": "get_sector_list", "args": [], "kwargs": {}},
             )
 
         self.assertEqual(status.status_code, 401)

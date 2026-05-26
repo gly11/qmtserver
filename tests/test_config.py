@@ -36,6 +36,10 @@ class SettingsTests(unittest.TestCase):
         self.assertTrue(settings.connect_on_startup)
         self.assertTrue(settings.connect_quote)
         self.assertTrue(settings.connect_trader)
+        self.assertFalse(settings.transparent_rpc)
+        self.assertEqual(settings.transparent_rpc_allowed_targets(), {"xtdata"})
+        self.assertFalse(settings.transparent_rpc_allow_trader)
+        self.assertFalse(settings.transparent_rpc_allow_trading)
 
     def test_overrides(self) -> None:
         settings = load_settings(userdata=Path("userdata_mini"), account_id="10001", port=9000)
@@ -66,6 +70,11 @@ class SettingsTests(unittest.TestCase):
 
         self.assertEqual(settings.trading_allowed_symbols(), {"000001.SZ", "600000.SH"})
         self.assertEqual(settings.trading_blocked_symbols(), {"300001.SZ"})
+
+    def test_transparent_rpc_targets_parse_comma_list(self) -> None:
+        settings = load_settings(transparent_rpc_targets="xtdata, trader")
+
+        self.assertEqual(settings.transparent_rpc_allowed_targets(), {"xtdata", "trader"})
 
 
 if __name__ == "__main__":

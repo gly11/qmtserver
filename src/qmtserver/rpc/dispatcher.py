@@ -11,6 +11,7 @@ from qmtserver.errors import QmtServerError, QmtTradingDisabledError
 from qmtserver.rpc.registry import RpcMethodSpec, get_method_spec
 from qmtserver.rpc.responses import error_response, success_response
 from qmtserver.rpc.serializers import convert_input, to_jsonable
+from qmtserver.rpc.transparent import transparent_method_decision
 from qmtserver.rpc.types import RpcResponse
 from qmtserver.trading import TradingDetails, TradingKwargs, prepare_trading_call
 
@@ -51,13 +52,22 @@ class RpcDispatcher:
 
         try:
             if spec is None:
-                result = error_response(
-                    call,
-                    "METHOD_NOT_ALLOWED",
-                    f"RPC method is not allowed: {call.target}.{call.method}",
-                    started_at,
+                decision = transparent_method_decision(
+                    self.service.settings,
+                    call.target,
+                    call.method,
                 )
-                return result
+                if decision.spec is None:
+                    result = error_response(
+                        call,
+                        decision.error_code or "METHOD_NOT_ALLOWED",
+                        decision.message
+                        or f"RPC method is not allowed: {call.target}.{call.method}",
+                        started_at,
+                        decision.level,
+                    )
+                    return result
+                spec = decision.spec
 
             if spec.level == "trading" and not self.service.settings.enable_trading:
                 raise QmtTradingDisabledError("Trading RPC methods are disabled")
@@ -75,7 +85,7 @@ class RpcDispatcher:
             if spec.level == "trading":
                 result = self._dispatch_trading(call, state)
             else:
-                result = self._dispatch_method(call, "readonly", call.kwargs, state)
+                result = self._dispatch_method(call, spec.level, call.kwargs, state)
             return result
         except QmtServerError as exc:
             result = error_response(
