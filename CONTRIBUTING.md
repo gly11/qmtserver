@@ -11,6 +11,10 @@ uv run ty check
 uv run python scripts/check_code_health.py
 ```
 
+默认开发环境可以不安装 `xtquant`。不直连 MiniQMT 的单元测试、ruff 和 ty 门禁应在缺少
+`xtquant` 时继续可运行；涉及真实行情、交易连接或 `qmtserver check` 的验证仍需要 Windows、
+MiniQMT 和下面的可选依赖。
+
 如果需要在本机直连 MiniQMT 或运行依赖 `xtquant` 的检查，可以安装可选依赖：
 
 ```powershell

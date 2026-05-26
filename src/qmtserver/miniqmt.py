@@ -6,6 +6,7 @@ import random
 import sys
 import time
 from dataclasses import dataclass
+from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -125,7 +126,7 @@ def build_connectivity_report(
 
 def check_xtquant_import() -> dict[str, Any]:
     try:
-        import xtquant
+        xtquant = load_xtquant_module()
 
         package_file = Path(xtquant.__file__).resolve()
         return {
@@ -139,7 +140,7 @@ def check_xtquant_import() -> dict[str, Any]:
 
 def check_quote_connection(config: QuoteCheckConfig) -> dict[str, Any]:
     try:
-        from xtquant import xtdata
+        xtdata = load_xtdata_module()
 
         client = xtdata.reconnect(
             ip=config.ip,
@@ -177,8 +178,7 @@ def check_trader_connection(config: TraderCheckConfig) -> dict[str, Any]:
     callback = MiniQmtCallback()
 
     try:
-        from xtquant.xttrader import XtQuantTrader
-        from xtquant.xttype import StockAccount
+        XtQuantTrader, StockAccount = load_trader_classes()
 
         session_id = config.session_id or _make_session_id()
         trader = XtQuantTrader(str(userdata), session_id, callback)
@@ -229,6 +229,20 @@ def check_trader_connection(config: TraderCheckConfig) -> dict[str, Any]:
 
 def _make_session_id() -> int:
     return int(time.time()) % 1_000_000_000 + random.randint(1, 999)
+
+
+def load_xtquant_module() -> Any:
+    return import_module("xtquant")
+
+
+def load_xtdata_module() -> Any:
+    return import_module("xtquant.xtdata")
+
+
+def load_trader_classes() -> tuple[type[Any], type[Any]]:
+    xttrader = import_module("xtquant.xttrader")
+    xttype = import_module("xtquant.xttype")
+    return xttrader.XtQuantTrader, xttype.StockAccount
 
 
 def _format_exception(exc: Exception) -> str:

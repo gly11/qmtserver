@@ -8,7 +8,12 @@ from typing import Any
 from qmtserver.config import Settings
 from qmtserver.errors import QmtTargetNotConnectedError, QmtTargetNotFoundError
 from qmtserver.events import EventBus
-from qmtserver.miniqmt import MiniQmtCallback, check_xtquant_import
+from qmtserver.miniqmt import (
+    MiniQmtCallback,
+    check_xtquant_import,
+    load_trader_classes,
+    load_xtdata_module,
+)
 from qmtserver.observability import Metrics
 from qmtserver.orders import OrderStore
 from qmtserver.trading import DailyTradingLimits
@@ -111,8 +116,7 @@ class QmtService:
     def _disconnect_quote(self) -> None:
         if self.quote_client is not None:
             with contextlib.suppress(Exception):
-                from xtquant import xtdata
-
+                xtdata = load_xtdata_module()
                 xtdata.disconnect()
         self.quote_client = None
         self.quote_connected = False
@@ -155,9 +159,7 @@ class QmtService:
         if target == "xtdata":
             if not self.quote_connected:
                 raise QmtTargetNotConnectedError("xtdata target is not connected")
-            from xtquant import xtdata
-
-            return xtdata
+            return load_xtdata_module()
         if target == "trader":
             if self.trader is None or not self.trader_connected:
                 raise QmtTargetNotConnectedError("trader target is not connected")
@@ -165,7 +167,7 @@ class QmtService:
         raise QmtTargetNotFoundError(f"unsupported rpc target: {target}")
 
     def _connect_quote(self) -> None:
-        from xtquant import xtdata
+        xtdata = load_xtdata_module()
 
         self.quote_client = xtdata.reconnect()
         self.quote_connected = bool(self.quote_client and self.quote_client.is_connected())
@@ -182,8 +184,7 @@ class QmtService:
         if not userdata.exists():
             raise FileNotFoundError(f"userdata path does not exist: {userdata}")
 
-        from xtquant.xttrader import XtQuantTrader
-        from xtquant.xttype import StockAccount
+        XtQuantTrader, StockAccount = load_trader_classes()
 
         try:
             assert self.callback is not None

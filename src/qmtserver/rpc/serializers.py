@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
 from typing import Any
+
+
+@dataclass(frozen=True)
+class StockAccountValue:
+    account_id: str
+    account_type: str = "STOCK"
 
 
 def convert_input(value: Any) -> Any:
@@ -65,5 +72,7 @@ def _stock_account_class() -> type[Any]:
     try:
         module = import_module("xtquant.xttype")
     except ModuleNotFoundError as exc:
-        raise RuntimeError("xtquant is required to build StockAccount values") from exc
+        if exc.name is not None and not exc.name.startswith("xtquant"):
+            raise
+        return StockAccountValue
     return module.StockAccount
