@@ -8,7 +8,7 @@ from qmtserver.config import load_settings
 
 class SettingsTests(unittest.TestCase):
     def test_defaults(self) -> None:
-        settings = load_settings()
+        settings = load_settings(_env_file=None)
 
         self.assertEqual(settings.host, "127.0.0.1")
         self.assertEqual(settings.port, 8000)
@@ -50,7 +50,7 @@ class SettingsTests(unittest.TestCase):
 
     def test_require_token_requires_api_token(self) -> None:
         with self.assertRaises(ValueError):
-            load_settings(require_token=True, api_token="")
+            load_settings(_env_file=None, require_token=True, api_token="")
 
     def test_trading_allowed_accounts_falls_back_to_account_id(self) -> None:
         settings = load_settings(account_id="10001")

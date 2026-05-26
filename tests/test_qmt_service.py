@@ -12,6 +12,7 @@ class FakeLifecycleService(QmtService):
     def __init__(self) -> None:
         super().__init__(
             load_settings(
+                _env_file=None,
                 auto_connect=False,
                 connect_quote=True,
                 connect_trader=False,
@@ -34,7 +35,7 @@ class FakeLifecycleService(QmtService):
 
 class FailingQuoteService(QmtService):
     def __init__(self) -> None:
-        super().__init__(load_settings(auto_connect=False, connect_trader=False))
+        super().__init__(load_settings(_env_file=None, auto_connect=False, connect_trader=False))
 
     def _connect_quote(self) -> None:
         raise RuntimeError("quote unavailable")
@@ -86,7 +87,7 @@ class QmtServiceLifecycleTests(unittest.TestCase):
         self.assertIsNone(status["trader"]["userdata"])
 
     def test_get_target_raises_stable_errors(self) -> None:
-        service = QmtService(load_settings(auto_connect=False, connect_quote=False))
+        service = QmtService(load_settings(_env_file=None, auto_connect=False, connect_quote=False))
 
         with self.assertRaises(QmtTargetNotConnectedError):
             service.get_target("xtdata")

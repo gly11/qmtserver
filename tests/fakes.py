@@ -106,6 +106,7 @@ class FakeService:
         snapshot_dir: Path | None = None,
     ) -> None:
         self.settings = load_settings(
+            _env_file=None,
             auto_connect=False,
             enable_trading=enable_trading,
             trading_dry_run=trading_dry_run,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Protocol
 
 from qmtserver.market.models import MarketRequest
@@ -26,7 +27,23 @@ class XtDataMarketAdapter:
             field_list=[],
             stock_list=request.symbols,
             period=period,
-            start_time=request.start or "",
-            end_time=request.end or "",
+            start_time=_xtdata_time(request.start),
+            end_time=_xtdata_time(request.end),
             dividend_type=request.adjust,
         )
+
+
+def _xtdata_time(value: str | None) -> str:
+    if not value:
+        return ""
+    if value.isdigit():
+        return value
+    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S%z"):
+        try:
+            parsed = datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+        if "T" in value:
+            return parsed.strftime("%Y%m%d%H%M%S")
+        return parsed.strftime("%Y%m%d")
+    return value

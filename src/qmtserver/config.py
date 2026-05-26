@@ -80,7 +80,9 @@ class Settings(BaseSettings):
 
 
 def load_settings(**overrides: Any) -> Settings:
-    values = {key: value for key, value in overrides.items() if value is not None}
+    values = {
+        key: value for key, value in overrides.items() if value is not None or key.startswith("_")
+    }
     return Settings(**values)
 
 
