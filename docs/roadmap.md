@@ -1,79 +1,134 @@
 # Development Roadmap
 
 qmtserver 的目标是让一台已登录 MiniQMT 的 Windows 电脑成为受控网关。其他机器通过
-HTTP RPC、WebSocket 或独立客户端项目 qmtclient 访问它，而不直接安装或适配 `xtquant`。
+HTTP API、WebSocket 或独立客户端项目 qmtclient 访问它，而不直接安装或适配 `xtquant`。
 
 ```text
 remote tools / strategies / qmtclient
         |
-HTTP RPC / WebSocket
+HTTP API / WebSocket
         |
 qmtserver
         |
-xtquant
+xtquant adapters
         |
 MiniQMT
 ```
 
-## 0.1.0: 已完成
+路线图按能力方向维护，不精确绑定版本号。具体已发布版本和发布门禁见
+[Release Plan](release-plan.md)。
 
-`0.1.0` 是安全远程网关 MVP，已经包含：
+## Completed Foundation
 
-- CLI 连接检查。
+qmtserver 当前已经具备一个安全优先的本地网关基础：
+
+- CLI MiniQMT 连接检查。
 - `/v1` HTTP API。
-- RPC 方法白名单。
+- allowlisted RPC forwarding。
+- 默认关闭的 transparent RPC 探索模式。
 - token 鉴权。
 - 交易保护、dry-run、账号/代码/限额校验、确认文本和审计日志。
 - WebSocket 事件。
 - 订单、成交和事件内存缓存。
-- 内置 Python 兼容客户端。
-- 日志、指标、request ID 和 Windows 启动脚本。
+- 内置 Python 兼容客户端；独立客户端能力由 qmtclient 项目承接。
+- 日志、metrics、request ID 和 Windows helper scripts。
+- 稳定行情 API、daily/intraday bars schema、snapshot/export、history job、diagnostics、
+  reference 和 data quality endpoints。
 
-## 0.2.0: 已完成
+## Adapter Direction
 
-`0.2.0` 聚焦透明 RPC 实验模式。该模式默认关闭，用于在明确授权后探索白名单外的公开
-`xtquant` 方法。
+qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把高价值能力逐步适配成稳定、
+可测试、可运维的 qmtserver 契约。适配规则见 [xtquant Adapter Guide](xtquant-adapter.md)。
 
-详细设计和使用说明见 [Transparent RPC](transparent-rpc.md)。
+### Readonly Trading Queries
 
-## 0.3.0: 已完成
+优先适配风险较低、价值较高的只读交易查询：
 
-`0.3.0` 是稳定行情数据版本，目标是让策略和回测系统不再依赖 `/v1/rpc` 与 `xtdata` 原始返回
-形态，而是消费 qmtserver 自己承诺的稳定数据契约。
+- 账号状态。
+- 资金资产。
+- 持仓。
+- 当日委托。
+- 当日成交。
+- 可撤委托。
 
-已完成能力：
+这些接口应返回稳定 JSON schema，不暴露原始 `xtquant` 对象。账号 ID 必须脱敏进入日志，
+真实账号查询需要沿用 token、安全边界和审计规则。
 
-- whitelist-only 的 `/v1/market` 行情 API，不依赖 transparent RPC。
-- 标准化 daily bars 和 intraday bars，包含固定 OHLCV/amount 字段和 per-row `meta`。
-- 行情响应 metadata，包含 request params、row_count、generated_at、qmtserver version 和
-  xtquant version。
-- 空数据、未连接、无权限、方法不允许、数据源异常和参数非法的稳定错误语义。
-- capability endpoint，返回 supported methods、schema versions、periods 和 adjust modes。
-- CSV snapshot/export、manifest、registry、download 和 snapshot 质量报告。
-- 历史下载 job create/status/result/cancel，job result 可关联 snapshot manifest。
-- diagnostics endpoint、job metrics、交易日历、标的列表、instrument detail 和 bars 质量报告。
+### Market Data Depth
 
-详细 milestone 计划已归档到 [Archived Milestone Plans](archive/milestones/README.md)。
+继续扩展行情数据能力，但保持显式 API 优先：
 
-## 1.0.0: 远期稳定版
+- 历史数据下载和补齐。
+- 批量历史数据任务。
+- 本地缓存状态和缺失数据诊断。
+- 交易日历、标的池和 instrument detail 的更完整字段。
+- 可选的 Level2、逐笔、盘口等高阶行情能力。
 
-`1.0.0` 代表 qmtserver 的服务端 API、错误码、WebSocket 事件结构、交易保护语义和运维文档
-进入稳定承诺期。
+这些能力需要明确区分“从本地缓存读取”和“触发 MiniQMT 下载”的行为，避免用户误以为所有
+接口都是即时、无副作用、无等待的查询。
 
-进入 `1.0.0` 前至少需要完成真实 Windows + MiniQMT 集成 smoke、qmtclient 兼容验证、schema
-version 稳定性审查和长期运行诊断验证。
+### Subscriptions And Events
 
-## 边界
+在稳定查询 API 之后，逐步增强订阅和事件：
 
-- qmtclient 已拆为独立项目；客户端 SDK 规划在 qmtclient 中维护。
-- qmtserver 负责稳定服务端契约、MiniQMT 连接、`xtquant` 适配、行情 schema 标准化、RPC 安全
+- `xtdata.subscribe_quote` 适配。
+- 实时行情事件标准化。
+- 断线重连后的重订阅。
+- WebSocket backpressure 和事件缓存策略。
+- 订阅生命周期管理 API。
+
+订阅类能力应明确连接、取消订阅、心跳、错误事件和客户端断开后的服务端行为。
+
+### Trading Expansion
+
+交易能力继续放在更严格的安全边界内推进：
+
+- 下单和撤单保持默认关闭。
+- 真实交易必须显式开启，并继续要求 dry-run 关闭、账号 allowlist、symbol allowlist 或
+  blocklist、限额、确认文本和审计日志。
+- 融资融券、银证转账、期权、期货或其他账户状态变更接口必须单独评审。
+- 普通 CI 和默认 smoke test 不执行真实交易。
+
+交易接口不追求覆盖速度，优先保证误用成本高、日志可追溯、失败语义稳定。
+
+### Compatibility Matrix
+
+建立 `xtquant` 兼容性记录：
+
+- 本地 `xtquant` 版本。
+- 关键函数签名。
+- 输入格式差异，例如日期和时间格式。
+- 返回对象和字段变化。
+- 已覆盖的单元测试。
+- 已完成的真实 MiniQMT smoke 项。
+
+兼容矩阵应帮助判断升级 `xtquant` 包后哪些适配需要复测，而不是假设上游文档和当前行为总是
+一致。
+
+## Stabilization Goals
+
+qmtserver 进入长期稳定阶段前，需要持续强化：
+
+- API schema 和错误码稳定性。
+- Windows + MiniQMT 真实 smoke 流程。
+- qmtclient 兼容性验证。
+- 长时间运行诊断。
+- 日志、metrics 和事件追踪。
+- 安全配置文档和部署建议。
+- 发布流程和回滚说明。
+
+稳定版本代表服务端 API、错误码、WebSocket 事件结构、交易保护语义和运维文档进入承诺期。
+
+## Boundaries
+
+- qmtserver 负责服务端契约、MiniQMT 连接、`xtquant` 适配、行情 schema 标准化、RPC 安全
   边界、交易保护、snapshot manifest 和运维诊断。
-- qmtclient 负责 Python 友好的 facade、类型模型、DataFrame 转换、job polling helper 和本地
-  fixture；策略和回测系统应消费 qmtserver 稳定 schema，不直接依赖 `xtdata` 原始形态。
-- 没有明确版本计划的想法暂不写入路线图。
+- qmtclient 是独立客户端项目；Python 友好的 facade、类型模型、DataFrame 转换、job polling
+  helper 和本地 fixture 由 qmtclient 承接。
+- Transparent RPC 是探索和调试能力，不等同于稳定 API。
+- 没有明确使用场景、测试策略和安全边界的想法暂不进入路线图。
 
-详细发布节奏见 [Release Plan](release-plan.md)。
+## Historical Plans
 
-## 历史计划
-
-已完成 milestone 文档已归档到 [Archived Milestone Plans](archive/milestones/README.md)。这些文档仅用于追溯设计演进。
+已完成 milestone 文档归档在 [Archived Milestone Plans](archive/milestones/README.md)。这些文档
+仅用于追溯设计演进，不代表当前路线图仍按固定 milestone 推进。

@@ -35,8 +35,9 @@ API routes should stay thin. They should parse requests, enforce authentication,
 assemble responses. Business logic belongs in service, RPC, trading, event, order, serialization, or
 audit modules.
 
-RPC is not an arbitrary `xtquant` proxy in `0.1.0`. Requests must pass through the method registry.
-Trading methods must also pass server-side trading guards.
+RPC is not an arbitrary `xtquant` proxy by default. Requests must pass through the method registry or
+the explicitly enabled transparent RPC policy. Trading methods must also pass server-side trading
+guards.
 
 qmtclient is a separate client project. qmtserver documentation should describe the server API,
 runtime, security, and compatibility boundary; client-side SDK planning belongs in qmtclient.
