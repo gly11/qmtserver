@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+
+- 增加稳定 `/v1/market` 行情 API，覆盖 capabilities、daily bars 和 intraday bars。
+- 标准化 bars 响应 schema、metadata、空数据和行情错误语义。
+- 增加 snapshot/export API，支持 CSV snapshot、manifest、registry、下载和质量报告。
+- 增加历史下载 job API，支持 create/status/result/cancel 和 snapshot result。
+- 增加 diagnostics endpoint 和 job metrics，便于检查 MiniQMT、行情源和服务端时钟状态。
+- 增加交易日历、标的列表、instrument detail 和数据质量标准接口。
+- 更新 API、错误码、roadmap、release plan 和 milestone 归档文档。
+
 ## 0.2.0
 
 - 增加默认关闭的透明 RPC 实验模式。

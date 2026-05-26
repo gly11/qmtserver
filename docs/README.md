@@ -5,7 +5,6 @@
 - [Architecture](architecture.md)：当前架构和后续服务端方向。
 - [Installation](installation.md)：Windows、Python 和 `xtquant` 安装说明。
 - [Development Roadmap](roadmap.md)：整体开发路线和版本节奏。
-- [Active Milestone Plans](milestones/README.md)：当前主线的详细开发计划和验收标准。
 - [Release Plan](release-plan.md)：版本定位、发布门禁和后续节奏。
 - [API Reference](api.md)：稳定 HTTP RPC 和 WebSocket 契约。
 - [Error Codes](errors.md)：错误码和错误响应结构。
@@ -14,7 +13,7 @@
 - [Code Quality Track](code-quality.md)：代码健康基线、阈值和优化路线。
 - [Operations](operations.md)：本机运行、日志和健康检查。
 - [Troubleshooting](troubleshooting.md)：常见连接、鉴权和事件问题排查。
-- [Archived Milestone Plans](archive/milestones/README.md)：早期开发阶段计划归档。
+- [Archived Milestone Plans](archive/milestones/README.md)：已完成 milestone 详细计划归档。
 
 原则：
 

@@ -20,6 +20,9 @@ HTTP RPC 和 WebSocket，方便其他机器通过网络访问。
 
 - CLI 连接检查：验证行情连接、交易连接、账号订阅和资金查询。
 - 本地 HTTP RPC 网关：提供 `/v1/rpc` 和白名单方法转发。
+- 稳定行情 API：提供 capabilities、daily bars、intraday bars 和标准 metadata。
+- Snapshot 与历史任务：支持 CSV snapshot、manifest、下载任务和运行诊断。
+- 数据准备接口：提供交易日历、标的列表、instrument detail 和数据质量报告。
 - 透明 RPC 实验模式：显式开启后可受控探索白名单外的公开 `xtquant` 方法。
 - 交易保护：token 鉴权、交易开关、dry-run、账号/代码/限额校验和审计日志。
 - WebSocket 事件：推送连接状态、委托回报、成交回报和错误事件。
@@ -62,6 +65,14 @@ http://127.0.0.1:8000
 ```text
 GET  /v1/health
 GET  /v1/qmt/status
+GET  /v1/market/capabilities
+GET  /v1/market/bars/daily
+GET  /v1/market/bars/intraday
+POST /v1/snapshots
+POST /v1/jobs/history-download
+GET  /v1/diagnostics
+GET  /v1/reference/calendar
+GET  /v1/quality/bars
 GET  /v1/rpc/methods
 POST /v1/rpc
 WS   /v1/ws/events

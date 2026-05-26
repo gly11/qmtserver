@@ -1,12 +1,13 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前已完成版本为 `0.2.0`。
+本文档记录 qmtserver 的版本节奏和发布门禁。当前已完成版本为 `0.3.0`。
 
 ## 版本节奏
 
 ```text
 0.1.0  已完成  安全远程网关 MVP
 0.2.0  已完成  透明 RPC 实验模式
+0.3.0  已完成  稳定行情数据、snapshot、job 和诊断接口
 1.0.0  远期    稳定版本
 ```
 
@@ -45,6 +46,27 @@
 - 增加透明 RPC 单元测试和文档。
 
 详细设计和使用说明见 [Transparent RPC](transparent-rpc.md)。
+
+## 0.3.0
+
+状态：已完成。
+
+`0.3.0` 聚焦稳定行情数据契约，让策略、研究和回测系统优先消费 qmtserver 的显式 API，
+不再依赖 transparent RPC 或 `xtdata` 原始返回形态。
+
+范围：
+
+- 增加 `/v1/market/capabilities`、daily bars 和 intraday bars。
+- 统一 bars schema、metadata、空数据和错误语义。
+- 增加 CSV snapshot/export、manifest、registry、download 和质量报告。
+- 增加历史下载 job create/status/result/cancel。
+- 增加 diagnostics、job metrics、交易日历、标的列表和 instrument detail。
+- 补充 API、错误码、roadmap、release plan 和 milestone 归档文档。
+
+发布限制：
+
+- 本地开发环境可以完成单元测试、lint、format、type 和 diff 检查。
+- 真实 Windows + MiniQMT smoke 需要在具备 `xtquant`、MiniQMT userdata 和账号权限的网关机上补做。
 
 ## 发布门禁
 
