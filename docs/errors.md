@@ -21,6 +21,8 @@ qmtserver 的错误码集中定义在 `qmtserver.errors.ERROR_CODES`。客户端
 | `TRANSPARENT_METHOD_DENIED` | Transparent RPC method name is denied. |
 | `TRANSPARENT_TRADER_DENIED` | Transparent RPC for trader is disabled. |
 | `TRANSPARENT_TRADING_DENIED` | Transparent RPC trading-like method is denied. |
+| `INVALID_MARKET_REQUEST` | Market data request parameters are invalid. |
+| `MARKET_DATA_ERROR` | Market data source returned an unexpected error. |
 | `RPC_ERROR` | Client-side wrapper for an RPC error response. |
 | `QMT_SERVER_ERROR` | Generic qmtserver error. |
 
@@ -50,5 +52,28 @@ RPC failures use the stable response envelope:
     "message": "RPC method is not allowed: trader.unknown"
   },
   "meta": {}
+}
+```
+
+## Market Data Error
+
+Market data endpoints use the same stable envelope shape as RPC endpoints:
+
+```json
+{
+  "ok": false,
+  "data": null,
+  "error": {
+    "code": "INVALID_MARKET_REQUEST",
+    "message": "symbols must include at least one symbol"
+  },
+  "meta": {
+    "schema": "market.bars.v1",
+    "request": {},
+    "row_count": 0,
+    "generated_at": "2026-05-26T00:00:00+00:00",
+    "qmtserver_version": "0.2.0",
+    "xtquant_version": null
+  }
 }
 ```

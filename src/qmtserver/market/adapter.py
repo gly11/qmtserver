@@ -1,0 +1,32 @@
+from __future__ import annotations
+
+from typing import Any, Protocol
+
+from qmtserver.market.models import MarketRequest
+
+
+class TargetProvider(Protocol):
+    def get_target(self, target: str) -> Any: ...
+
+
+class XtDataMarketAdapter:
+    def __init__(self, provider: TargetProvider) -> None:
+        self.provider = provider
+
+    def fetch_daily(self, request: MarketRequest) -> Any:
+        return self._get_market_data(request, period="1d")
+
+    def fetch_intraday(self, request: MarketRequest) -> Any:
+        assert request.period is not None
+        return self._get_market_data(request, period=request.period)
+
+    def _get_market_data(self, request: MarketRequest, *, period: str) -> Any:
+        xtdata = self.provider.get_target("xtdata")
+        return xtdata.get_market_data_ex(
+            field_list=[],
+            stock_list=request.symbols,
+            period=period,
+            start_time=request.start or "",
+            end_time=request.end or "",
+            dividend_type=request.adjust,
+        )

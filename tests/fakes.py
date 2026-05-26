@@ -12,6 +12,47 @@ class FakeTarget:
     def get_full_tick(self, codes: list[str]) -> dict[str, object]:
         return {"codes": codes}
 
+    def get_market_data_ex(
+        self,
+        *,
+        field_list: list[str],
+        stock_list: list[str],
+        period: str,
+        start_time: str,
+        end_time: str,
+        dividend_type: str,
+    ) -> dict[str, list[dict[str, object]]]:
+        del field_list, start_time, end_time, dividend_type
+        if period == "1d":
+            return {
+                symbol: [
+                    {
+                        "date": "2026-01-02",
+                        "open": 10.1,
+                        "high": 10.5,
+                        "low": 10.0,
+                        "close": 10.3,
+                        "volume": 1200000,
+                        "amount": 12345678.9,
+                    }
+                ]
+                for symbol in stock_list
+            }
+        return {
+            symbol: [
+                {
+                    "timestamp": "2026-01-02T09:31:00+08:00",
+                    "open": 10.1,
+                    "high": 10.2,
+                    "low": 10.0,
+                    "close": 10.15,
+                    "volume": 1000,
+                    "amount": 10150.0,
+                }
+            ]
+            for symbol in stock_list
+        }
+
     def get_sector_list(self) -> list[str]:
         return ["沪深A股"]
 

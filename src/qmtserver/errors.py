@@ -49,6 +49,14 @@ class QmtTradeConfirmationRequiredError(QmtServerError):
     code = "TRADE_CONFIRMATION_REQUIRED"
 
 
+class QmtInvalidMarketRequestError(QmtServerError):
+    code = "INVALID_MARKET_REQUEST"
+
+
+class QmtMarketDataError(QmtServerError):
+    code = "MARKET_DATA_ERROR"
+
+
 @dataclass(frozen=True)
 class ErrorCode:
     code: str
@@ -73,6 +81,8 @@ ERROR_CODES: tuple[ErrorCode, ...] = (
     ErrorCode("TRANSPARENT_METHOD_DENIED", "Transparent RPC method name is denied."),
     ErrorCode("TRANSPARENT_TRADER_DENIED", "Transparent RPC for trader is disabled."),
     ErrorCode("TRANSPARENT_TRADING_DENIED", "Transparent RPC trading-like method is denied."),
+    ErrorCode("INVALID_MARKET_REQUEST", "Market data request parameters are invalid."),
+    ErrorCode("MARKET_DATA_ERROR", "Market data source returned an unexpected error."),
     ErrorCode("RPC_ERROR", "Client-side wrapper for an RPC error response."),
     ErrorCode("QMT_SERVER_ERROR", "Generic qmtserver error."),
 )

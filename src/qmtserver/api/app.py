@@ -7,6 +7,7 @@ from fastapi import FastAPI
 
 from qmtserver.api.middleware import request_id_middleware
 from qmtserver.api.routes_health import router as health_router
+from qmtserver.api.routes_market import router as market_router
 from qmtserver.api.routes_metrics import router as metrics_router
 from qmtserver.api.routes_orders import router as orders_router
 from qmtserver.api.routes_qmt import router as qmt_router
@@ -65,12 +66,14 @@ def create_app(settings: Settings | None = None, *, connect_on_startup: bool = T
     app.middleware("http")(request_id_middleware)
     app.include_router(health_router)
     app.include_router(qmt_router)
+    app.include_router(market_router)
     app.include_router(rpc_router)
     app.include_router(ws_router)
     app.include_router(metrics_router)
     app.include_router(orders_router)
     app.include_router(health_router, prefix=API_PREFIX)
     app.include_router(qmt_router, prefix=API_PREFIX)
+    app.include_router(market_router, prefix=API_PREFIX)
     app.include_router(rpc_router, prefix=API_PREFIX)
     app.include_router(ws_router, prefix=API_PREFIX)
     app.include_router(metrics_router, prefix=API_PREFIX)

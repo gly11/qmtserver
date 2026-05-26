@@ -10,6 +10,9 @@ GET  /v1/qmt/status
 POST /v1/qmt/connect
 POST /v1/qmt/reconnect
 POST /v1/qmt/disconnect
+GET  /v1/market/capabilities
+GET  /v1/market/bars/daily
+GET  /v1/market/bars/intraday
 GET  /v1/rpc/methods
 POST /v1/rpc
 GET  /v1/metrics
@@ -19,6 +22,76 @@ GET  /v1/trades
 GET  /v1/events/recent
 WS   /v1/ws/events
 ```
+
+## Market Data API
+
+`/v1/market` 是策略和回测系统优先使用的稳定行情入口。它只调用 qmtserver 明确适配的
+whitelist-only 行情方法，不依赖 transparent RPC，也不直接暴露 `xtdata` 原始返回形态。
+
+### GET /v1/market/capabilities
+
+返回当前稳定行情 API 的 schema versions、supported endpoints、periods、adjust modes 和内部
+数据源方法。
+
+### GET /v1/market/bars/daily
+
+示例：
+
+```text
+GET /v1/market/bars/daily?symbols=000001.SZ,600000.SH&start=2026-01-01&end=2026-01-31&adjust=none
+```
+
+响应字段固定为：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "bars": [
+      {
+        "date": "2026-01-02",
+        "symbol": "000001.SZ",
+        "open": 10.1,
+        "high": 10.5,
+        "low": 10.0,
+        "close": 10.3,
+        "volume": 1200000,
+        "amount": 12345678.9,
+        "meta": {}
+      }
+    ]
+  },
+  "error": null,
+  "meta": {
+    "schema": "market.bars.v1",
+    "request": {
+      "symbols": ["000001.SZ"],
+      "start": "2026-01-01",
+      "end": "2026-01-31",
+      "adjust": "none"
+    },
+    "row_count": 1,
+    "generated_at": "2026-05-26T00:00:00+00:00",
+    "qmtserver_version": "0.2.0",
+    "xtquant_version": null
+  }
+}
+```
+
+### GET /v1/market/bars/intraday
+
+示例：
+
+```text
+GET /v1/market/bars/intraday?symbols=000001.SZ&period=1m&start=2026-01-01T09:30:00+08:00&end=2026-01-01T15:00:00+08:00&adjust=none
+```
+
+intraday bar 字段固定为 `timestamp`、`symbol`、`period`、`open`、`high`、`low`、`close`、
+`volume`、`amount` 和 `meta`。
+
+空数据不是错误：服务返回 `ok=true`、`bars=[]` 和 `row_count=0`。参数非法返回
+`INVALID_MARKET_REQUEST`，行情源异常返回 `MARKET_DATA_ERROR`，行情 target 未连接返回
+`TARGET_NOT_CONNECTED`。
 
 ## RPC Request
 

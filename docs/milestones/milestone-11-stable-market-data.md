@@ -3,7 +3,7 @@
 Milestone 11 的目标是新增 whitelist-only 的稳定行情 API，让策略、回测系统和 qmtclient 不再消费
 `xtdata` 原始返回形态。
 
-状态：计划中。
+状态：已完成本地实现；真实 Windows + MiniQMT smoke test 尚未在本机执行。
 
 ## 目标
 
@@ -142,9 +142,16 @@ Milestone 11 完成时必须满足：
 4. 无 `xtquant` 本地环境可以跑完主质量门禁。
 5. Windows + MiniQMT 环境至少完成一个 daily 和一个 intraday smoke test。
 
+当前本地验收：
+
+- 已实现 `/v1/market/capabilities`、`/v1/market/bars/daily` 和
+  `/v1/market/bars/intraday`。
+- 已实现 `market.bars.v1` metadata、`INVALID_MARKET_REQUEST` 和 `MARKET_DATA_ERROR`。
+- 已用 fake adapter / fixture 覆盖无 `xtquant` 环境。
+- 本机没有 MiniQMT，未执行真实 Windows smoke test；需要在 Windows 网关机补充验证。
+
 ## 风险与应对
 
 - `xtdata` 返回形态不稳定：用 fixture 固定多种输入形态，normalizer 只输出稳定 schema。
 - JSON 大响应过慢：Milestone 11 限制同步查询规模，大批量留给 snapshot/export。
 - API route 变厚：route 只做 request parsing 和 response assembly，逻辑放 market service。
-
