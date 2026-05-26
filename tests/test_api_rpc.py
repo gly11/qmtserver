@@ -152,7 +152,8 @@ class ApiRpcTests(unittest.TestCase):
 
         body = response.json()
         self.assertTrue(body["ok"])
-        self.assertEqual(body["data"], {"account_id": "10001"})
+        self.assertEqual(body["data"]["account_id"], "10001")
+        self.assertEqual(body["data"]["cash"], 1000.0)
 
 
 if __name__ == "__main__":
