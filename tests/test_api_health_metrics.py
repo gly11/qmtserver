@@ -5,6 +5,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
+from qmtserver import __version__
 from qmtserver.api import create_app
 from qmtserver.config import load_settings
 from tests.fakes import FakeService
@@ -22,6 +23,11 @@ class ApiHealthMetricsTests(unittest.TestCase):
         self.assertTrue(response.json()["ok"])
         self.assertEqual(versioned.status_code, 200)
         self.assertIn("v1", versioned.json()["api_versions"])
+
+    def test_fastapi_metadata_version_matches_package_version(self) -> None:
+        app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
+
+        self.assertEqual(app.version, __version__)
 
     def test_request_id_header_is_returned(self) -> None:
         app = create_app(load_settings(auto_connect=False), connect_on_startup=False)

@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from qmtserver import __version__
 from qmtserver.api.middleware import request_id_middleware
 from qmtserver.api.routes_diagnostics import router as diagnostics_router
 from qmtserver.api.routes_health import router as health_router
@@ -61,8 +62,8 @@ def create_app(settings: Settings | None = None, *, connect_on_startup: bool = T
 
     app = FastAPI(
         title="qmtserver",
-        version="0.1.0",
-        description="Local MiniQMT readonly RPC gateway.",
+        version=__version__,
+        description="Local MiniQMT gateway server.",
         lifespan=lifespan,
     )
     app.state.qmt_service = service
