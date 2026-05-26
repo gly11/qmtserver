@@ -17,9 +17,29 @@ qmtserver 服务端运行在 Windows 上，并依赖 Python 3.12/3.13、MiniQMT 
 其他系统可以通过 HTTP、WebSocket 或 Python SDK 作为客户端访问 Windows 上运行的
 qmtserver。
 
-## 初始化项目环境
+## 安装 qmtserver
+
+普通使用建议直接从 PyPI 安装，不需要 clone 仓库。
 
 ```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install "qmtserver[xtquant]"
+```
+
+安装后可以直接运行：
+
+```powershell
+qmtserver --help
+```
+
+## 从源码初始化项目环境
+
+需要本地开发、运行测试或调试仓库代码时，使用源码安装。先 clone 仓库并进入项目目录：
+
+```powershell
+git clone https://github.com/gly11/qmtserver.git
+cd qmtserver
 uv sync
 ```
 
@@ -33,7 +53,15 @@ CI 固定使用 Windows runner 并安装 `xtquant` extra；不规划 Linux/macOS
 ### 方式一：安装 PyPI 版本
 
 如果只想快速初始化，可以安装 PyPI 上的 `xtquant` 版本。Python 3.12/3.13 需要
-`xtquant>=250516.1.1`：
+`xtquant>=250516.1.1`。
+
+如果是 PyPI 安装 qmtserver：
+
+```powershell
+python -m pip install "qmtserver[xtquant]"
+```
+
+如果是源码安装 qmtserver，需要在项目目录下执行：
 
 ```powershell
 uv sync --extra xtquant

@@ -32,11 +32,27 @@ HTTP RPC 和 WebSocket，方便其他机器通过网络访问。
 
 ## 快速开始
 
-安装项目依赖和 PyPI 版 `xtquant`：
+### PyPI 安装
+
+普通使用不需要 clone 仓库，可以直接从 PyPI 安装 qmtserver 和 PyPI 版 `xtquant`：
 
 ```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install "qmtserver[xtquant]"
+```
+
+### 源码安装
+
+需要本地开发或运行仓库内测试时，先 clone 项目并进入项目目录：
+
+```powershell
+git clone https://github.com/gly11/qmtserver.git
+cd qmtserver
 uv sync --extra xtquant
 ```
+
+`uv sync --extra xtquant` 会安装项目依赖和 PyPI 版 `xtquant`。
 
 如果 PyPI 版落后，也可以从迅投知识库下载新版后覆盖安装：
 
