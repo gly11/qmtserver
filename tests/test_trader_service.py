@@ -46,5 +46,74 @@ class TraderServiceAccountTests(unittest.TestCase):
             resolve_stock_account(settings, account_id=None, account_type=None)
 
 
+class TraderServiceNormalizerTests(unittest.TestCase):
+    def test_asset_normalizer_uses_stable_fields_and_extra(self) -> None:
+        from qmtserver.trader.models import normalize_asset
+
+        raw = _object(
+            account_id="10001",
+            cash=100.0,
+            frozen_cash=1.0,
+            market_value=200.0,
+            total_asset=300.0,
+            fetch_balance=99.0,
+            unknown_field="kept",
+            _private="hidden",
+        )
+
+        self.assertEqual(
+            normalize_asset(raw),
+            {
+                "account_id": "10001",
+                "cash": 100.0,
+                "frozen_cash": 1.0,
+                "market_value": 200.0,
+                "total_asset": 300.0,
+                "fetch_balance": 99.0,
+                "extra": {"unknown_field": "kept"},
+            },
+        )
+
+    def test_position_normalizer_uses_stable_fields(self) -> None:
+        from qmtserver.trader.models import normalize_position
+
+        raw = _object(
+            account_id="10001",
+            stock_code="000001.SZ",
+            volume=100,
+            can_use_volume=80,
+            open_price=10.0,
+            market_value=1100.0,
+        )
+
+        self.assertEqual(normalize_position(raw)["stock_code"], "000001.SZ")
+        self.assertEqual(normalize_position(raw)["volume"], 100)
+        self.assertIn("extra", normalize_position(raw))
+
+    def test_order_trade_and_account_status_normalizers(self) -> None:
+        from qmtserver.trader.models import (
+            normalize_account_status,
+            normalize_order,
+            normalize_trade,
+        )
+
+        status = normalize_account_status(
+            _object(account_id="10001", account_type="STOCK", status=0)
+        )
+        order = normalize_order(_object(account_id="10001", order_id=1, stock_code="000001.SZ"))
+        trade = normalize_trade(_object(account_id="10001", trade_id="T1", stock_code="000001.SZ"))
+
+        self.assertEqual(status["account_type"], "STOCK")
+        self.assertEqual(order["order_id"], 1)
+        self.assertEqual(trade["trade_id"], "T1")
+
+
+def _object(**values: object) -> object:
+    item = type("RawObject", (), {})()
+    for key, value in values.items():
+        setattr(item, key, value)
+    return item
+
+
 if __name__ == "__main__":
     unittest.main()
