@@ -2,7 +2,7 @@
 
 Milestone 14 的目标是完善回测前置数据准备，并提供基础数据质量报告。
 
-状态：计划中。
+状态：已完成本地实现；真实 Windows + MiniQMT reference/quality smoke test 尚未在本机执行。
 
 ## 目标
 
@@ -115,9 +115,18 @@ Milestone 14 完成时必须满足：
 3. 数据质量报告只描述数据问题，不做交易决策。
 4. 缓存不会改变返回 schema 或错误语义。
 
+当前本地验收：
+
+- 已实现 `GET /v1/reference/calendar`、`GET /v1/reference/universe` 和
+  `GET /v1/reference/instruments`。
+- 已实现 `GET /v1/market/bars/daily/quality` 和 `GET /v1/snapshots/{snapshot_id}/quality`。
+- 已实现缺失日期、重复行、价格异常和成交量异常的保守检查。
+- 批量数据复用继续依赖 snapshot registry；新增缓存策略已在 operations 文档中约束 cache key。
+- 本机没有 MiniQMT，未执行真实 Windows reference/quality smoke test；需要在 Windows 网关机
+  补充验证。
+
 ## 风险与应对
 
 - 交易日历来源不一致：metadata 记录数据来源和生成时间。
 - 异常规则误报：首版只做保守检查，并把结果标为 warnings。
 - 缓存污染：缓存 key 必须包含 endpoint、symbols、period、start、end、adjust 和 schema version。
-

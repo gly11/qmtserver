@@ -22,6 +22,11 @@ GET  /v1/jobs/{job_id}
 GET  /v1/jobs/{job_id}/result
 POST /v1/jobs/{job_id}/cancel
 GET  /v1/diagnostics
+GET  /v1/reference/calendar
+GET  /v1/reference/universe
+GET  /v1/reference/instruments
+GET  /v1/market/bars/daily/quality
+GET  /v1/snapshots/{snapshot_id}/quality
 GET  /v1/rpc/methods
 POST /v1/rpc
 GET  /v1/metrics
@@ -136,6 +141,31 @@ intraday bar 字段固定为 `timestamp`、`symbol`、`period`、`open`、`high`
 ### GET /v1/snapshots/{snapshot_id}/download
 
 下载 snapshot 数据文件。当前仅承诺 CSV。
+
+### GET /v1/snapshots/{snapshot_id}/quality
+
+基于 snapshot CSV 和 manifest request 生成基础数据质量报告。
+
+## Reference and Quality API
+
+Reference endpoints 用于回测前置数据准备。首版提供 weekday-based calendar、股票池和
+instrument detail 的稳定响应结构。
+
+```text
+GET /v1/reference/calendar?start=2026-01-01&end=2026-01-31
+GET /v1/reference/universe?name=all_a
+GET /v1/reference/instruments?symbols=000001.SZ,600000.SH
+```
+
+数据质量报告只描述数据问题，不提供投资建议或交易决策：
+
+```text
+GET /v1/market/bars/daily/quality?symbols=000001.SZ&start=2026-01-01&end=2026-01-31
+GET /v1/snapshots/{snapshot_id}/quality
+```
+
+质量报告 schema 为 `market.quality.v1`，包含 `missing_dates`、`duplicate_rows`、
+`price_anomalies` 和 `volume_anomalies`。
 
 ## Jobs and Diagnostics
 

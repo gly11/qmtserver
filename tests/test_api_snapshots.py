@@ -20,7 +20,7 @@ class ApiSnapshotTests(unittest.TestCase):
             )
 
             with TestClient(app) as client:
-                app.state.qmt_service = FakeService()
+                app.state.qmt_service = FakeService(snapshot_dir=Path(tmp))
                 create = client.post(
                     "/v1/snapshots",
                     json={
@@ -56,7 +56,7 @@ class ApiSnapshotTests(unittest.TestCase):
             )
 
             with TestClient(app) as client:
-                app.state.qmt_service = FakeService()
+                app.state.qmt_service = FakeService(snapshot_dir=Path(tmp))
                 payload = {
                     "kind": "daily_bars",
                     "symbols": ["000001.SZ"],

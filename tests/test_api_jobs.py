@@ -22,7 +22,7 @@ class ApiJobsTests(unittest.TestCase):
             )
 
             with TestClient(app) as client:
-                app.state.qmt_service = FakeService()
+                app.state.qmt_service = FakeService(snapshot_dir=Path(tmp))
                 created = client.post(
                     "/v1/jobs/history-download",
                     json={

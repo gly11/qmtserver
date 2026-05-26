@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from qmtserver.api.dependencies import get_qmt_service
+from qmtserver.data_quality.service import quality_response, read_csv_rows
 from qmtserver.errors import QmtSnapshotNotFoundError
 from qmtserver.services import QmtService
 from qmtserver.snapshots import SnapshotService
@@ -50,6 +51,24 @@ def download_snapshot(snapshot_id: str, service: QmtServiceDep) -> FileResponse 
     except QmtSnapshotNotFoundError as exc:
         return _error(exc.code, str(exc))
     return FileResponse(path, media_type="text/csv", filename=path.name)
+
+
+@router.get("/{snapshot_id}/quality")
+def snapshot_quality(snapshot_id: str, service: QmtServiceDep) -> dict[str, object]:
+    snapshot_service = _snapshot_service(service)
+    try:
+        manifest_response = snapshot_service.manifest(snapshot_id)
+        path = snapshot_service.download_path(snapshot_id)
+    except QmtSnapshotNotFoundError as exc:
+        return _error(exc.code, str(exc))
+    manifest = manifest_response["data"]["manifest"]
+    request = manifest.get("request", {}) if isinstance(manifest, dict) else {}
+    rows = read_csv_rows(path)
+    return quality_response(
+        rows,
+        start=request.get("start") if isinstance(request, dict) else None,
+        end=request.get("end") if isinstance(request, dict) else None,
+    )
 
 
 def _snapshot_service(service: QmtService) -> SnapshotService:

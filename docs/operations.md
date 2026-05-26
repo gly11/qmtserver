@@ -61,6 +61,7 @@ GET /v1/metrics
 GET /v1/qmt/status
 GET /v1/market/capabilities
 GET /v1/diagnostics
+GET /v1/reference/calendar
 GET /v1/rpc/methods
 WS  /v1/ws/events
 ```
@@ -92,6 +93,15 @@ GET /v1/metrics
 `/v1/diagnostics` 返回 MiniQMT/qmtserver 状态、server clock、版本信息和 sample symbol smoke。
 `/v1/metrics` 包含 job status 计数，便于观察 queued、running、succeeded、failed 和 cancelled
 分布。
+
+## Reference、质量报告与缓存
+
+Reference endpoints 和 quality endpoints 不写入交易状态，也不产生投资建议。质量报告只做保守
+数据检查，包括缺失日期、重复行、价格异常和成交量异常。
+
+批量数据复用优先通过 snapshot registry 完成：相同 snapshot 参数会命中已有 manifest。后续如
+增加更细的 market cache，cache key 必须包含 endpoint、symbols、period、start、end、adjust 和
+schema version，且不得改变 API schema 或 error code。
 
 ## 日志
 

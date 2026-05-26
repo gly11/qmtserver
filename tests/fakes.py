@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from qmtserver.config import load_settings
 from qmtserver.errors import QmtTargetNotConnectedError
 from qmtserver.rpc.types import RpcResponse
@@ -56,6 +58,13 @@ class FakeTarget:
     def get_sector_list(self) -> list[str]:
         return ["沪深A股"]
 
+    def get_stock_list_in_sector(self, sector: str) -> list[str]:
+        del sector
+        return ["000001.SZ", "600000.SH"]
+
+    def get_instrument_detail(self, symbol: str) -> dict[str, object]:
+        return {"symbol": symbol, "name": "平安银行" if symbol == "000001.SZ" else symbol}
+
     def _private(self) -> str:
         return "secret"
 
@@ -94,6 +103,7 @@ class FakeService:
         transparent_rpc_targets: str = "xtdata",
         transparent_rpc_allow_trader: bool = False,
         transparent_rpc_allow_trading: bool = False,
+        snapshot_dir: Path | None = None,
     ) -> None:
         self.settings = load_settings(
             auto_connect=False,
@@ -111,6 +121,7 @@ class FakeService:
             transparent_rpc_targets=transparent_rpc_targets,
             transparent_rpc_allow_trader=transparent_rpc_allow_trader,
             transparent_rpc_allow_trading=transparent_rpc_allow_trading,
+            snapshot_dir=snapshot_dir,
         )
         self.connected = False
         self.trader = FakeTrader()

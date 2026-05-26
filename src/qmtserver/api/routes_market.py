@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from qmtserver.api.dependencies import get_qmt_service
+from qmtserver.data_quality.service import quality_response
 from qmtserver.market import MarketService
 from qmtserver.services import QmtService
 
@@ -49,3 +50,22 @@ def intraday_bars(
         end=end,
         adjust=adjust,
     )
+
+
+@router.get("/bars/daily/quality")
+def daily_bars_quality(
+    service: QmtServiceDep,
+    symbols: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    adjust: str = "none",
+) -> dict[str, object]:
+    response = MarketService(service).daily_bars(
+        symbols=symbols,
+        start=start,
+        end=end,
+        adjust=adjust,
+    )
+    if not response["ok"]:
+        return response
+    return quality_response(response["data"]["bars"], start=start, end=end)
