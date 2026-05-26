@@ -1,5 +1,8 @@
 # Documentation
 
+- [xtquant Adapter Guide](xtquant-adapter.md): adapter rules, compatibility checklist, and real
+  MiniQMT smoke requirements for stable `xtquant` integrations.
+
 文档按用途拆分：
 
 - [Architecture](architecture.md)：当前架构和后续服务端方向。

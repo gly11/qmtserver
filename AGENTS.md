@@ -10,7 +10,7 @@ qmtserver is a local Windows gateway for MiniQMT / `xtquant`. A Windows machine 
 qmtserver; other tools, strategy systems, or automation scripts access it through HTTP RPC,
 WebSocket events, and client SDKs.
 
-The current `0.1.0` baseline is a safety-first remote gateway MVP:
+The current `0.3.0` baseline is a safety-first remote gateway MVP:
 
 - connection-check CLI;
 - `/v1` HTTP API;
@@ -21,6 +21,7 @@ The current `0.1.0` baseline is a safety-first remote gateway MVP:
 - in-memory order, trade, and event caches;
 - built-in Python client SDK;
 - logs, metrics, request IDs, and Windows helper scripts.
+- stable market data, snapshot, job, diagnostics, reference, and data quality endpoints.
 
 qmtclient is a separate client project. qmtserver documentation should focus on server API,
 runtime, security, trading protection, MiniQMT connectivity, and operational behavior.
@@ -92,6 +93,27 @@ access, say so explicitly in the handoff.
 - Put business logic in service, RPC, trading, event, order, serialization, or audit modules.
 - Trading methods such as order and cancel are disabled by default and must require explicit config
   and allowlists.
+
+## xtquant Adapter Rules
+
+- Do not call `xtquant.xtdata`, `XtQuantTrader`, or `xtquant.xttype` directly from API routes,
+  client code, or documentation examples that are meant to describe qmtserver behavior.
+- Put direct `xtquant` calls behind adapter, service, trading, or serialization modules. Current
+  examples are `qmtserver.market.adapter`, `qmtserver.services.qmt_service`, and
+  `qmtserver.rpc.serializers`.
+- qmtserver public APIs should keep stable JSON-friendly contracts even when `xtquant` signatures or
+  return objects are awkward. Convert inputs and outputs at the adapter boundary.
+- Treat upstream docs as useful but not sufficient. Verify behavior against the locally installed
+  `xtquant` version, especially date formats, period names, adjustment modes, account objects, and
+  return shapes.
+- Record new or changed `xtquant` adaptations in `docs/xtquant-adapter.md`, including the qmtserver
+  endpoint, upstream function, local signature, input conversion, output normalization, error
+  mapping, and MiniQMT smoke coverage.
+- Every new stable `xtquant` adaptation needs focused unit tests with fakes. Real MiniQMT checks are
+  release gates, not substitutes for deterministic tests.
+- Transparent RPC is for exploration and advanced debugging only. Do not treat a transparent method
+  as stable until it has an explicit qmtserver contract, tests, docs, and safety review.
+- Trading-related adaptations require the security and trading rules below, plus failure-path tests.
 
 ## Code Size And Structure
 
