@@ -7,6 +7,14 @@ import httpx
 from qmtserver.client.errors import QmtAuthError, QmtConnectionError, QmtHttpError, QmtRpcError
 from qmtserver.client.events import ConnectFactory, EventStream
 from qmtserver.client.proxy import RpcTargetProxy
+from qmtserver.client.responses import (
+    http_error_detail,
+    response_json,
+    response_list,
+    response_named_item,
+    response_named_list,
+    response_request_id,
+)
 from qmtserver.errors import API_VERSION
 
 
@@ -84,14 +92,14 @@ class QmtClient:
                 target=target,
                 method=method,
                 response=response,
-                request_id=_response_request_id(response),
+                request_id=response_request_id(response),
             )
         return response.get("data")
 
     def orders(self, limit: int | None = None) -> list[dict[str, Any]]:
         params = {"limit": limit} if limit is not None else None
         response = self._request("GET", "/orders", params=params)
-        return _response_list(response)
+        return response_list(response)
 
     def order(self, order_id: str) -> dict[str, Any]:
         response = self._request("GET", f"/orders/{order_id}")
@@ -101,7 +109,63 @@ class QmtClient:
     def trades(self, limit: int | None = None) -> list[dict[str, Any]]:
         params = {"limit": limit} if limit is not None else None
         response = self._request("GET", "/trades", params=params)
-        return _response_list(response)
+        return response_list(response)
+
+    def trader_account_status(self) -> list[dict[str, Any]]:
+        response = self._request("GET", "/trader/account-status")
+        return response_named_list(response, "statuses", target="trader", method="account_status")
+
+    def trader_asset(
+        self,
+        *,
+        account_id: str | None = None,
+        account_type: str | None = None,
+    ) -> dict[str, Any]:
+        response = self._request(
+            "GET",
+            "/trader/asset",
+            params=_account_params(account_id=account_id, account_type=account_type),
+        )
+        return response_named_item(response, "asset", target="trader", method="asset")
+
+    def trader_positions(
+        self,
+        *,
+        account_id: str | None = None,
+        account_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        response = self._request(
+            "GET",
+            "/trader/positions",
+            params=_account_params(account_id=account_id, account_type=account_type),
+        )
+        return response_named_list(response, "positions", target="trader", method="positions")
+
+    def trader_orders(
+        self,
+        *,
+        account_id: str | None = None,
+        account_type: str | None = None,
+        cancelable_only: bool = False,
+    ) -> list[dict[str, Any]]:
+        params = _account_params(account_id=account_id, account_type=account_type) or {}
+        if cancelable_only:
+            params["cancelable_only"] = cancelable_only
+        response = self._request("GET", "/trader/orders", params=params or None)
+        return response_named_list(response, "orders", target="trader", method="orders")
+
+    def trader_trades(
+        self,
+        *,
+        account_id: str | None = None,
+        account_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        response = self._request(
+            "GET",
+            "/trader/trades",
+            params=_account_params(account_id=account_id, account_type=account_type),
+        )
+        return response_named_list(response, "trades", target="trader", method="trades")
 
     def recent_events(
         self,
@@ -115,7 +179,7 @@ class QmtClient:
         if limit is not None:
             params["limit"] = limit
         response = self._request("GET", "/events/recent", params=params or None)
-        return _response_list(response)
+        return response_list(response)
 
     def events(self, *, types: list[str] | tuple[str, ...] | None = None) -> EventStream:
         return EventStream(
@@ -133,10 +197,10 @@ class QmtClient:
         except httpx.RequestError as exc:
             raise QmtConnectionError(str(exc)) from exc
 
-        response_body = _response_json(response)
+        response_body = response_json(response)
         request_id = response.headers.get("X-Request-ID")
         if response.status_code == 401:
-            code, message = _http_error_detail(response_body, "UNAUTHORIZED", "Unauthorized")
+            code, message = http_error_detail(response_body, "UNAUTHORIZED", "Unauthorized")
             raise QmtAuthError(
                 response.status_code,
                 message,
@@ -145,7 +209,7 @@ class QmtClient:
                 request_id=request_id,
             )
         if response.status_code >= 400:
-            code, message = _http_error_detail(response_body, "HTTP_ERROR", response.text)
+            code, message = http_error_detail(response_body, "HTTP_ERROR", response.text)
             raise QmtHttpError(
                 response.status_code,
                 message,
@@ -167,37 +231,14 @@ class QmtClient:
         return f"/{self.api_version}{normalized}"
 
 
-def _response_json(response: httpx.Response) -> dict[str, Any]:
-    if not response.content:
-        return {}
-    value = response.json()
-    if isinstance(value, dict):
-        return value
-    return {"data": value}
-
-
-def _http_error_detail(
-    response: dict[str, Any],
-    default_code: str,
-    default_message: str,
-) -> tuple[str, str]:
-    detail = response.get("detail")
-    if isinstance(detail, dict):
-        return str(detail.get("code", default_code)), str(detail.get("message", default_message))
-    error = response.get("error")
-    if isinstance(error, dict):
-        return str(error.get("code", default_code)), str(error.get("message", default_message))
-    return default_code, default_message
-
-
-def _response_request_id(response: dict[str, Any]) -> str | None:
-    meta = response.get("meta")
-    if isinstance(meta, dict):
-        request_id = meta.get("request_id")
-        return str(request_id) if request_id is not None else None
-    return None
-
-
-def _response_list(response: dict[str, Any]) -> list[dict[str, Any]]:
-    data = response.get("data", [])
-    return data if isinstance(data, list) else []
+def _account_params(
+    *,
+    account_id: str | None,
+    account_type: str | None,
+) -> dict[str, Any] | None:
+    params: dict[str, Any] = {}
+    if account_id is not None:
+        params["account_id"] = account_id
+    if account_type is not None:
+        params["account_type"] = account_type
+    return params or None

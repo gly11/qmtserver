@@ -155,6 +155,64 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(client.trades(), [{"trade_id": 2}])
         self.assertEqual(client.recent_events(types=["stock_trade"]), [{"type": "stock_trade"}])
 
+    def test_trader_readonly_helpers(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/v1/trader/account-status":
+                return httpx.Response(200, json={"ok": True, "data": {"statuses": [{"status": 0}]}})
+            if request.url.path == "/v1/trader/asset":
+                self.assertEqual(request.url.params["account_id"], "10001")
+                return httpx.Response(
+                    200,
+                    json={"ok": True, "data": {"asset": {"account_id": "10001"}}},
+                )
+            if request.url.path == "/v1/trader/positions":
+                return httpx.Response(
+                    200,
+                    json={"ok": True, "data": {"positions": [{"stock_code": "000001.SZ"}]}},
+                )
+            if request.url.path == "/v1/trader/orders":
+                self.assertEqual(request.url.params["cancelable_only"], "true")
+                return httpx.Response(
+                    200,
+                    json={"ok": True, "data": {"orders": [{"order_id": 1}]}},
+                )
+            if request.url.path == "/v1/trader/trades":
+                return httpx.Response(
+                    200,
+                    json={"ok": True, "data": {"trades": [{"trade_id": "T1"}]}},
+                )
+            raise AssertionError(request.url.path)
+
+        client = QmtClient("http://qmt.test", transport=httpx.MockTransport(handler))
+
+        self.assertEqual(client.trader_account_status(), [{"status": 0}])
+        self.assertEqual(client.trader_asset(account_id="10001"), {"account_id": "10001"})
+        self.assertEqual(client.trader_positions(), [{"stock_code": "000001.SZ"}])
+        self.assertEqual(client.trader_orders(cancelable_only=True), [{"order_id": 1}])
+        self.assertEqual(client.trader_trades(), [{"trade_id": "T1"}])
+
+    def test_trader_readonly_helper_raises_typed_error(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "ok": False,
+                    "data": None,
+                    "error": {"code": "TRADER_ACCOUNT_REQUIRED", "message": "account missing"},
+                    "meta": {"request_id": "trader-request"},
+                },
+            )
+
+        client = QmtClient("http://qmt.test", transport=httpx.MockTransport(handler))
+
+        with self.assertRaises(QmtRpcError) as raised:
+            client.trader_asset()
+
+        self.assertEqual(raised.exception.code, "TRADER_ACCOUNT_REQUIRED")
+        self.assertEqual(raised.exception.target, "trader")
+        self.assertEqual(raised.exception.method, "asset")
+        self.assertEqual(raised.exception.request_id, "trader-request")
+
     def test_build_ws_url_preserves_https(self) -> None:
         self.assertEqual(
             build_ws_url("https://qmt.test/api", "token"),

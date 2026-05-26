@@ -28,6 +28,7 @@ qmtserver 的错误码集中定义在 `qmtserver.errors.ERROR_CODES`。客户端
 | `JOB_NOT_FOUND` | Requested job is not in the in-memory job registry. |
 | `JOB_NOT_READY` | Requested job result is not ready. |
 | `JOB_NOT_CANCELLABLE` | Requested job cannot be cancelled. |
+| `TRADER_ACCOUNT_REQUIRED` | Readonly trader query requires an account id. |
 | `RPC_ERROR` | Client-side wrapper for an RPC error response. |
 | `QMT_SERVER_ERROR` | Generic qmtserver error. |
 
