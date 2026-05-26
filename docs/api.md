@@ -48,6 +48,22 @@ WS   /v1/ws/events
 }
 ```
 
+透明 RPC 请求需要显式开启 `QMT_TRANSPARENT_RPC=true`。开启后，允许 target 上的公开白名单外
+方法可以继续使用同一个 `/v1/rpc` endpoint：
+
+```json
+{
+  "target": "xtdata",
+  "method": "get_sector_list",
+  "args": [],
+  "kwargs": {}
+}
+```
+
+透明调用成功时，响应结构不变，`meta.level` 为 `transparent`。如果 target、方法名或疑似交易
+方法不符合透明 RPC 安全规则，响应仍使用标准 RPC error envelope。详细规则见
+[Transparent RPC](transparent-rpc.md)。
+
 交易账号查询：
 
 ```json
