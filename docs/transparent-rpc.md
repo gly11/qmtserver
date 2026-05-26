@@ -58,7 +58,8 @@ QMT_TRANSPARENT_RPC_ALLOW_TRADING=false
 - `QMT_TRANSPARENT_RPC`：总开关，默认关闭。
 - `QMT_TRANSPARENT_RPC_TARGETS`：允许透明调用的 target 列表，逗号分隔，默认 `xtdata`。
 - `QMT_TRANSPARENT_RPC_ALLOW_TRADER`：是否允许透明调用 `trader` 白名单外方法，默认关闭。
-- `QMT_TRANSPARENT_RPC_ALLOW_TRADING`：是否允许透明调用交易类方法，默认关闭。
+- `QMT_TRANSPARENT_RPC_ALLOW_TRADING`：保留配置，默认关闭。`0.2.0` 不开放真实透明交易；
+  即使开启，也不能绕过 `QMT_ENABLE_TRADING` 和现有交易校验。
 
 `Settings` 中新增：
 
@@ -86,8 +87,8 @@ def transparent_rpc_allowed_targets(self) -> set[str]:
 4. 方法名不能以 `_` 开头，不能包含 `__` dunder 形式。
 5. 方法名必须是合法标识符，避免路径、属性链或魔术访问。
 6. handler 必须 callable。
-7. 透明调用默认按 `readonly` 级别处理。
-8. 疑似交易方法必须拒绝，除非显式打开 `QMT_TRANSPARENT_RPC_ALLOW_TRADING`，且仍必须走现有交易保护。
+7. 透明调用使用 `transparent` 级别审计和返回 `meta.level`。
+8. 疑似交易方法默认拒绝。`QMT_TRANSPARENT_RPC_ALLOW_TRADING` 是保留开关，`0.2.0` 不提供绕过现有交易校验的透明交易能力。
 9. token 鉴权、请求 ID、metrics、审计日志继续生效。
 10. 返回值必须经过 `to_jsonable()`，不可返回任意 Python 对象。
 
@@ -109,8 +110,7 @@ position_adjust
 新增或复用以下错误码：
 
 ```text
-METHOD_NOT_ALLOWED              透明模式未开启或 target 不允许
-TRANSPARENT_RPC_DISABLED        透明模式未开启，可选
+METHOD_NOT_ALLOWED              透明模式未开启
 TRANSPARENT_TARGET_NOT_ALLOWED  target 不在允许列表
 TRANSPARENT_METHOD_DENIED       私有/dunder/非法方法名
 TRANSPARENT_TRADER_DENIED       trader 透明调用未开启
@@ -249,12 +249,13 @@ RpcMethodLevel = Literal["readonly", "trading", "admin", "transparent"]
 规则：
 
 - `QMT_TRANSPARENT_RPC_ALLOW_TRADING=false` 时，疑似交易方法直接拒绝。
-- 即使未来允许透明交易，也必须进入 `prepare_trading_call()` 等现有交易校验。
+- `0.2.0` 不开放真实透明交易；该配置即使开启，也只能进入现有 `trading` 分支并接受
+  `QMT_ENABLE_TRADING`、`prepare_trading_call()` 等保护。
 - 不能通过透明 RPC 调用绕过 `QMT_ENABLE_TRADING=false`。
 
 验收：
 
-- `order_stock` 即使不在白名单透明路径中，也不能绕过交易开关。
+- `order_stock` 即使通过透明路径判断，也不能绕过交易开关。
 - `cancel_order_stock`、`order_stock_async`、包含 `trade`/`buy`/`sell` 的未知方法被保守拒绝。
 
 ### Step 5: 可观测性
