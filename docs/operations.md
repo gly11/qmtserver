@@ -59,9 +59,22 @@ uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-i
 GET /v1/health
 GET /v1/metrics
 GET /v1/qmt/status
+GET /v1/market/capabilities
 GET /v1/rpc/methods
 WS  /v1/ws/events
 ```
+
+## Snapshot 数据目录
+
+Snapshot/export 文件默认写入 `data/snapshots/`，可通过环境变量调整：
+
+```env
+QMT_SNAPSHOT_DIR=data/snapshots
+```
+
+该目录用于保存 CSV 数据文件和对应的 `*.manifest.json`。manifest 不记录本机绝对路径、账号、
+token 或 MiniQMT userdata 路径；如需备份或清理 snapshot，优先以 manifest 为单位处理同名
+数据文件。
 
 ## 日志
 

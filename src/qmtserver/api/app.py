@@ -12,6 +12,7 @@ from qmtserver.api.routes_metrics import router as metrics_router
 from qmtserver.api.routes_orders import router as orders_router
 from qmtserver.api.routes_qmt import router as qmt_router
 from qmtserver.api.routes_rpc import router as rpc_router
+from qmtserver.api.routes_snapshots import router as snapshots_router
 from qmtserver.api.routes_ws import router as ws_router
 from qmtserver.config import Settings, load_settings
 from qmtserver.events import EventBus
@@ -68,6 +69,7 @@ def create_app(settings: Settings | None = None, *, connect_on_startup: bool = T
     app.include_router(qmt_router)
     app.include_router(market_router)
     app.include_router(rpc_router)
+    app.include_router(snapshots_router)
     app.include_router(ws_router)
     app.include_router(metrics_router)
     app.include_router(orders_router)
@@ -75,6 +77,7 @@ def create_app(settings: Settings | None = None, *, connect_on_startup: bool = T
     app.include_router(qmt_router, prefix=API_PREFIX)
     app.include_router(market_router, prefix=API_PREFIX)
     app.include_router(rpc_router, prefix=API_PREFIX)
+    app.include_router(snapshots_router, prefix=API_PREFIX)
     app.include_router(ws_router, prefix=API_PREFIX)
     app.include_router(metrics_router, prefix=API_PREFIX)
     app.include_router(orders_router, prefix=API_PREFIX)

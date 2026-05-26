@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     log_json: bool = False
     log_max_bytes: int = Field(default=10485760, ge=1)
     log_backup_count: int = Field(default=10, ge=0)
+    snapshot_dir: Path = Path("data/snapshots")
     api_token: str | None = None
     require_token: bool = False
     audit_log: bool = True

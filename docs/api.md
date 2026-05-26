@@ -13,6 +13,10 @@ POST /v1/qmt/disconnect
 GET  /v1/market/capabilities
 GET  /v1/market/bars/daily
 GET  /v1/market/bars/intraday
+POST /v1/snapshots
+GET  /v1/snapshots
+GET  /v1/snapshots/{snapshot_id}/manifest
+GET  /v1/snapshots/{snapshot_id}/download
 GET  /v1/rpc/methods
 POST /v1/rpc
 GET  /v1/metrics
@@ -92,6 +96,41 @@ intraday bar 字段固定为 `timestamp`、`symbol`、`period`、`open`、`high`
 空数据不是错误：服务返回 `ok=true`、`bars=[]` 和 `row_count=0`。参数非法返回
 `INVALID_MARKET_REQUEST`，行情源异常返回 `MARKET_DATA_ERROR`，行情 target 未连接返回
 `TARGET_NOT_CONNECTED`。
+
+## Snapshot API
+
+`/v1/snapshots` 用于回测批量数据准备。大批量数据不通过普通 JSON response 返回，而是写入
+服务端 snapshot 文件，并通过 manifest 描述参数、schema、格式、hash、覆盖区间和版本信息。
+首个稳定导出格式是 CSV。
+
+### POST /v1/snapshots
+
+创建或复用 snapshot：
+
+```json
+{
+  "kind": "daily_bars",
+  "symbols": ["000001.SZ"],
+  "start": "2026-01-01",
+  "end": "2026-01-31",
+  "adjust": "none",
+  "format": "csv"
+}
+```
+
+如果相同参数已经生成过 snapshot，服务返回同一个 manifest，并在 `data.cached` 中标记缓存命中。
+
+### GET /v1/snapshots
+
+列出当前 snapshot registry 中的 manifest 摘要。
+
+### GET /v1/snapshots/{snapshot_id}/manifest
+
+返回指定 snapshot manifest。
+
+### GET /v1/snapshots/{snapshot_id}/download
+
+下载 snapshot 数据文件。当前仅承诺 CSV。
 
 ## RPC Request
 

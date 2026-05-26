@@ -57,6 +57,14 @@ class QmtMarketDataError(QmtServerError):
     code = "MARKET_DATA_ERROR"
 
 
+class QmtInvalidSnapshotRequestError(QmtServerError):
+    code = "INVALID_SNAPSHOT_REQUEST"
+
+
+class QmtSnapshotNotFoundError(QmtServerError):
+    code = "SNAPSHOT_NOT_FOUND"
+
+
 @dataclass(frozen=True)
 class ErrorCode:
     code: str
@@ -83,6 +91,8 @@ ERROR_CODES: tuple[ErrorCode, ...] = (
     ErrorCode("TRANSPARENT_TRADING_DENIED", "Transparent RPC trading-like method is denied."),
     ErrorCode("INVALID_MARKET_REQUEST", "Market data request parameters are invalid."),
     ErrorCode("MARKET_DATA_ERROR", "Market data source returned an unexpected error."),
+    ErrorCode("INVALID_SNAPSHOT_REQUEST", "Snapshot request parameters are invalid."),
+    ErrorCode("SNAPSHOT_NOT_FOUND", "Requested snapshot or snapshot file was not found."),
     ErrorCode("RPC_ERROR", "Client-side wrapper for an RPC error response."),
     ErrorCode("QMT_SERVER_ERROR", "Generic qmtserver error."),
 )

@@ -3,7 +3,7 @@
 Milestone 12 的目标是支持回测批量数据准备。大批量历史数据不通过普通 JSON 同步返回，而是生成
 可追溯 snapshot，并通过 manifest 描述数据完整性。
 
-状态：计划中。
+状态：已完成本地实现；真实 Windows + MiniQMT 大样本导出尚未在本机执行。
 
 ## 目标
 
@@ -127,9 +127,18 @@ Milestone 12 完成时必须满足：
 3. 大数据下载不通过普通 JSON response 承载。
 4. snapshot 文件不泄露账号、token 或个人路径。
 
+当前本地验收：
+
+- 已实现 `POST /v1/snapshots`、`GET /v1/snapshots`、
+  `GET /v1/snapshots/{snapshot_id}/manifest` 和
+  `GET /v1/snapshots/{snapshot_id}/download`。
+- 已实现 request hash、CSV writer、manifest JSON 和 snapshot registry。
+- 已实现同参数 snapshot 复用。
+- 默认 snapshot 目录为 `data/snapshots/`，该目录已由仓库忽略规则覆盖。
+- 本机没有 MiniQMT，未执行真实 Windows 大样本导出；需要在 Windows 网关机补充验证。
+
 ## 风险与应对
 
 - snapshot 文件过大：只承诺本地文件输出，不做内存聚合下载。
 - registry 损坏：manifest 采用独立 JSON 文件，registry 可从目录重建。
 - 格式承诺过早：首版只稳定 CSV，Parquet / Arrow 作为后续增强。
-

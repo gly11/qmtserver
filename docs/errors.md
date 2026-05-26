@@ -23,6 +23,8 @@ qmtserver 的错误码集中定义在 `qmtserver.errors.ERROR_CODES`。客户端
 | `TRANSPARENT_TRADING_DENIED` | Transparent RPC trading-like method is denied. |
 | `INVALID_MARKET_REQUEST` | Market data request parameters are invalid. |
 | `MARKET_DATA_ERROR` | Market data source returned an unexpected error. |
+| `INVALID_SNAPSHOT_REQUEST` | Snapshot request parameters are invalid. |
+| `SNAPSHOT_NOT_FOUND` | Requested snapshot or snapshot file was not found. |
 | `RPC_ERROR` | Client-side wrapper for an RPC error response. |
 | `QMT_SERVER_ERROR` | Generic qmtserver error. |
 
