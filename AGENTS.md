@@ -10,7 +10,7 @@ qmtserver is a local Windows gateway for MiniQMT / `xtquant`. A Windows machine 
 qmtserver; other tools, strategy systems, or automation scripts access it through HTTP RPC,
 WebSocket events, and client SDKs.
 
-The current `0.3.0` baseline is a safety-first remote gateway MVP:
+The current `0.4.0` baseline is a safety-first remote gateway MVP:
 
 - connection-check CLI;
 - `/v1` HTTP API;

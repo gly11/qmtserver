@@ -1,6 +1,6 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前已完成版本为 `0.3.0`。
+本文档记录 qmtserver 的版本节奏和发布门禁。当前准备发布版本为 `0.4.0`。
 
 ## 版本节奏
 
@@ -8,6 +8,7 @@
 0.1.0  已完成  安全远程网关 MVP
 0.2.0  已完成  透明 RPC 实验模式
 0.3.0  已完成  稳定行情数据、snapshot、job 和诊断接口
+0.4.0  准备发布  稳定只读交易查询 API
 1.0.0  远期    稳定版本
 ```
 
@@ -67,6 +68,28 @@
 
 - 本地开发环境可以完成单元测试、lint、format、type 和 diff 检查。
 - 真实 Windows + MiniQMT smoke 需要在具备 `xtquant`、MiniQMT userdata 和账号权限的网关机上补做。
+
+## 0.4.0
+
+状态：准备发布。
+
+`0.4.0` 聚焦稳定只读交易查询 API，让外部系统在不走 transparent RPC 的情况下查询账号状态、
+资产、持仓、当日委托和当日成交。
+
+范围：
+
+- 增加 `/v1/trader/account-status`、asset、positions、orders 和 trades。
+- 统一只读交易查询响应 envelope 和 `trader.readonly.v1` schema。
+- 增加账号解析、账号 allowlist 过滤和 `TRADER_ACCOUNT_REQUIRED` 错误码。
+- 增加内置客户端只读 trader helper。
+- 补充 API、SDK、错误码、roadmap 和 xtquant adapter 文档。
+
+发布限制：
+
+- 本地开发环境可以完成单元测试、lint、format、type、code health、build、twine check 和 diff
+  检查。
+- 真实 Windows + MiniQMT smoke 应在具备 `xtquant`、MiniQMT userdata 和账号权限的网关机上补做。
+- 只读交易查询 smoke 不应执行真实下单或撤单。
 
 ## 发布门禁
 

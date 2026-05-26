@@ -57,6 +57,7 @@ class TraderReadonlyService:
         try:
             trader = self.qmt_service.get_target("trader")
             data = [normalize_account_status(item) for item in trader.query_account_status()]
+            data = _filter_allowed_account_statuses(data, self.settings.trading_allowed_accounts())
             return self._success({"statuses": data}, account=None)
         except Exception as exc:
             return self._failure(exc, account=None)
@@ -199,3 +200,12 @@ def _mask_account(account_id: str) -> str:
     if len(account_id) <= 6:
         return "***"
     return f"{account_id[:3]}****{account_id[-3:]}"
+
+
+def _filter_allowed_account_statuses(
+    statuses: list[dict[str, Any]],
+    allowed_accounts: set[str],
+) -> list[dict[str, Any]]:
+    if not allowed_accounts:
+        return statuses
+    return [item for item in statuses if item.get("account_id") in allowed_accounts]

@@ -35,7 +35,7 @@ CI 已使用严格模式，提交或 PR 会运行同一套质量门禁。
 265  src/qmtserver/trading.py
 254  src/qmtserver/services/qmt_service.py
 244  src/qmtserver/client/client.py
-201  src/qmtserver/trader/service.py
+211  src/qmtserver/trader/service.py
 ```
 
 最大的测试文件：
@@ -43,7 +43,7 @@ CI 已使用严格模式，提交或 PR 会运行同一套质量门禁。
 ```text
 243  tests/test_client.py
 242  tests/fakes.py
-169  tests/test_trader_service.py
+190  tests/test_trader_service.py
 ```
 
 结论：

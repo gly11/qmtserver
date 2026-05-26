@@ -5,7 +5,7 @@ import unittest
 from qmtserver.config import load_settings
 from qmtserver.errors import QmtAccountNotAllowedError, QmtTraderAccountRequiredError
 from qmtserver.trader.service import TraderReadonlyService, resolve_stock_account
-from tests.fakes import DisconnectedTraderService, FakeService
+from tests.fakes import DisconnectedTraderService, FakeService, FakeTrader
 
 
 class TraderServiceAccountTests(unittest.TestCase):
@@ -119,6 +119,19 @@ class TraderReadonlyServiceTests(unittest.TestCase):
         self.assertEqual(response["meta"]["schema"], "trader.readonly.v1")
         self.assertEqual(response["data"]["statuses"][0]["account_type"], "STOCK")
 
+    def test_account_status_hides_accounts_outside_allowlist(self) -> None:
+        fake_service = FakeService(account_id="10001")
+        fake_service.trader = _MultiAccountStatusTrader()
+        service = TraderReadonlyService(fake_service)
+
+        response = service.account_status()
+
+        self.assertTrue(response["ok"])
+        self.assertEqual(
+            [item["account_id"] for item in response["data"]["statuses"]],
+            ["10001"],
+        )
+
     def test_asset_resolves_default_account(self) -> None:
         service = TraderReadonlyService(FakeService(account_id="123456789"))
 
@@ -163,6 +176,14 @@ def _object(**values: object) -> object:
     for key, value in values.items():
         setattr(item, key, value)
     return item
+
+
+class _MultiAccountStatusTrader(FakeTrader):
+    def query_account_status(self) -> list[object]:
+        return [
+            _object(account_id="10001", account_type="STOCK", status=0),
+            _object(account_id="10002", account_type="STOCK", status=0),
+        ]
 
 
 if __name__ == "__main__":
