@@ -60,6 +60,7 @@ GET /v1/health
 GET /v1/metrics
 GET /v1/qmt/status
 GET /v1/market/capabilities
+GET /v1/diagnostics
 GET /v1/rpc/methods
 WS  /v1/ws/events
 ```
@@ -75,6 +76,22 @@ QMT_SNAPSHOT_DIR=data/snapshots
 该目录用于保存 CSV 数据文件和对应的 `*.manifest.json`。manifest 不记录本机绝对路径、账号、
 token 或 MiniQMT userdata 路径；如需备份或清理 snapshot，优先以 manifest 为单位处理同名
 数据文件。
+
+## Jobs 与诊断
+
+历史下载 job 使用进程内存 registry，服务重启后 job 状态清空。成功 job 关联的 snapshot 文件和
+manifest 会保留在 `QMT_SNAPSHOT_DIR`。
+
+常用诊断入口：
+
+```text
+GET /v1/diagnostics
+GET /v1/metrics
+```
+
+`/v1/diagnostics` 返回 MiniQMT/qmtserver 状态、server clock、版本信息和 sample symbol smoke。
+`/v1/metrics` 包含 job status 计数，便于观察 queued、running、succeeded、failed 和 cancelled
+分布。
 
 ## 日志
 

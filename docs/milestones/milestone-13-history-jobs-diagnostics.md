@@ -2,7 +2,7 @@
 
 Milestone 13 的目标是把耗时的历史下载操作任务化，并提供更强的运行诊断能力。
 
-状态：计划中。
+状态：已完成本地实现；真实 Windows + MiniQMT 历史下载 smoke test 尚未在本机执行。
 
 ## 目标
 
@@ -112,9 +112,18 @@ Milestone 13 完成时必须满足：
 3. diagnostics 能判断 MiniQMT 连接、行情源和示例标的是否可用。
 4. metrics 可观察 job 状态分布。
 
+当前本地验收：
+
+- 已实现 `POST /v1/jobs/history-download`、`GET /v1/jobs/{job_id}`、
+  `GET /v1/jobs/{job_id}/result` 和 `POST /v1/jobs/{job_id}/cancel`。
+- 已实现进程内存 job registry 和后台线程 runner。
+- history-download job 成功后关联 snapshot manifest。
+- 已实现 `/v1/diagnostics`，返回 qmt、clock、version 和 sample sections。
+- `/v1/metrics` 已增加 job status 计数。
+- 本机没有 MiniQMT，未执行真实 Windows 历史下载 smoke test；需要在 Windows 网关机补充验证。
+
 ## 风险与应对
 
 - 任务取消不可靠：首版只保证 queued 可取消，running 取消作为 best effort。
 - 后台线程资源泄露：限制并发数量，服务 shutdown 时清理 runner。
 - 下载与 snapshot 耦合过深：job result 只引用 manifest，不直接暴露内部文件路径。
-

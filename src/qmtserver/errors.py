@@ -65,6 +65,14 @@ class QmtSnapshotNotFoundError(QmtServerError):
     code = "SNAPSHOT_NOT_FOUND"
 
 
+class QmtJobNotFoundError(QmtServerError):
+    code = "JOB_NOT_FOUND"
+
+
+class QmtJobNotReadyError(QmtServerError):
+    code = "JOB_NOT_READY"
+
+
 @dataclass(frozen=True)
 class ErrorCode:
     code: str
@@ -93,6 +101,9 @@ ERROR_CODES: tuple[ErrorCode, ...] = (
     ErrorCode("MARKET_DATA_ERROR", "Market data source returned an unexpected error."),
     ErrorCode("INVALID_SNAPSHOT_REQUEST", "Snapshot request parameters are invalid."),
     ErrorCode("SNAPSHOT_NOT_FOUND", "Requested snapshot or snapshot file was not found."),
+    ErrorCode("JOB_NOT_FOUND", "Requested job is not in the in-memory job registry."),
+    ErrorCode("JOB_NOT_READY", "Requested job result is not ready."),
+    ErrorCode("JOB_NOT_CANCELLABLE", "Requested job cannot be cancelled."),
     ErrorCode("RPC_ERROR", "Client-side wrapper for an RPC error response."),
     ErrorCode("QMT_SERVER_ERROR", "Generic qmtserver error."),
 )

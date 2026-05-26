@@ -57,3 +57,14 @@ ws://127.0.0.1:8000/v1/ws/events?token=<QMT_API_TOKEN>
 ## WebSocket 收不到事件
 
 先确认 `/v1/ws/events` 能收到 heartbeat；交易回报事件需要 trader 成功连接并触发对应 xtquant 回调。
+
+## history job 没有结果
+
+先检查 job 状态：
+
+```text
+GET /v1/jobs/{job_id}
+```
+
+如果状态仍是 `queued` 或 `running`，结果接口会返回 `JOB_NOT_READY`。如果状态是 `failed`，
+查看 job 的 `error.code` 和 `error.message`，再结合 `/v1/diagnostics` 判断 MiniQMT 和行情源是否可用。

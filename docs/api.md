@@ -17,6 +17,11 @@ POST /v1/snapshots
 GET  /v1/snapshots
 GET  /v1/snapshots/{snapshot_id}/manifest
 GET  /v1/snapshots/{snapshot_id}/download
+POST /v1/jobs/history-download
+GET  /v1/jobs/{job_id}
+GET  /v1/jobs/{job_id}/result
+POST /v1/jobs/{job_id}/cancel
+GET  /v1/diagnostics
 GET  /v1/rpc/methods
 POST /v1/rpc
 GET  /v1/metrics
@@ -131,6 +136,33 @@ intraday bar 字段固定为 `timestamp`、`symbol`、`period`、`open`、`high`
 ### GET /v1/snapshots/{snapshot_id}/download
 
 下载 snapshot 数据文件。当前仅承诺 CSV。
+
+## Jobs and Diagnostics
+
+历史下载类任务使用内存 job registry。服务重启后 job 状态会清空；已生成的 snapshot 文件和
+manifest 仍保留在 snapshot 目录中。
+
+### POST /v1/jobs/history-download
+
+创建历史下载 job。首版 job runner 在后台线程中执行，并把成功结果关联到 snapshot manifest。
+请求体沿用 snapshot 创建参数。
+
+### GET /v1/jobs/{job_id}
+
+查询 job 状态。状态包括 `queued`、`running`、`succeeded`、`failed` 和 `cancelled`。
+
+### GET /v1/jobs/{job_id}/result
+
+成功后返回关联的 snapshot manifest。结果未就绪时返回 `JOB_NOT_READY`。
+
+### POST /v1/jobs/{job_id}/cancel
+
+取消尚未运行的 job。running job 的取消是 best effort，首版只保证 queued job 可取消。
+
+### GET /v1/diagnostics
+
+返回 MiniQMT/qmtserver 状态、server clock、qmtserver/xtquant 版本和 sample symbol smoke 信息，
+用于排查连接和行情源状态。
 
 ## RPC Request
 

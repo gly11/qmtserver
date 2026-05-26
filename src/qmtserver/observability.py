@@ -31,7 +31,7 @@ class Metrics:
                 self.rpc_error += 1
             self.rpc_elapsed_total_ms += elapsed_ms
 
-    def snapshot(self, *, service: Any, event_bus: Any) -> dict[str, Any]:
+    def snapshot(self, *, service: Any, event_bus: Any, job_registry: Any = None) -> dict[str, Any]:
         with self._lock:
             rpc_total = self.rpc_total
             rpc_success = self.rpc_success
@@ -57,6 +57,7 @@ class Metrics:
                 "clients": getattr(event_bus, "subscriber_count", 0),
                 "events_published": getattr(event_bus, "events_published", 0),
             },
+            "jobs": _job_status_counts(job_registry),
         }
 
 
@@ -106,4 +107,14 @@ def _service_status(service: Any) -> dict[str, Any]:
         value = service.status()
     except Exception as exc:
         return {"lifecycle": {"state": "unknown"}, "error": f"{type(exc).__name__}: {exc}"}
+    return value if isinstance(value, dict) else {}
+
+
+def _job_status_counts(job_registry: Any) -> dict[str, int]:
+    if job_registry is None:
+        return {}
+    try:
+        value = job_registry.status_counts()
+    except Exception:
+        return {}
     return value if isinstance(value, dict) else {}

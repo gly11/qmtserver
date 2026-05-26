@@ -14,4 +14,5 @@ def metrics(request: Request) -> dict[str, object]:
     return request.app.state.metrics.snapshot(
         service=service,
         event_bus=request.app.state.event_bus,
+        job_registry=request.app.state.job_registry,
     )
