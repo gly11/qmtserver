@@ -73,8 +73,70 @@ class FakeTrader:
     def __init__(self) -> None:
         self.calls: list[tuple[str, tuple[object, ...]]] = []
 
+    def query_account_status(self) -> list[object]:
+        return [
+            _fake_object(
+                account_id="10001",
+                account_type="STOCK",
+                status=0,
+            )
+        ]
+
     def query_stock_asset(self, account: object) -> dict[str, object]:
-        return {"account_id": getattr(account, "account_id", None)}
+        return {
+            "account_id": getattr(account, "account_id", None),
+            "cash": 1000.0,
+            "frozen_cash": 10.0,
+            "market_value": 2000.0,
+            "total_asset": 3000.0,
+            "fetch_balance": 990.0,
+        }
+
+    def query_stock_positions(self, account: object) -> list[object]:
+        return [
+            _fake_object(
+                account_id=getattr(account, "account_id", None),
+                stock_code="000001.SZ",
+                volume=100,
+                can_use_volume=80,
+                open_price=10.0,
+                market_value=1100.0,
+            )
+        ]
+
+    def query_stock_orders(
+        self,
+        account: object,
+        cancelable_only: bool = False,
+    ) -> list[object]:
+        return [
+            _fake_object(
+                account_id=getattr(account, "account_id", None),
+                order_id=10001,
+                stock_code="000001.SZ",
+                order_type=23,
+                order_volume=100,
+                price_type=11,
+                price=10.5,
+                order_status=0,
+                status_msg="ok",
+                cancelable_only=cancelable_only,
+            )
+        ]
+
+    def query_stock_trades(self, account: object) -> list[object]:
+        return [
+            _fake_object(
+                account_id=getattr(account, "account_id", None),
+                trade_id="T10001",
+                stock_code="000001.SZ",
+                order_id=10001,
+                traded_volume=100,
+                traded_price=10.5,
+                traded_amount=1050.0,
+                traded_time="20260102093000",
+            )
+        ]
 
     def order_stock(self, *args: object) -> int:
         self.calls.append(("order_stock", args))
@@ -171,3 +233,10 @@ def rpc_error_code(response: RpcResponse) -> str:
     error = response["error"]
     assert error is not None
     return error["code"]
+
+
+def _fake_object(**values: object) -> object:
+    item = type("FakeObject", (), {})()
+    for key, value in values.items():
+        setattr(item, key, value)
+    return item

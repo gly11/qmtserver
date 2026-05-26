@@ -1,3 +1,7 @@
-from qmtserver.trader.service import ResolvedStockAccount, resolve_stock_account
+from qmtserver.trader.service import (
+    ResolvedStockAccount,
+    TraderReadonlyService,
+    resolve_stock_account,
+)
 
-__all__ = ["ResolvedStockAccount", "resolve_stock_account"]
+__all__ = ["ResolvedStockAccount", "TraderReadonlyService", "resolve_stock_account"]
