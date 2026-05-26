@@ -73,6 +73,10 @@ class QmtJobNotReadyError(QmtServerError):
     code = "JOB_NOT_READY"
 
 
+class QmtTraderAccountRequiredError(QmtServerError):
+    code = "TRADER_ACCOUNT_REQUIRED"
+
+
 @dataclass(frozen=True)
 class ErrorCode:
     code: str
@@ -104,6 +108,7 @@ ERROR_CODES: tuple[ErrorCode, ...] = (
     ErrorCode("JOB_NOT_FOUND", "Requested job is not in the in-memory job registry."),
     ErrorCode("JOB_NOT_READY", "Requested job result is not ready."),
     ErrorCode("JOB_NOT_CANCELLABLE", "Requested job cannot be cancelled."),
+    ErrorCode("TRADER_ACCOUNT_REQUIRED", "Readonly trader query requires an account id."),
     ErrorCode("RPC_ERROR", "Client-side wrapper for an RPC error response."),
     ErrorCode("QMT_SERVER_ERROR", "Generic qmtserver error."),
 )
