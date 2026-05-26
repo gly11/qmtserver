@@ -88,7 +88,8 @@ POST /v1/snapshots
 POST /v1/jobs/history-download
 GET  /v1/diagnostics
 GET  /v1/reference/calendar
-GET  /v1/quality/bars
+GET  /v1/market/bars/daily/quality
+GET  /v1/snapshots/{snapshot_id}/quality
 GET  /v1/rpc/methods
 POST /v1/rpc
 WS   /v1/ws/events
