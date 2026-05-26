@@ -50,7 +50,7 @@ class SnapshotService:
             bars = response["data"]["bars"]
             snapshot_id = f"{canonical['kind']}-{req_hash.removeprefix('sha256:')[:16]}"
             data_path = self.registry.data_path(snapshot_id, canonical["format"])
-            data_hash = write_csv(data_path, bars)
+            data_hash = write_csv(data_path, bars, kind=canonical["kind"])
             manifest = self._manifest(
                 snapshot_id=snapshot_id,
                 request=canonical,

@@ -78,6 +78,22 @@ QMT_SNAPSHOT_DIR=data/snapshots
 token 或 MiniQMT userdata 路径；如需备份或清理 snapshot，优先以 manifest 为单位处理同名
 数据文件。
 
+每个 snapshot 使用同一个 `snapshot_id` 生成两个文件：
+
+```text
+{snapshot_id}.csv
+{snapshot_id}.manifest.json
+```
+
+CSV 字段按 snapshot kind 固定：
+
+- `daily_bars`：`date,symbol,open,high,low,close,volume,amount,meta`
+- `intraday_bars`：`timestamp,symbol,period,open,high,low,close,volume,amount,meta`
+
+其中 `meta` 字段在 CSV 中为 JSON 字符串。manifest 记录 request、request_hash、schema、
+format、hash、row_count、symbol_count、coverage_start、coverage_end、generated_at、
+qmtserver_version 和 xtquant_version。
+
 ## Jobs 与诊断
 
 历史下载 job 使用进程内存 registry，服务重启后 job 状态清空。成功 job 关联的 snapshot 文件和

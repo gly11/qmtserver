@@ -113,6 +113,14 @@ intraday bar 字段固定为 `timestamp`、`symbol`、`period`、`open`、`high`
 服务端 snapshot 文件，并通过 manifest 描述参数、schema、格式、hash、覆盖区间和版本信息。
 首个稳定导出格式是 CSV。
 
+CSV 文件字段跟随 snapshot kind：
+
+- `daily_bars`：`date`、`symbol`、`open`、`high`、`low`、`close`、`volume`、`amount`、`meta`
+- `intraday_bars`：`timestamp`、`symbol`、`period`、`open`、`high`、`low`、`close`、`volume`、
+  `amount`、`meta`
+
+`meta` 在 CSV 中序列化为 JSON 字符串。
+
 ### POST /v1/snapshots
 
 创建或复用 snapshot：
@@ -129,6 +137,8 @@ intraday bar 字段固定为 `timestamp`、`symbol`、`period`、`open`、`high`
 ```
 
 如果相同参数已经生成过 snapshot，服务返回同一个 manifest，并在 `data.cached` 中标记缓存命中。
+缓存命中基于 canonical request 的 `request_hash`，包含 kind、symbols、start、end、adjust、
+format，以及 intraday 请求的 period。
 
 ### GET /v1/snapshots
 

@@ -76,6 +76,40 @@ class ApiSnapshotTests(unittest.TestCase):
         )
         self.assertTrue(second["data"]["cached"])
 
+    def test_create_intraday_snapshot_downloads_intraday_csv_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = create_app(
+                load_settings(auto_connect=False, snapshot_dir=Path(tmp)),
+                connect_on_startup=False,
+            )
+
+            with TestClient(app) as client:
+                app.state.qmt_service = FakeService(snapshot_dir=Path(tmp))
+                create = client.post(
+                    "/v1/snapshots",
+                    json={
+                        "kind": "intraday_bars",
+                        "symbols": ["000001.SZ"],
+                        "period": "1m",
+                        "start": "2026-01-02T09:30:00+08:00",
+                        "end": "2026-01-02T15:00:00+08:00",
+                        "adjust": "none",
+                        "format": "csv",
+                    },
+                )
+                self.assertEqual(create.status_code, 200)
+                body = create.json()
+                snapshot_id = body["data"]["manifest"]["snapshot_id"]
+                download = client.get(f"/v1/snapshots/{snapshot_id}/download")
+
+        self.assertTrue(snapshot_id.startswith("intraday_bars-"))
+        self.assertEqual(download.status_code, 200)
+        self.assertIn(
+            "timestamp,symbol,period,open,high,low,close,volume,amount,meta",
+            download.text,
+        )
+        self.assertIn("2026-01-02T09:31:00+08:00,000001.SZ,1m", download.text)
+
 
 if __name__ == "__main__":
     unittest.main()

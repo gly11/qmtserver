@@ -30,7 +30,7 @@ class SnapshotManifestTests(unittest.TestCase):
 
         self.assertEqual(request_hash(first), request_hash(second))
 
-    def test_csv_writer_uses_stable_column_order(self) -> None:
+    def test_daily_csv_writer_uses_stable_column_order(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "bars.csv"
             digest = write_csv(
@@ -52,6 +52,36 @@ class SnapshotManifestTests(unittest.TestCase):
 
             lines = path.read_text(encoding="utf-8").splitlines()
             self.assertEqual(lines[0], "date,symbol,open,high,low,close,volume,amount,meta")
+            self.assertTrue(digest.startswith("sha256:"))
+
+    def test_intraday_csv_writer_preserves_timestamp_and_period(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "intraday.csv"
+            digest = write_csv(
+                path,
+                [
+                    {
+                        "timestamp": "2026-01-02T09:31:00+08:00",
+                        "symbol": "000001.SZ",
+                        "period": "1m",
+                        "open": 10.1,
+                        "high": 10.2,
+                        "low": 10.0,
+                        "close": 10.15,
+                        "volume": 1000,
+                        "amount": 10150.0,
+                        "meta": {},
+                    }
+                ],
+                kind="intraday_bars",
+            )
+
+            lines = path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(
+                lines[0],
+                "timestamp,symbol,period,open,high,low,close,volume,amount,meta",
+            )
+            self.assertIn("2026-01-02T09:31:00+08:00,000001.SZ,1m", lines[1])
             self.assertTrue(digest.startswith("sha256:"))
 
     def test_registry_lists_and_finds_manifest_by_request_hash(self) -> None:

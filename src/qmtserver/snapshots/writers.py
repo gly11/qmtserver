@@ -7,13 +7,25 @@ from typing import Any
 
 from qmtserver.snapshots.manifest import content_hash
 
-CSV_COLUMNS = ("date", "symbol", "open", "high", "low", "close", "volume", "amount", "meta")
+DAILY_CSV_COLUMNS = ("date", "symbol", "open", "high", "low", "close", "volume", "amount", "meta")
+INTRADAY_CSV_COLUMNS = (
+    "timestamp",
+    "symbol",
+    "period",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "amount",
+    "meta",
+)
 
 
-def write_csv(path: Path, rows: list[dict[str, Any]]) -> str:
+def write_csv(path: Path, rows: list[dict[str, Any]], *, kind: str = "daily_bars") -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=CSV_COLUMNS, extrasaction="ignore")
+        writer = csv.DictWriter(handle, fieldnames=_columns_for_kind(kind), extrasaction="ignore")
         writer.writeheader()
         for row in rows:
             prepared = dict(row)
@@ -24,3 +36,9 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> str:
             )
             writer.writerow(prepared)
     return content_hash(path.read_bytes())
+
+
+def _columns_for_kind(kind: str) -> tuple[str, ...]:
+    if kind == "intraday_bars":
+        return INTRADAY_CSV_COLUMNS
+    return DAILY_CSV_COLUMNS
