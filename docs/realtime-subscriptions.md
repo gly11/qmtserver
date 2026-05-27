@@ -231,4 +231,8 @@ Readonly smoke only:
 6. Stop the subscription.
 7. Confirm no further events for the stopped local `subscription_id`.
 
+After-hours smoke may only prove quote connectivity and subscription lifecycle behavior. Treat live
+`market_quote` callback delivery as verified only after observing a quote event while market data is
+active.
+
 Do not run order, cancel, transfer, or other trading commands during this smoke.

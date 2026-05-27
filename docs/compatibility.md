@@ -13,6 +13,7 @@ Add one row per verified environment:
 | Date | Python | qmtserver | xtquant source/version | MiniQMT userdata | Smoke scope | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-05-27 | CPython 3.13 | 0.4.0 | `xtquant_250516` from local venv | `userdata_mini` | connection, market bars, readonly trader queries | Baseline before realtime subscription work |
+| 2026-05-27 | CPython 3.13.13 | unreleased realtime subscription work | `xtquant_250516` from local venv | `userdata_mini` | quote connection, subscription create, subscription stop, WebSocket lifecycle event | After-hours smoke at 17:27 local time. No live `market_quote` observed; rerun during active market data to verify callback delivery. No trader or trading commands used. |
 
 Do not record account IDs, tokens, private paths, or other local secrets.
 
@@ -65,7 +66,10 @@ Current: `tests/test_market_adapter.py`, `tests/test_market_normalizers.py`, and
 `tests/test_market_subscriptions.py`. Planned: `tests/test_api_market_subscriptions.py`.
 
 real smoke:
-Planned readonly smoke with MiniQMT started and logged in. No trading commands.
+Partial readonly smoke completed after market close: quote connection succeeded, subscription create
+returned `active`, WebSocket received `market_subscription`, and stop returned `stopped`. No live
+`market_quote` callback was observed after hours. Rerun during active market data before treating
+quote callback delivery as real-smoke verified. No trader or trading commands were used.
 
 trading safety:
 Readonly market data only.
