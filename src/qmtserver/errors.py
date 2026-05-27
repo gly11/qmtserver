@@ -57,6 +57,22 @@ class QmtMarketDataError(QmtServerError):
     code = "MARKET_DATA_ERROR"
 
 
+class QmtInvalidSubscriptionRequestError(QmtServerError):
+    code = "INVALID_SUBSCRIPTION_REQUEST"
+
+
+class QmtMarketSubscriptionError(QmtServerError):
+    code = "MARKET_SUBSCRIPTION_ERROR"
+
+
+class QmtMarketSubscriptionNotFoundError(QmtServerError):
+    code = "MARKET_SUBSCRIPTION_NOT_FOUND"
+
+
+class QmtMarketSubscriptionUnsupportedError(QmtServerError):
+    code = "MARKET_SUBSCRIPTION_UNSUPPORTED"
+
+
 class QmtInvalidSnapshotRequestError(QmtServerError):
     code = "INVALID_SNAPSHOT_REQUEST"
 
@@ -103,6 +119,10 @@ ERROR_CODES: tuple[ErrorCode, ...] = (
     ErrorCode("TRANSPARENT_TRADING_DENIED", "Transparent RPC trading-like method is denied."),
     ErrorCode("INVALID_MARKET_REQUEST", "Market data request parameters are invalid."),
     ErrorCode("MARKET_DATA_ERROR", "Market data source returned an unexpected error."),
+    ErrorCode("INVALID_SUBSCRIPTION_REQUEST", "Market subscription parameters are invalid."),
+    ErrorCode("MARKET_SUBSCRIPTION_ERROR", "Market subscription failed unexpectedly."),
+    ErrorCode("MARKET_SUBSCRIPTION_NOT_FOUND", "Requested market subscription was not found."),
+    ErrorCode("MARKET_SUBSCRIPTION_UNSUPPORTED", "Market subscription behavior is unsupported."),
     ErrorCode("INVALID_SNAPSHOT_REQUEST", "Snapshot request parameters are invalid."),
     ErrorCode("SNAPSHOT_NOT_FOUND", "Requested snapshot or snapshot file was not found."),
     ErrorCode("JOB_NOT_FOUND", "Requested job is not in the in-memory job registry."),

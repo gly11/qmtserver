@@ -23,6 +23,10 @@ qmtserver 的错误码集中定义在 `qmtserver.errors.ERROR_CODES`。客户端
 | `TRANSPARENT_TRADING_DENIED` | Transparent RPC trading-like method is denied. |
 | `INVALID_MARKET_REQUEST` | Market data request parameters are invalid. |
 | `MARKET_DATA_ERROR` | Market data source returned an unexpected error. |
+| `INVALID_SUBSCRIPTION_REQUEST` | Market subscription parameters are invalid. |
+| `MARKET_SUBSCRIPTION_ERROR` | Market subscription failed unexpectedly. |
+| `MARKET_SUBSCRIPTION_NOT_FOUND` | Requested market subscription was not found. |
+| `MARKET_SUBSCRIPTION_UNSUPPORTED` | Market subscription behavior is unsupported. |
 | `INVALID_SNAPSHOT_REQUEST` | Snapshot request parameters are invalid. |
 | `SNAPSHOT_NOT_FOUND` | Requested snapshot or snapshot file was not found. |
 | `JOB_NOT_FOUND` | Requested job is not in the in-memory job registry. |
