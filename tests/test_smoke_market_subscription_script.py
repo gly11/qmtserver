@@ -54,6 +54,21 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
         self.assertEqual(summary["type"], "market_quote")
         self.assertEqual(summary["quote_source"], "callback")
 
+    def test_receive_events_records_receiver_errors(self) -> None:
+        module = load_smoke_module()
+
+        class BrokenWebSocket:
+            def receive_json(self) -> dict[str, object]:
+                raise RuntimeError("closed")
+
+        result = {"received_quote": False, "received_callback": False}
+        events: list[dict[str, object]] = []
+
+        module._receive_events(BrokenWebSocket(), events, result, require_callback=True)
+
+        self.assertEqual(events, [])
+        self.assertEqual(result["receiver_error"], "RuntimeError: closed")
+
 
 if __name__ == "__main__":
     unittest.main()

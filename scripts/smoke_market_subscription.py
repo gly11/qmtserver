@@ -61,6 +61,7 @@ def run_smoke(
         "events": events,
         "received_quote": False,
         "received_callback": False,
+        "receiver_error": None,
         "require_callback": require_callback,
         "trader_connected": None,
     }
@@ -105,17 +106,20 @@ def _receive_events(
     result: dict[str, Any],
     require_callback: bool,
 ) -> None:
-    for _ in range(20):
-        event = websocket.receive_json()
-        summary = summarize_event(event)
-        events.append(summary)
-        if summary["type"] != "market_quote":
-            continue
-        result["received_quote"] = True
-        if summary.get("quote_source") == "callback":
-            result["received_callback"] = True
-        if not require_callback or result["received_callback"]:
-            return
+    try:
+        for _ in range(20):
+            event = websocket.receive_json()
+            summary = summarize_event(event)
+            events.append(summary)
+            if summary["type"] != "market_quote":
+                continue
+            result["received_quote"] = True
+            if summary.get("quote_source") == "callback":
+                result["received_callback"] = True
+            if not require_callback or result["received_callback"]:
+                return
+    except Exception as exc:
+        result["receiver_error"] = f"{type(exc).__name__}: {exc}"
 
 
 def summarize_event(event: dict[str, Any]) -> dict[str, Any]:
