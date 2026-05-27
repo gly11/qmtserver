@@ -8,6 +8,9 @@
 - [Architecture](architecture.md)：当前架构和后续服务端方向。
 - [Installation](installation.md)：Windows、Python 和 `xtquant` 安装说明。
 - [Development Roadmap](roadmap.md)：整体开发能力路线。
+- [Realtime Market Subscriptions](realtime-subscriptions.md)：实时行情订阅和 WebSocket quote
+  event 的下一阶段计划。
+- [Compatibility Matrix](compatibility.md)：`xtquant` 版本、签名和真实 MiniQMT smoke 记录。
 - [Release Plan](release-plan.md)：版本定位、发布门禁和后续节奏。
 - [API Reference](api.md)：稳定 HTTP RPC 和 WebSocket 契约。
 - [Error Codes](errors.md)：错误码和错误响应结构。

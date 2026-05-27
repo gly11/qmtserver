@@ -79,6 +79,8 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 - 订阅生命周期管理 API。
 
 订阅类能力应明确连接、取消订阅、心跳、错误事件和客户端断开后的服务端行为。
+下一阶段计划见 [Realtime Market Subscriptions](realtime-subscriptions.md)，并同步维护
+[Compatibility Matrix](compatibility.md)。
 
 ### Trading Expansion
 
@@ -105,6 +107,7 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 
 兼容矩阵应帮助判断升级 `xtquant` 包后哪些适配需要复测，而不是假设上游文档和当前行为总是
 一致。
+矩阵记录见 [Compatibility Matrix](compatibility.md)。
 
 ## Stabilization Goals
 

@@ -133,6 +133,40 @@ With MiniQMT logged in and a safe account configured, verify `/v1/trader/asset`,
 `/v1/trader/positions`, `/v1/trader/orders`, and `/v1/trader/trades`. Do not use real order or
 cancel methods for this smoke gate.
 
+### Realtime Market Subscriptions
+
+qmtserver surface:
+Planned `POST /v1/market/subscriptions`, `GET /v1/market/subscriptions`,
+`GET /v1/market/subscriptions/{subscription_id}`, and
+`DELETE /v1/market/subscriptions/{subscription_id}`.
+
+upstream:
+`xtquant.xtdata.subscribe_quote` and the local unsubscribe function if one is available.
+
+observed signature:
+To be recorded in [Compatibility Matrix](compatibility.md) after local inspection.
+
+input conversion:
+qmtserver accepts stable JSON containing `symbols` and `period`; the adapter validates and converts
+these values before calling `xtdata`.
+
+output normalization:
+Quote callbacks normalize to `market.quote.v1` and are published as `market_quote` WebSocket events.
+Subscription lifecycle updates publish `market_subscription` or `market_subscription_error`.
+
+error mapping:
+Invalid input maps to `INVALID_SUBSCRIPTION_REQUEST`. Missing quote connectivity maps to
+`TARGET_NOT_CONNECTED`. Upstream failures map to `MARKET_SUBSCRIPTION_ERROR` or
+`MARKET_SUBSCRIPTION_UNSUPPORTED`.
+
+unit tests:
+Planned fake tests for the adapter, service, API routes, and WebSocket delivery.
+
+real smoke:
+Readonly MiniQMT smoke should create one subscription, observe lifecycle and quote events, stop the
+subscription, and verify no further events for the stopped local subscription id. Do not use real
+order, cancel, transfer, or other trading commands.
+
 ## Real MiniQMT Smoke Gate
 
 Before release, run the normal quality gate, then run a real MiniQMT check on a Windows machine with

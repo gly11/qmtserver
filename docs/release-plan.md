@@ -1,6 +1,7 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前准备发布版本为 `0.4.0`。
+本文档记录 qmtserver 的版本节奏和发布门禁。当前下一阶段聚焦 realtime market
+subscriptions 和 `xtquant` compatibility baseline。
 
 ## 版本节奏
 
@@ -8,7 +9,8 @@
 0.1.0  已完成  安全远程网关 MVP
 0.2.0  已完成  透明 RPC 实验模式
 0.3.0  已完成  稳定行情数据、snapshot、job 和诊断接口
-0.4.0  准备发布  稳定只读交易查询 API
+0.4.0  已发布    稳定只读交易查询 API
+0.5.0  规划中    实时行情订阅和兼容矩阵基线
 1.0.0  远期    稳定版本
 ```
 
@@ -71,7 +73,7 @@
 
 ## 0.4.0
 
-状态：准备发布。
+状态：已发布。
 
 `0.4.0` 聚焦稳定只读交易查询 API，让外部系统在不走 transparent RPC 的情况下查询账号状态、
 资产、持仓、当日委托和当日成交。
@@ -90,6 +92,28 @@
   检查。
 - 真实 Windows + MiniQMT smoke 应在具备 `xtquant`、MiniQMT userdata 和账号权限的网关机上补做。
 - 只读交易查询 smoke 不应执行真实下单或撤单。
+
+## 0.5.0
+
+状态：规划中。
+
+`0.5.0` 聚焦实时行情订阅和 WebSocket quote event，使远程客户端可以通过 qmtserver 管理
+MiniQMT 行情订阅，而不直接依赖 `xtquant`。
+
+范围：
+
+- 增加 `/v1/market/subscriptions` 创建、列表、详情和停止接口。
+- 适配 `xtdata.subscribe_quote`，并记录本地签名、callback 形态和取消订阅行为。
+- 标准化 `market.subscription.v1` 和 `market.quote.v1` 事件。
+- 复用现有 WebSocket `/v1/ws/events`，支持 `market_quote` 和 `market_subscription` 事件。
+- 建立 `docs/compatibility.md`，作为后续 `xtquant` 适配和升级复测基线。
+
+发布限制：
+
+- 普通测试必须使用 fakes，不依赖真实 MiniQMT。
+- 真实 MiniQMT smoke 只做 readonly 行情订阅，不执行下单、撤单、转账或其他交易命令。
+- 如果本地 `xtquant` 不支持可靠取消订阅，必须在 API 和兼容矩阵文档中明确 qmtserver 的本地
+  stop 行为。
 
 ## 发布门禁
 
