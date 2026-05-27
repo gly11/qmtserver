@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable
 from typing import Any
 
@@ -32,6 +33,9 @@ class XtDataSubscriptionAdapter:
                     callback=_quote_callback(symbol, callback),
                 )
             )
+        with contextlib.suppress(Exception):
+            for quote in normalize_quote_payload(xtdata.get_full_tick(symbols)):
+                callback(quote)
         return upstream_ids
 
     def unsubscribe(self, upstream_id: Any) -> None:

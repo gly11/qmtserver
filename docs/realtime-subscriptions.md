@@ -28,6 +28,7 @@ In scope:
 - Stable subscription lifecycle models.
 - In-memory subscription registry.
 - `xtdata.subscribe_quote` adapter boundary.
+- Best-effort initial quote seed from `xtdata.get_full_tick`.
 - Quote callback normalization to `market.quote.v1`.
 - WebSocket events for quote updates, subscription status, and subscription errors.
 - HTTP APIs for create, list, get, and stop.
@@ -166,6 +167,8 @@ Responsibilities:
 
 - Models define stable qmtserver request, state, and event shapes.
 - Adapter owns direct `xtdata.subscribe_quote` and unsubscribe calls.
+- Adapter may emit one initial `get_full_tick` quote after subscription setup; failures are ignored
+  because live callbacks remain the primary stream.
 - Service owns local lifecycle, registry state, status transitions, and EventBus publishing.
 - API routes parse HTTP input and assemble responses only.
 
@@ -231,8 +234,7 @@ Readonly smoke only:
 6. Stop the subscription.
 7. Confirm no further events for the stopped local `subscription_id`.
 
-After-hours smoke may only prove quote connectivity and subscription lifecycle behavior. Treat live
-`market_quote` callback delivery as verified only after observing a quote event while market data is
-active.
+After-hours smoke can verify the event path through the initial `get_full_tick` quote seed. Treat
+live callback delivery as verified only after observing a quote event while market data is active.
 
 Do not run order, cancel, transfer, or other trading commands during this smoke.

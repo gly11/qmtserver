@@ -40,6 +40,19 @@ class RecordingBus:
         self.events.append((event_type, data or {}, meta or {}))
 
 
+class InitialQuoteAdapter(RecordingAdapter):
+    def subscribe(
+        self,
+        *,
+        symbols: list[str],
+        period: str,
+        callback: Callable[[dict[str, Any]], None],
+    ) -> int:
+        upstream_id = super().subscribe(symbols=symbols, period=period, callback=callback)
+        callback({"schema": "market.quote.v1", "symbol": symbols[0], "last_price": 10.25})
+        return upstream_id
+
+
 class MarketSubscriptionServiceTests(unittest.TestCase):
     def test_create_subscription_stores_state_and_publishes_lifecycle_event(self) -> None:
         adapter = RecordingAdapter()
@@ -91,6 +104,21 @@ class MarketSubscriptionServiceTests(unittest.TestCase):
         self.assertEqual(adapter.unsubscribe_calls, [7])
         self.assertEqual(bus.events[-1][0], "market_subscription")
         self.assertEqual(bus.events[-1][1]["status"], "stopped")
+
+    def test_initial_quote_during_create_is_published(self) -> None:
+        bus = RecordingBus()
+        service = MarketSubscriptionService(
+            adapter=InitialQuoteAdapter(),
+            event_bus=bus,
+            id_factory=lambda: "sub_test",
+        )
+
+        service.create(symbols=["000001.SZ"], period="tick")
+
+        quote_events = [event for event in bus.events if event[0] == "market_quote"]
+        self.assertEqual(len(quote_events), 1)
+        self.assertEqual(quote_events[0][1]["schema"], "market.quote.v1")
+        self.assertEqual(quote_events[0][2]["subscription_id"], "sub_test")
 
 
 if __name__ == "__main__":

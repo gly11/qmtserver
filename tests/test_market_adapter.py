@@ -18,6 +18,11 @@ class RecordingXtData:
         self.calls.append(kwargs)
         return {}
 
+    def get_full_tick(self, stock_list: list[str]) -> dict[str, dict[str, object]]:
+        return {
+            symbol: {"lastPrice": 10.25, "volume": 1200, "amount": 12300.0} for symbol in stock_list
+        }
+
     def subscribe_quote(self, **kwargs: Any) -> int:
         self.subscribe_calls.append(kwargs)
         return len(self.subscribe_calls)
@@ -114,6 +119,21 @@ class MarketSubscriptionAdapterTests(unittest.TestCase):
         upstream_callback = provider.xtdata.subscribe_calls[0]["callback"]
 
         upstream_callback({"000001.SZ": {"lastPrice": 10.25, "volume": 1200}})
+
+        self.assertEqual(received[0]["schema"], "market.quote.v1")
+        self.assertEqual(received[0]["symbol"], "000001.SZ")
+        self.assertEqual(received[0]["last_price"], 10.25)
+
+    def test_subscribe_quote_emits_initial_full_tick_snapshot(self) -> None:
+        provider = RecordingProvider()
+        adapter = XtDataSubscriptionAdapter(provider)
+        received: list[dict[str, Any]] = []
+
+        adapter.subscribe(
+            symbols=["000001.SZ"],
+            period="tick",
+            callback=received.append,
+        )
 
         self.assertEqual(received[0]["schema"], "market.quote.v1")
         self.assertEqual(received[0]["symbol"], "000001.SZ")

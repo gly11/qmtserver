@@ -96,7 +96,7 @@ class MarketSubscriptionService:
 
     def handle_quote(self, subscription_id: str, payload: dict[str, Any]) -> None:
         subscription = self.get(subscription_id)
-        if subscription.status != "active":
+        if subscription.status not in {"starting", "active"}:
             return
         self.event_bus.publish_threadsafe(
             "market_quote",

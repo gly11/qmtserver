@@ -167,6 +167,8 @@ intraday bar 字段固定为 `timestamp`、`symbol`、`period`、`open`、`high`
 Realtime subscriptions are readonly market-data APIs. They call qmtserver's explicit
 `xtdata.subscribe_quote` adapter and publish normalized WebSocket events; they do not place, cancel,
 or modify orders.
+After the upstream subscription is accepted, qmtserver also emits a best-effort initial
+`market_quote` from `xtdata.get_full_tick` so after-hours smoke can verify the event path.
 
 ```text
 POST /v1/market/subscriptions

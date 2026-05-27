@@ -13,7 +13,8 @@ Add one row per verified environment:
 | Date | Python | qmtserver | xtquant source/version | MiniQMT userdata | Smoke scope | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-05-27 | CPython 3.13 | 0.4.0 | `xtquant_250516` from local venv | `userdata_mini` | connection, market bars, readonly trader queries | Baseline before realtime subscription work |
-| 2026-05-27 | CPython 3.13.13 | unreleased realtime subscription work | `xtquant_250516` from local venv | `userdata_mini` | quote connection, subscription create, subscription stop, WebSocket lifecycle event | After-hours smoke at 17:27 local time. No live `market_quote` observed; rerun during active market data to verify callback delivery. No trader or trading commands used. |
+| 2026-05-27 | CPython 3.13.13 | unreleased realtime subscription work | `xtquant_250516` from local venv | `userdata_mini` | quote connection, subscription create, subscription stop, WebSocket lifecycle event | After-hours smoke at 17:27 local time. No live `market_quote` observed before initial quote seed support; rerun after seed support and during active market data. No trader or trading commands used. |
+| 2026-05-27 | CPython 3.13.13 | unreleased realtime subscription work | `xtquant_250516` from local venv | `userdata_mini` | quote connection, subscription create, initial `market_quote`, subscription stop | After-hours smoke at 17:59 local time verified the initial `get_full_tick` seed path. Live callback delivery still needs active-market smoke. No trader or trading commands used. |
 
 Do not record account IDs, tokens, private paths, or other local secrets.
 
@@ -49,6 +50,11 @@ input conversion:
 qmtserver accepts a non-empty list of stock symbols and a stable period string. The adapter converts
 these to the local upstream signature after validation.
 
+initial quote:
+After upstream subscription setup, qmtserver performs a best-effort `xtdata.get_full_tick(symbols)`
+call and publishes normalized `market_quote` events. Failure to fetch the initial quote does not fail
+the subscription.
+
 callback payload:
 To be recorded from readonly MiniQMT smoke. Record shape, not private data.
 
@@ -66,10 +72,10 @@ Current: `tests/test_market_adapter.py`, `tests/test_market_normalizers.py`, and
 `tests/test_market_subscriptions.py`. Planned: `tests/test_api_market_subscriptions.py`.
 
 real smoke:
-Partial readonly smoke completed after market close: quote connection succeeded, subscription create
-returned `active`, WebSocket received `market_subscription`, and stop returned `stopped`. No live
-`market_quote` callback was observed after hours. Rerun during active market data before treating
-quote callback delivery as real-smoke verified. No trader or trading commands were used.
+Readonly after-hours smoke with initial quote seed support: quote connection succeeded,
+subscription create returned `active`, WebSocket received `market_quote` with schema
+`market.quote.v1`, and stop returned `stopped`. Rerun during active market data before treating live
+callback delivery as real-smoke verified. No trader or trading commands were used.
 
 trading safety:
 Readonly market data only.
