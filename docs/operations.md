@@ -75,6 +75,20 @@ GET /v1/rpc/methods
 WS  /v1/ws/events
 ```
 
+实时行情订阅只读 smoke：
+
+```powershell
+uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ
+```
+
+盘中验证 live `subscribe_quote` callback 时使用：
+
+```powershell
+uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback
+```
+
+该脚本显式使用 `connect_trader=False`，不会连接 trader，也不会执行下单、撤单或转账命令。
+
 ## Snapshot 数据目录
 
 Snapshot/export 文件默认写入 `data/snapshots/`，可通过环境变量调整：

@@ -240,4 +240,11 @@ live callback delivery as verified only after observing a quote event while mark
 Use WebSocket event `meta.quote_source`: `initial` proves the seed path, while `callback` proves the
 live `subscribe_quote` callback path.
 
+Helper command:
+
+```powershell
+uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ
+uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback
+```
+
 Do not run order, cancel, transfer, or other trading commands during this smoke.
