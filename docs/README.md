@@ -11,7 +11,7 @@
 - [Realtime Market Subscriptions](realtime-subscriptions.md)：实时行情订阅和 WebSocket quote
   event 的下一阶段计划。
 - [Compatibility Matrix](compatibility.md)：`xtquant` 版本、签名和真实 MiniQMT smoke 记录。
-- [Release Plan](release-plan.md)：版本定位、发布门禁和后续节奏。
+- [Release Plan](release-plan.md)：版本定位、发布门禁、实时订阅 smoke 和后续节奏。
 - [API Reference](api.md)：稳定 HTTP RPC 和 WebSocket 契约。
 - [Error Codes](errors.md)：错误码和错误响应结构。
 - [Built-in Client](sdk.md)：内置 Python 兼容客户端说明；独立客户端规划在 qmtclient 项目中维护。

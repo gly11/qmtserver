@@ -25,8 +25,8 @@ Do not record account IDs, tokens, private paths, or other local secrets.
 | `GET /v1/market/bars/daily` | `xtdata.get_market_data_ex` | `field_list`, `stock_list`, `period`, `start_time`, `end_time`, `count`, `dividend_type`, `fill_data` | `tests/test_market_adapter.py`, `tests/test_api_market.py` | Required before market-data release | stable |
 | `GET /v1/market/bars/intraday` | `xtdata.get_market_data_ex` | Same as daily bars, with intraday `period` | `tests/test_market_adapter.py`, `tests/test_api_market.py` | Required before market-data release | stable |
 | `GET /v1/trader/*` readonly queries | `XtQuantTrader.query_*` readonly methods | Account-specific methods accept `StockAccount`; orders accept `cancelable_only` | `tests/test_trader_service.py`, `tests/test_api_trader.py` | Required before trader-query release; no real trading | stable |
-| `POST /v1/market/subscriptions` | `xtdata.subscribe_quote` | `subscribe_quote(stock_code, period='1d', start_time='', end_time='', count=0, callback=None)` | `tests/test_market_adapter.py`, `tests/test_market_normalizers.py` | Planned readonly smoke | in progress |
-| `DELETE /v1/market/subscriptions/{subscription_id}` | `xtdata.unsubscribe_quote` | `unsubscribe_quote(seq)` | `tests/test_market_adapter.py` | Planned readonly smoke | in progress |
+| `POST /v1/market/subscriptions` | `xtdata.subscribe_quote` | `subscribe_quote(stock_code, period='1d', start_time='', end_time='', count=0, callback=None)` | `tests/test_market_adapter.py`, `tests/test_market_normalizers.py` | After-hours readonly smoke passed for initial quote seed; active-market callback smoke pending | release candidate |
+| `DELETE /v1/market/subscriptions/{subscription_id}` | `xtdata.unsubscribe_quote` | `unsubscribe_quote(seq)` | `tests/test_market_adapter.py` | After-hours readonly smoke passed | release candidate |
 
 ## Realtime Subscription Observations
 

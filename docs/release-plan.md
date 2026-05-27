@@ -1,7 +1,7 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前下一阶段聚焦 realtime market
-subscriptions 和 `xtquant` compatibility baseline。
+本文档记录 qmtserver 的版本节奏和发布门禁。当前准备发布版本为 `0.5.0`，主题是 realtime
+market subscriptions 和 `xtquant` compatibility baseline。
 
 ## 版本节奏
 
@@ -10,7 +10,7 @@ subscriptions 和 `xtquant` compatibility baseline。
 0.2.0  已完成  透明 RPC 实验模式
 0.3.0  已完成  稳定行情数据、snapshot、job 和诊断接口
 0.4.0  已发布    稳定只读交易查询 API
-0.5.0  规划中    实时行情订阅和兼容矩阵基线
+0.5.0  准备发布  实时行情订阅和兼容矩阵基线
 1.0.0  远期    稳定版本
 ```
 
@@ -95,7 +95,7 @@ subscriptions 和 `xtquant` compatibility baseline。
 
 ## 0.5.0
 
-状态：规划中。
+状态：准备发布。
 
 `0.5.0` 聚焦实时行情订阅和 WebSocket quote event，使远程客户端可以通过 qmtserver 管理
 MiniQMT 行情订阅，而不直接依赖 `xtquant`。
@@ -112,6 +112,10 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 
 - 普通测试必须使用 fakes，不依赖真实 MiniQMT。
 - 真实 MiniQMT smoke 只做 readonly 行情订阅，不执行下单、撤单、转账或其他交易命令。
+- 盘后 smoke 可以验证 quote 连接、订阅生命周期和 initial `get_full_tick` quote seed。
+- 正式发布 `0.5.0` 前必须在活跃行情时段运行
+  `uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback`，
+  并看到 `received_callback=true` 或 WebSocket 事件 `meta.quote_source=callback`。
 - 如果本地 `xtquant` 不支持可靠取消订阅，必须在 API 和兼容矩阵文档中明确 qmtserver 的本地
   stop 行为。
 
@@ -124,6 +128,7 @@ uv run python -m unittest discover
 uv run ruff check .
 uv run ruff format --check .
 uv run ty check
+uv run python scripts\check_code_health.py --enforce
 git diff --check
 ```
 
@@ -144,6 +149,11 @@ uv run qmtserver serve --userdata $userdata --account-id $account
 - token 鉴权开启。
 - 远程电脑可访问 `/v1/health`。
 - 远程客户端可调用 `status()` 和至少一个只读行情方法。
+- `0.5.0` 发布前可运行只读实时订阅 smoke：
+
+```powershell
+uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback
+```
 
 ## 发布原则
 

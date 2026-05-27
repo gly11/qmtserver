@@ -18,7 +18,7 @@ dependencies = [
 
 keywords = ["miniqmt", "qmt", "xtquant", "trading"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Framework :: FastAPI",
     "License :: OSI Approved :: MIT License",
