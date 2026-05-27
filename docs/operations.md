@@ -67,6 +67,8 @@ GET /v1/trader/positions
 GET /v1/trader/orders
 GET /v1/trader/trades
 GET /v1/market/capabilities
+POST /v1/market/subscriptions
+GET /v1/market/subscriptions
 GET /v1/diagnostics
 GET /v1/reference/calendar
 GET /v1/rpc/methods

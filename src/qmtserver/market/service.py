@@ -14,6 +14,7 @@ from qmtserver.market.models import (
     MarketRequest,
 )
 from qmtserver.market.normalizers import normalize_daily_bars, normalize_intraday_bars
+from qmtserver.market.subscription_models import SUBSCRIPTION_SCHEMA, SUPPORTED_SUBSCRIPTION_PERIODS
 from qmtserver.miniqmt import check_xtquant_import
 
 
@@ -26,15 +27,17 @@ class MarketService:
         return {
             "ok": True,
             "data": {
-                "schema_versions": [BAR_SCHEMA, CAPABILITIES_SCHEMA],
+                "schema_versions": [BAR_SCHEMA, CAPABILITIES_SCHEMA, SUBSCRIPTION_SCHEMA],
                 "endpoints": [
                     "/v1/market/bars/daily",
                     "/v1/market/bars/intraday",
                     "/v1/market/capabilities",
+                    "/v1/market/subscriptions",
                 ],
                 "periods": list(SUPPORTED_PERIODS),
+                "subscription_periods": list(SUPPORTED_SUBSCRIPTION_PERIODS),
                 "adjust_modes": list(ADJUST_MODES),
-                "methods": ["xtdata.get_market_data_ex"],
+                "methods": ["xtdata.get_market_data_ex", "xtdata.subscribe_quote"],
             },
             "error": None,
             "meta": self._meta(CAPABILITIES_SCHEMA, {}, 0),

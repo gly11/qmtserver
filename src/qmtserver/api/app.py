@@ -22,6 +22,8 @@ from qmtserver.api.routes_ws import router as ws_router
 from qmtserver.config import Settings, load_settings
 from qmtserver.events import EventBus
 from qmtserver.jobs import JobRegistry
+from qmtserver.market.subscription_adapter import XtDataSubscriptionAdapter
+from qmtserver.market.subscription_service import MarketSubscriptionService
 from qmtserver.observability import Metrics, configure_logging
 from qmtserver.orders import OrderStore
 from qmtserver.services import QmtService
@@ -45,6 +47,10 @@ def create_app(settings: Settings | None = None, *, connect_on_startup: bool = T
         metrics=metrics,
         order_store=order_store,
     )
+    market_subscription_service = MarketSubscriptionService(
+        adapter=XtDataSubscriptionAdapter(service),
+        event_bus=event_bus,
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -54,6 +60,7 @@ def create_app(settings: Settings | None = None, *, connect_on_startup: bool = T
         app.state.metrics = metrics
         app.state.job_registry = job_registry
         app.state.order_store = order_store
+        app.state.market_subscription_service = market_subscription_service
         if connect_on_startup and app_settings.auto_connect and app_settings.connect_on_startup:
             service.connect()
         try:
@@ -73,6 +80,7 @@ def create_app(settings: Settings | None = None, *, connect_on_startup: bool = T
     app.state.metrics = metrics
     app.state.job_registry = job_registry
     app.state.order_store = order_store
+    app.state.market_subscription_service = market_subscription_service
     app.middleware("http")(request_id_middleware)
     app.include_router(health_router)
     app.include_router(qmt_router)

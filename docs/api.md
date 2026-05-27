@@ -18,6 +18,10 @@ GET  /v1/trader/trades
 GET  /v1/market/capabilities
 GET  /v1/market/bars/daily
 GET  /v1/market/bars/intraday
+POST /v1/market/subscriptions
+GET  /v1/market/subscriptions
+GET  /v1/market/subscriptions/{subscription_id}
+DELETE /v1/market/subscriptions/{subscription_id}
 POST /v1/snapshots
 GET  /v1/snapshots
 GET  /v1/snapshots/{snapshot_id}/manifest
@@ -157,6 +161,52 @@ intraday bar 字段固定为 `timestamp`、`symbol`、`period`、`open`、`high`
 空数据不是错误：服务返回 `ok=true`、`bars=[]` 和 `row_count=0`。参数非法返回
 `INVALID_MARKET_REQUEST`，行情源异常返回 `MARKET_DATA_ERROR`，行情 target 未连接返回
 `TARGET_NOT_CONNECTED`。
+
+### Realtime Market Subscriptions
+
+Realtime subscriptions are readonly market-data APIs. They call qmtserver's explicit
+`xtdata.subscribe_quote` adapter and publish normalized WebSocket events; they do not place, cancel,
+or modify orders.
+
+```text
+POST /v1/market/subscriptions
+GET /v1/market/subscriptions
+GET /v1/market/subscriptions/{subscription_id}
+DELETE /v1/market/subscriptions/{subscription_id}
+```
+
+Create request:
+
+```json
+{
+  "symbols": ["000001.SZ"],
+  "period": "tick"
+}
+```
+
+Create response:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "schema": "market.subscription.v1",
+    "subscription_id": "sub_...",
+    "symbols": ["000001.SZ"],
+    "period": "tick",
+    "status": "active",
+    "created_at": "2026-05-27T09:30:00+00:00",
+    "updated_at": "2026-05-27T09:30:00+00:00",
+    "upstream_id": [1],
+    "last_error": null
+  },
+  "error": null
+}
+```
+
+Invalid requests return `INVALID_SUBSCRIPTION_REQUEST`. Missing quote connectivity returns
+`TARGET_NOT_CONNECTED`. If the local `xtquant` package cannot unsubscribe reliably, qmtserver marks
+the local subscription `stopped` and ignores later callbacks for that `subscription_id`.
 
 ## Snapshot API
 
@@ -364,6 +414,7 @@ HTTP 请求可以传入 `X-Request-ID`。服务会在响应头中回写同一个
 ```text
 ws://127.0.0.1:8000/v1/ws/events
 ws://127.0.0.1:8000/v1/ws/events?types=stock_order,stock_trade
+ws://127.0.0.1:8000/v1/ws/events?types=market_subscription,market_quote
 ```
 
 事件结构：
@@ -376,6 +427,29 @@ ws://127.0.0.1:8000/v1/ws/events?types=stock_order,stock_trade
   "meta": {
     "source": "qmtserver",
     "sequence": 1
+  }
+}
+```
+
+Realtime quote events use the same envelope:
+
+```json
+{
+  "type": "market_quote",
+  "ts": "2026-05-27T09:30:01+00:00",
+  "data": {
+    "schema": "market.quote.v1",
+    "symbol": "000001.SZ",
+    "time": "2026-05-27T09:30:01+08:00",
+    "last_price": 10.25,
+    "volume": 1200,
+    "amount": 12300.0,
+    "extra": {}
+  },
+  "meta": {
+    "source": "xtdata",
+    "sequence": 10,
+    "subscription_id": "sub_..."
   }
 }
 ```
