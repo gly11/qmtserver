@@ -4,6 +4,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from qmtserver.market.models import DailyBar, IntradayBar
+from qmtserver.market.subscription_models import QUOTE_SCHEMA
 
 _FIELD_KEYS = {
     "date",
@@ -17,6 +18,21 @@ _FIELD_KEYS = {
     "high",
     "low",
     "close",
+    "volume",
+    "vol",
+    "amount",
+}
+
+_QUOTE_KEYS = {
+    "time",
+    "timestamp",
+    "datetime",
+    "symbol",
+    "stock_code",
+    "code",
+    "lastPrice",
+    "last_price",
+    "price",
     "volume",
     "vol",
     "amount",
@@ -62,6 +78,29 @@ def normalize_intraday_bars(raw: Any, *, period: str) -> list[IntradayBar]:
     return bars
 
 
+def normalize_quote_payload(
+    raw: Any,
+    *,
+    fallback_symbol: str | None = None,
+) -> list[dict[str, Any]]:
+    quotes: list[dict[str, Any]] = []
+    for record in _quote_records(raw, fallback_symbol=fallback_symbol):
+        symbol = _text(_first(record, "symbol", "stock_code", "code"))
+        if not symbol and fallback_symbol:
+            symbol = fallback_symbol
+        quote = {
+            "schema": QUOTE_SCHEMA,
+            "symbol": symbol,
+            "time": _text(_first(record, "time", "timestamp", "datetime")),
+            "last_price": _float(_first(record, "last_price", "lastPrice", "price")),
+            "volume": _number(_first(record, "volume", "vol")),
+            "amount": _float(record.get("amount")),
+            "extra": {key: value for key, value in record.items() if key not in _QUOTE_KEYS},
+        }
+        quotes.append(quote)
+    return quotes
+
+
 def _records(raw: Any) -> list[dict[str, Any]]:
     if raw is None:
         return []
@@ -91,6 +130,29 @@ def _records_from_mapping(raw: Mapping[Any, Any]) -> list[dict[str, Any]]:
             record.setdefault("symbol", str(symbol))
             result.append(record)
     return result
+
+
+def _quote_records(raw: Any, *, fallback_symbol: str | None) -> list[dict[str, Any]]:
+    if raw is None:
+        return []
+    if isinstance(raw, Mapping):
+        text_keys = {str(key) for key in raw}
+        if text_keys & _QUOTE_KEYS:
+            record = {str(key): value for key, value in raw.items()}
+            if fallback_symbol:
+                record.setdefault("symbol", fallback_symbol)
+            return [record]
+        result: list[dict[str, Any]] = []
+        for symbol, value in raw.items():
+            for record in _quote_records(value, fallback_symbol=str(symbol)):
+                result.append(record)
+        return result
+    if isinstance(raw, list | tuple):
+        result: list[dict[str, Any]] = []
+        for item in raw:
+            result.extend(_quote_records(item, fallback_symbol=fallback_symbol))
+        return result
+    return []
 
 
 def _is_columnar(raw: Mapping[Any, Any]) -> bool:

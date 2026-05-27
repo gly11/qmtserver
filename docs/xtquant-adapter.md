@@ -144,7 +144,9 @@ upstream:
 `xtquant.xtdata.subscribe_quote` and the local unsubscribe function if one is available.
 
 observed signature:
-To be recorded in [Compatibility Matrix](compatibility.md) after local inspection.
+Observed locally with `xtquant_250516`:
+`subscribe_quote(stock_code, period='1d', start_time='', end_time='', count=0, callback=None)` and
+`unsubscribe_quote(seq)`.
 
 input conversion:
 qmtserver accepts stable JSON containing `symbols` and `period`; the adapter validates and converts
@@ -160,7 +162,8 @@ Invalid input maps to `INVALID_SUBSCRIPTION_REQUEST`. Missing quote connectivity
 `MARKET_SUBSCRIPTION_UNSUPPORTED`.
 
 unit tests:
-Planned fake tests for the adapter, service, API routes, and WebSocket delivery.
+Fake tests cover the adapter, quote normalization, and subscription service. API routes and
+WebSocket delivery are planned for the next implementation step.
 
 real smoke:
 Readonly MiniQMT smoke should create one subscription, observe lifecycle and quote events, stop the

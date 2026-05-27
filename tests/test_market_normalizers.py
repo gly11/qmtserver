@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from qmtserver.market.normalizers import normalize_daily_bars, normalize_intraday_bars
+from qmtserver.market.normalizers import (
+    normalize_daily_bars,
+    normalize_intraday_bars,
+    normalize_quote_payload,
+)
 
 
 class TableLike:
@@ -68,6 +72,28 @@ class MarketNormalizerTests(unittest.TestCase):
     def test_normalizers_return_empty_list_for_empty_data(self) -> None:
         self.assertEqual(normalize_daily_bars({}), [])
         self.assertEqual(normalize_intraday_bars([], period="1m"), [])
+
+    def test_quote_normalizer_converts_symbol_mapping(self) -> None:
+        quotes = normalize_quote_payload(
+            {
+                "000001.SZ": {
+                    "time": "2026-05-27T09:30:01+08:00",
+                    "lastPrice": 10.25,
+                    "volume": 1200,
+                    "amount": 12300.0,
+                    "bidPrice": [10.24],
+                }
+            }
+        )
+
+        self.assertEqual(len(quotes), 1)
+        self.assertEqual(quotes[0]["schema"], "market.quote.v1")
+        self.assertEqual(quotes[0]["symbol"], "000001.SZ")
+        self.assertEqual(quotes[0]["time"], "2026-05-27T09:30:01+08:00")
+        self.assertEqual(quotes[0]["last_price"], 10.25)
+        self.assertEqual(quotes[0]["volume"], 1200)
+        self.assertEqual(quotes[0]["amount"], 12300.0)
+        self.assertEqual(quotes[0]["extra"], {"bidPrice": [10.24]})
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ Add one row per verified environment:
 
 | Date | Python | qmtserver | xtquant source/version | MiniQMT userdata | Smoke scope | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2026-05-27 | CPython 3.13 | 0.4.0 | local downloaded package, exact version to record | `userdata_mini` | connection, market bars, readonly trader queries | Baseline before realtime subscription work |
+| 2026-05-27 | CPython 3.13 | 0.4.0 | `xtquant_250516` from local venv | `userdata_mini` | connection, market bars, readonly trader queries | Baseline before realtime subscription work |
 
 Do not record account IDs, tokens, private paths, or other local secrets.
 
@@ -23,8 +23,8 @@ Do not record account IDs, tokens, private paths, or other local secrets.
 | `GET /v1/market/bars/daily` | `xtdata.get_market_data_ex` | `field_list`, `stock_list`, `period`, `start_time`, `end_time`, `count`, `dividend_type`, `fill_data` | `tests/test_market_adapter.py`, `tests/test_api_market.py` | Required before market-data release | stable |
 | `GET /v1/market/bars/intraday` | `xtdata.get_market_data_ex` | Same as daily bars, with intraday `period` | `tests/test_market_adapter.py`, `tests/test_api_market.py` | Required before market-data release | stable |
 | `GET /v1/trader/*` readonly queries | `XtQuantTrader.query_*` readonly methods | Account-specific methods accept `StockAccount`; orders accept `cancelable_only` | `tests/test_trader_service.py`, `tests/test_api_trader.py` | Required before trader-query release; no real trading | stable |
-| `POST /v1/market/subscriptions` | `xtdata.subscribe_quote` | To be observed locally | Planned fake tests | Planned readonly smoke | planned |
-| `DELETE /v1/market/subscriptions/{subscription_id}` | upstream unsubscribe function, if available | To be observed locally | Planned fake tests | Planned readonly smoke | planned |
+| `POST /v1/market/subscriptions` | `xtdata.subscribe_quote` | `subscribe_quote(stock_code, period='1d', start_time='', end_time='', count=0, callback=None)` | `tests/test_market_adapter.py`, `tests/test_market_normalizers.py` | Planned readonly smoke | in progress |
+| `DELETE /v1/market/subscriptions/{subscription_id}` | `xtdata.unsubscribe_quote` | `unsubscribe_quote(seq)` | `tests/test_market_adapter.py` | Planned readonly smoke | in progress |
 
 ## Realtime Subscription Observations
 
@@ -39,10 +39,10 @@ upstream:
 `xtdata.subscribe_quote`
 
 local xtquant version:
-To be recorded from the installed package.
+`xtquant_250516`.
 
 observed signature:
-To be recorded with `inspect.signature` when available.
+`subscribe_quote(stock_code, period='1d', start_time='', end_time='', count=0, callback=None)`.
 
 input conversion:
 qmtserver accepts a non-empty list of stock symbols and a stable period string. The adapter converts
@@ -61,8 +61,8 @@ Disconnected quote target maps to `TARGET_NOT_CONNECTED`. Invalid request parame
 `MARKET_SUBSCRIPTION_UNSUPPORTED`.
 
 unit tests:
-Planned: `tests/test_market_subscription_adapter.py`, `tests/test_market_subscriptions.py`, and
-`tests/test_api_market_subscriptions.py`.
+Current: `tests/test_market_adapter.py`, `tests/test_market_normalizers.py`, and
+`tests/test_market_subscriptions.py`. Planned: `tests/test_api_market_subscriptions.py`.
 
 real smoke:
 Planned readonly smoke with MiniQMT started and logged in. No trading commands.
@@ -73,8 +73,10 @@ Readonly market data only.
 ### Unsubscribe Behavior
 
 upstream:
-To be recorded after local inspection. Possible names include `unsubscribe_quote` or another
-function exposed by the local `xtdata` package.
+`xtdata.unsubscribe_quote`.
+
+observed signature:
+`unsubscribe_quote(seq)`.
 
 expected qmtserver behavior:
 If a real upstream unsubscribe exists, call it. If it does not exist or fails, mark the local
