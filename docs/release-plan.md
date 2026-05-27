@@ -108,8 +108,10 @@ git diff --check
 建议人工验证：
 
 ```powershell
-uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
-uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
+$userdata = "D:\path\to\MiniQMT\userdata_mini"
+$account = "资金账号"
+uv run qmtserver check --userdata $userdata --account-id $account
+uv run qmtserver serve --userdata $userdata --account-id $account
 ```
 
 远程访问发布前建议额外验证：

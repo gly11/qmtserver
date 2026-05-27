@@ -62,13 +62,15 @@ uv sync --extra xtquant
 先启动并登录 MiniQMT，再检查连接：
 
 ```powershell
-uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
+$userdata = "D:\path\to\MiniQMT\userdata_mini"
+$account = "资金账号"
+uv run qmtserver check --userdata $userdata --account-id $account
 ```
 
 启动本地网关：
 
 ```powershell
-uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
+uv run qmtserver serve --userdata $userdata --account-id $account
 ```
 
 默认监听：
@@ -82,6 +84,7 @@ http://127.0.0.1:8000
 ```text
 GET  /v1/health
 GET  /v1/qmt/status
+GET  /v1/trader/account-status
 GET  /v1/trader/asset
 GET  /v1/trader/positions
 GET  /v1/trader/orders

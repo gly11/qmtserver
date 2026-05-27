@@ -7,13 +7,15 @@ qmtserver 默认面向本机运行，建议保持 `QMT_HOST=127.0.0.1`，先启�
 先启动并登录 MiniQMT，再运行：
 
 ```powershell
-uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini"
+$userdata = "D:\path\to\MiniQMT\userdata_mini"
+$account = "资金账号"
+uv run qmtserver check --userdata $userdata
 ```
 
 如果要同时验证交易账号订阅和资金查询：
 
 ```powershell
-uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
+uv run qmtserver check --userdata $userdata --account-id $account
 ```
 
 常用参数：
@@ -32,19 +34,19 @@ uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-i
 开发模式：
 
 ```powershell
-.\scripts\run-dev.ps1 -Userdata "D:\path\to\MiniQMT\userdata_mini" -AccountId "资金账号"
+.\scripts\run-dev.ps1 -Userdata $userdata -AccountId $account
 ```
 
 常规运行：
 
 ```powershell
-.\scripts\run-server.ps1 -Userdata "D:\path\to\MiniQMT\userdata_mini" -AccountId "资金账号"
+.\scripts\run-server.ps1 -Userdata $userdata -AccountId $account
 ```
 
 也可以直接运行：
 
 ```powershell
-uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
+uv run qmtserver serve --userdata $userdata --account-id $account
 ```
 
 ## 检查
@@ -59,6 +61,11 @@ uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini" --account-i
 GET /v1/health
 GET /v1/metrics
 GET /v1/qmt/status
+GET /v1/trader/account-status
+GET /v1/trader/asset
+GET /v1/trader/positions
+GET /v1/trader/orders
+GET /v1/trader/trades
 GET /v1/market/capabilities
 GET /v1/diagnostics
 GET /v1/reference/calendar

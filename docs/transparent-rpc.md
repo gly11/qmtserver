@@ -299,9 +299,10 @@ tests/test_rpc_registry.py
 开启：
 
 ```powershell
+$userdata = "D:\path\to\MiniQMT\userdata_mini"
 $env:QMT_TRANSPARENT_RPC="true"
 $env:QMT_TRANSPARENT_RPC_TARGETS="xtdata"
-uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini"
+uv run qmtserver serve --userdata $userdata
 ```
 
 调用白名单外的公开 `xtdata` 方法：
@@ -350,8 +351,10 @@ uv tool run twine check dist\qmtserver-0.2.0.tar.gz dist\qmtserver-0.2.0-py3-non
 建议人工验证：
 
 ```powershell
-uv run qmtserver check --userdata "D:\path\to\MiniQMT\userdata_mini" --account-id "资金账号"
-uv run qmtserver serve --userdata "D:\path\to\MiniQMT\userdata_mini"
+$userdata = "D:\path\to\MiniQMT\userdata_mini"
+$account = "资金账号"
+uv run qmtserver check --userdata $userdata --account-id $account
+uv run qmtserver serve --userdata $userdata
 ```
 
 并从另一台机器或本机另一个终端验证：
