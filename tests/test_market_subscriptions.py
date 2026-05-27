@@ -120,6 +120,29 @@ class MarketSubscriptionServiceTests(unittest.TestCase):
         self.assertEqual(quote_events[0][1]["schema"], "market.quote.v1")
         self.assertEqual(quote_events[0][2]["subscription_id"], "sub_test")
 
+    def test_quote_source_is_published_in_meta_without_leaking_internal_key(self) -> None:
+        bus = RecordingBus()
+        service = MarketSubscriptionService(
+            adapter=RecordingAdapter(),
+            event_bus=bus,
+            id_factory=lambda: "sub_test",
+        )
+        service.create(symbols=["000001.SZ"], period="tick")
+
+        service.handle_quote(
+            "sub_test",
+            {
+                "schema": "market.quote.v1",
+                "symbol": "000001.SZ",
+                "last_price": 10.25,
+                "__qmt_quote_source": "callback",
+            },
+        )
+
+        quote_event = next(event for event in bus.events if event[0] == "market_quote")
+        self.assertEqual(quote_event[2]["quote_source"], "callback")
+        self.assertNotIn("__qmt_quote_source", quote_event[1])
+
 
 if __name__ == "__main__":
     unittest.main()

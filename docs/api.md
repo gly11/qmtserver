@@ -451,10 +451,14 @@ Realtime quote events use the same envelope:
   "meta": {
     "source": "xtdata",
     "sequence": 10,
-    "subscription_id": "sub_..."
+    "subscription_id": "sub_...",
+    "quote_source": "initial"
   }
 }
 ```
+
+`quote_source` is `initial` for the best-effort `get_full_tick` seed and `callback` for live
+`subscribe_quote` callbacks.
 
 ## Order and Event Cache
 

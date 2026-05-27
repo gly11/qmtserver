@@ -35,6 +35,7 @@ class XtDataSubscriptionAdapter:
             )
         with contextlib.suppress(Exception):
             for quote in normalize_quote_payload(xtdata.get_full_tick(symbols)):
+                quote["__qmt_quote_source"] = "initial"
                 callback(quote)
         return upstream_ids
 
@@ -53,6 +54,7 @@ def _quote_callback(
 ) -> Callable[[Any], None]:
     def handle(raw: Any) -> None:
         for quote in normalize_quote_payload(raw, fallback_symbol=symbol):
+            quote["__qmt_quote_source"] = "callback"
             callback(quote)
 
     return handle

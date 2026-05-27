@@ -131,7 +131,8 @@ Quote event:
   },
   "meta": {
     "subscription_id": "sub_...",
-    "source": "xtdata"
+    "source": "xtdata",
+    "quote_source": "callback"
   }
 }
 ```
@@ -236,5 +237,7 @@ Readonly smoke only:
 
 After-hours smoke can verify the event path through the initial `get_full_tick` quote seed. Treat
 live callback delivery as verified only after observing a quote event while market data is active.
+Use WebSocket event `meta.quote_source`: `initial` proves the seed path, while `callback` proves the
+live `subscribe_quote` callback path.
 
 Do not run order, cancel, transfer, or other trading commands during this smoke.

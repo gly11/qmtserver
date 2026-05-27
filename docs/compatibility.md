@@ -53,7 +53,8 @@ these to the local upstream signature after validation.
 initial quote:
 After upstream subscription setup, qmtserver performs a best-effort `xtdata.get_full_tick(symbols)`
 call and publishes normalized `market_quote` events. Failure to fetch the initial quote does not fail
-the subscription.
+the subscription. WebSocket event `meta.quote_source` is `initial` for this seed path and `callback`
+for live `subscribe_quote` callbacks.
 
 callback payload:
 To be recorded from readonly MiniQMT smoke. Record shape, not private data.

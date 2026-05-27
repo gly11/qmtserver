@@ -98,10 +98,16 @@ class MarketSubscriptionService:
         subscription = self.get(subscription_id)
         if subscription.status not in {"starting", "active"}:
             return
+        quote = dict(payload)
+        quote_source = quote.pop("__qmt_quote_source", "callback")
         self.event_bus.publish_threadsafe(
             "market_quote",
-            payload,
-            {"subscription_id": subscription_id, "source": "xtdata"},
+            quote,
+            {
+                "subscription_id": subscription_id,
+                "source": "xtdata",
+                "quote_source": quote_source,
+            },
         )
 
     def _set_status(

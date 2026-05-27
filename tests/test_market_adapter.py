@@ -138,6 +138,21 @@ class MarketSubscriptionAdapterTests(unittest.TestCase):
         self.assertEqual(received[0]["schema"], "market.quote.v1")
         self.assertEqual(received[0]["symbol"], "000001.SZ")
         self.assertEqual(received[0]["last_price"], 10.25)
+        self.assertEqual(received[0]["__qmt_quote_source"], "initial")
+
+    def test_live_callback_payloads_are_tagged_as_callback_source(self) -> None:
+        provider = RecordingProvider()
+        adapter = XtDataSubscriptionAdapter(provider)
+        received: list[dict[str, Any]] = []
+
+        adapter.subscribe(
+            symbols=["000001.SZ"],
+            period="tick",
+            callback=received.append,
+        )
+        provider.xtdata.subscribe_calls[0]["callback"]({"000001.SZ": {"lastPrice": 10.26}})
+
+        self.assertEqual(received[-1]["__qmt_quote_source"], "callback")
 
 
 if __name__ == "__main__":
