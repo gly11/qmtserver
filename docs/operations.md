@@ -83,6 +83,23 @@ WS  /v1/ws/events
 uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ
 ```
 
+交易账号只读查询 smoke：
+
+```powershell
+uv run python scripts\smoke_trader_readonly.py
+```
+
+如果 `.env` 中没有配置 `QMT_ACCOUNT_ID`，可以临时传入：
+
+```powershell
+uv run python scripts\smoke_trader_readonly.py --account-id $account
+```
+
+该脚本只请求 `GET /v1/trader/account-status`、`GET /v1/trader/asset`、
+`GET /v1/trader/positions`、`GET /v1/trader/orders` 和 `GET /v1/trader/trades`。输出只保留
+脱敏账号、行数、schema 和错误码，不打印资产、持仓、委托或成交明细，也不会调用下单、撤单或
+转账命令。
+
 盘中验证 live `subscribe_quote` callback 时使用：
 
 ```powershell
