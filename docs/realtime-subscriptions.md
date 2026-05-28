@@ -256,11 +256,17 @@ live `subscribe_quote` callback path.
 quote event with `meta.quote_source=callback`. The smoke script reported `trader_connected=false`,
 and no order, cancel, transfer, or other trading command was used.
 
+2026-05-28 13:57 local time readonly batch smoke subscribed to `000001.SZ`, `600000.SH`, and
+`510300.SH`. It verified initial quotes for all three symbols, one live callback, latest cache hits
+for all requested symbols, `initial_quote_count=3`, `callback_count=1`, and
+`trader_connected=false`.
+
 Helper command:
 
 ```powershell
 uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ
 uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback
+uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --require-callback --require-all-symbols --timeout-seconds 60
 ```
 
 Do not run order, cancel, transfer, or other trading commands during this smoke.
