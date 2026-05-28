@@ -119,6 +119,10 @@ curl "http://127.0.0.1:8000/v1/events/recent?types=market_quote&symbols=000001.S
 
 recent events 是短期内存事件回放；当前行情状态优先使用 `/v1/market/quotes/latest`。
 
+如果订阅状态为 `degraded`，先查看
+`/v1/market/subscriptions/{subscription_id}/diagnostics` 中的 `degraded_reason`。当前可靠性
+基线只记录 degraded 状态，不自动重连或重订阅。
+
 ## Snapshot 数据目录
 
 Snapshot/export 文件默认写入 `data/snapshots/`，可通过环境变量调整：

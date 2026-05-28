@@ -200,7 +200,9 @@ Rules:
 
 - `starting`: local object exists, upstream subscription call is in progress.
 - `active`: upstream subscription was accepted.
-- `degraded`: quote connection became unavailable after creation.
+- `degraded`: upstream subscription failed after local state was created, or quote connectivity
+  became unavailable after creation. Degraded subscriptions are diagnostic state; qmtserver does not
+  automatically resubscribe in this baseline.
 - `stopped`: user stopped the subscription, or qmtserver intentionally ignores later callbacks.
 - `error`: create or runtime failure.
 
@@ -223,6 +225,8 @@ Add focused fake-based tests:
 - Creating a subscription stores stable state and publishes `market_subscription`.
 - Invalid symbols or periods return `INVALID_SUBSCRIPTION_REQUEST`.
 - Disconnected `xtdata` returns `TARGET_NOT_CONNECTED`.
+- Upstream subscribe failure after local state creation marks the subscription `degraded` and records
+  `degraded_reason`.
 - Callback payloads normalize to `market.quote.v1`.
 - Callback and initial quote payloads update `/v1/market/quotes/latest`.
 - Subscription diagnostics report `callback_count`, `initial_quote_count`, `last_quote_at`,

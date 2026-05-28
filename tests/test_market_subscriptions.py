@@ -61,6 +61,17 @@ class InitialQuoteAdapter(RecordingAdapter):
         return upstream_id
 
 
+class FailingSubscribeAdapter(RecordingAdapter):
+    def subscribe(
+        self,
+        *,
+        symbols: list[str],
+        period: str,
+        callback: Callable[[dict[str, Any]], None],
+    ) -> int:
+        raise RuntimeError("quote disconnected")
+
+
 class MarketSubscriptionServiceTests(unittest.TestCase):
     def test_create_subscription_stores_state_and_publishes_lifecycle_event(self) -> None:
         adapter = RecordingAdapter()
@@ -288,6 +299,24 @@ class MarketSubscriptionServiceTests(unittest.TestCase):
         self.assertEqual(diagnostics["seconds_since_last_callback"], 5.0)
         self.assertTrue(diagnostics["is_callback_active"])
         self.assertEqual(diagnostics["callback_stale_after_seconds"], 10)
+
+    def test_create_marks_subscription_degraded_when_upstream_subscribe_fails(self) -> None:
+        bus = RecordingBus()
+        service = MarketSubscriptionService(
+            adapter=FailingSubscribeAdapter(),
+            event_bus=bus,
+            id_factory=lambda: "sub_test",
+        )
+
+        subscription = service.create(symbols=["000001.SZ"], period="tick")
+        diagnostics = service.diagnostics("sub_test")
+
+        self.assertEqual(subscription.status, "degraded")
+        self.assertIn("quote disconnected", subscription.last_error or "")
+        self.assertEqual(diagnostics["status"], "degraded")
+        self.assertEqual(diagnostics["degraded_reason"], "RuntimeError: quote disconnected")
+        self.assertEqual(bus.events[-1][0], "market_subscription")
+        self.assertEqual(bus.events[-1][1]["status"], "degraded")
 
 
 if __name__ == "__main__":

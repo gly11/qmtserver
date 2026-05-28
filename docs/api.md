@@ -211,8 +211,11 @@ Create response:
 ```
 
 Invalid requests return `INVALID_SUBSCRIPTION_REQUEST`. Missing quote connectivity returns
-`TARGET_NOT_CONNECTED`. If the local `xtquant` package cannot unsubscribe reliably, qmtserver marks
-the local subscription `stopped` and ignores later callbacks for that `subscription_id`.
+`TARGET_NOT_CONNECTED` for request paths that cannot reach the quote target. If upstream subscription
+creation fails after local state is created, qmtserver marks the subscription `degraded` and records
+`last_error` / `degraded_reason` in diagnostics. If the local `xtquant` package cannot unsubscribe
+reliably, qmtserver marks the local subscription `stopped` and ignores later callbacks for that
+`subscription_id`.
 Stopped subscriptions do not update latest quote cache or subscription diagnostics.
 
 Latest quote cache:

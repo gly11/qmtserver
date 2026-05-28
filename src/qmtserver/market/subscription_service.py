@@ -72,11 +72,20 @@ class MarketSubscriptionService:
         )
         self._subscriptions[subscription_id] = subscription
         self._diagnostics[subscription_id] = _empty_diagnostics(subscription)
-        upstream_id = self.adapter.subscribe(
-            symbols=clean_symbols,
-            period=period,
-            callback=lambda payload: self.handle_quote(subscription_id, payload),
-        )
+        try:
+            upstream_id = self.adapter.subscribe(
+                symbols=clean_symbols,
+                period=period,
+                callback=lambda payload: self.handle_quote(subscription_id, payload),
+            )
+        except Exception as exc:
+            degraded = self._set_status(
+                subscription_id,
+                "degraded",
+                last_error=f"{type(exc).__name__}: {exc}",
+            )
+            self._publish_subscription(degraded)
+            return degraded
         subscription = self._set_status(
             subscription_id,
             "active",
@@ -106,6 +115,9 @@ class MarketSubscriptionService:
                 "status": subscription.status,
                 "active_symbols": subscription.symbols if subscription.status == "active" else [],
                 "last_error": subscription.last_error,
+                "degraded_reason": subscription.last_error
+                if subscription.status == "degraded"
+                else None,
                 "seconds_since_last_quote": _seconds_since(diagnostics["last_quote_at"], now),
                 "seconds_since_last_callback": _seconds_since(
                     diagnostics["last_callback_at"],
@@ -271,6 +283,7 @@ def _empty_diagnostics(subscription: MarketSubscription) -> dict[str, Any]:
         "is_callback_active": False,
         "callback_stale_after_seconds": 30,
         "last_error": subscription.last_error,
+        "degraded_reason": subscription.last_error if subscription.status == "degraded" else None,
     }
 
 
