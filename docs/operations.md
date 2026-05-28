@@ -97,7 +97,7 @@ uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH
 
 该脚本显式使用 `connect_trader=False`，不会连接 trader，也不会执行下单、撤单或转账命令。
 脚本还会检查 latest quote cache 和 subscription diagnostics，确认服务端能通过 HTTP 返回最近
-一次 quote 和回调计数。
+一次 quote、回调计数、最近 callback 时间和 freshness 秒数。
 
 ## Snapshot 数据目录
 

@@ -225,6 +225,7 @@ Add focused fake-based tests:
 - Callback payloads normalize to `market.quote.v1`.
 - Callback and initial quote payloads update `/v1/market/quotes/latest`.
 - Subscription diagnostics report `callback_count`, `initial_quote_count`, `last_quote_at`,
+  `last_initial_quote_at`, `last_callback_at`, freshness seconds, `is_callback_active`,
   `last_quote_source`, and `last_event_seq`.
 - Stopping a subscription marks it `stopped`.
 - Stopped subscriptions do not publish later quote callbacks.

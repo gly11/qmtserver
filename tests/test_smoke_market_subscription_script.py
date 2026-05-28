@@ -122,6 +122,24 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
         self.assertEqual(summary["cache_hit_symbols"], ["000001.SZ", "600000.SH"])
         self.assertEqual(summary["missing_symbols"], ["510300.SH"])
 
+    def test_summarize_diagnostics_keeps_freshness_fields(self) -> None:
+        module = load_smoke_module()
+        summary = module.summarize_diagnostics(
+            {
+                "ok": True,
+                "data": {
+                    "subscription_id": "sub_test",
+                    "last_callback_at": "2026-05-28T01:00:03+00:00",
+                    "seconds_since_last_callback": 2.5,
+                    "is_callback_active": True,
+                },
+            }
+        )
+
+        self.assertEqual(summary["last_callback_at"], "2026-05-28T01:00:03+00:00")
+        self.assertEqual(summary["seconds_since_last_callback"], 2.5)
+        self.assertTrue(summary["is_callback_active"])
+
     def test_receive_events_records_receiver_errors(self) -> None:
         module = load_smoke_module()
 

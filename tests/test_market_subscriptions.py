@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
 from qmtserver.errors import QmtInvalidSubscriptionRequestError
@@ -228,6 +229,53 @@ class MarketSubscriptionServiceTests(unittest.TestCase):
 
         self.assertEqual(service.latest_quotes(["000001.SZ"])["missing_symbols"], ["000001.SZ"])
         self.assertEqual(service.diagnostics("sub_test")["callback_count"], 0)
+
+    def test_diagnostics_reports_quote_freshness_times(self) -> None:
+        times = iter(
+            [
+                datetime(2026, 5, 28, 1, 0, 0, tzinfo=UTC),
+                datetime(2026, 5, 28, 1, 0, 0, tzinfo=UTC),
+                datetime(2026, 5, 28, 1, 0, 1, tzinfo=UTC),
+                datetime(2026, 5, 28, 1, 0, 3, tzinfo=UTC),
+                datetime(2026, 5, 28, 1, 0, 8, tzinfo=UTC),
+            ]
+        )
+        service = MarketSubscriptionService(
+            adapter=RecordingAdapter(),
+            event_bus=RecordingBus(),
+            id_factory=lambda: "sub_test",
+            now_factory=lambda: next(times),
+            callback_stale_after_seconds=10,
+        )
+        service.create(symbols=["000001.SZ"], period="tick")
+
+        service.handle_quote(
+            "sub_test",
+            {
+                "schema": "market.quote.v1",
+                "symbol": "000001.SZ",
+                "last_price": 10.25,
+                "__qmt_quote_source": "initial",
+            },
+        )
+        service.handle_quote(
+            "sub_test",
+            {
+                "schema": "market.quote.v1",
+                "symbol": "000001.SZ",
+                "last_price": 10.26,
+                "__qmt_quote_source": "callback",
+            },
+        )
+
+        diagnostics = service.diagnostics("sub_test")
+
+        self.assertEqual(diagnostics["last_initial_quote_at"], "2026-05-28T01:00:01+00:00")
+        self.assertEqual(diagnostics["last_callback_at"], "2026-05-28T01:00:03+00:00")
+        self.assertEqual(diagnostics["seconds_since_last_quote"], 5.0)
+        self.assertEqual(diagnostics["seconds_since_last_callback"], 5.0)
+        self.assertTrue(diagnostics["is_callback_active"])
+        self.assertEqual(diagnostics["callback_stale_after_seconds"], 10)
 
 
 if __name__ == "__main__":

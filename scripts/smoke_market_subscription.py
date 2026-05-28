@@ -204,6 +204,11 @@ def summarize_diagnostics(response: dict[str, Any]) -> dict[str, Any]:
         "initial_quote_count": data.get("initial_quote_count", 0),
         "last_quote_source": data.get("last_quote_source"),
         "last_event_seq": data.get("last_event_seq"),
+        "last_initial_quote_at": data.get("last_initial_quote_at"),
+        "last_callback_at": data.get("last_callback_at"),
+        "seconds_since_last_quote": data.get("seconds_since_last_quote"),
+        "seconds_since_last_callback": data.get("seconds_since_last_callback"),
+        "is_callback_active": data.get("is_callback_active"),
     }
 
 

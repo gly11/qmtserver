@@ -253,8 +253,15 @@ Subscription diagnostics:
     "active_symbols": ["000001.SZ"],
     "callback_count": 1,
     "initial_quote_count": 1,
+    "last_quote_at": "2026-05-28T05:30:00+00:00",
+    "last_initial_quote_at": "2026-05-28T05:29:58+00:00",
+    "last_callback_at": "2026-05-28T05:30:00+00:00",
     "last_quote_source": "callback",
     "last_event_seq": 2,
+    "seconds_since_last_quote": 1.25,
+    "seconds_since_last_callback": 1.25,
+    "is_callback_active": true,
+    "callback_stale_after_seconds": 30,
     "last_error": null
   },
   "error": null
