@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import threading
+import time
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -19,6 +20,9 @@ def main(argv: list[str] | None = None) -> int:
         require_callback=args.require_callback,
         require_all_symbols=args.require_all_symbols,
         post_stop_listen_seconds=args.post_stop_listen_seconds,
+        duration_seconds=args.duration_seconds,
+        min_callbacks=args.min_callbacks,
+        report_intervals=args.report_intervals,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return (
@@ -59,6 +63,23 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="listen briefly after stop and fail if market_quote is still published",
     )
+    parser.add_argument(
+        "--duration-seconds",
+        type=float,
+        default=0.0,
+        help="collect quote events for this many seconds instead of stopping after first callback",
+    )
+    parser.add_argument(
+        "--min-callbacks",
+        type=int,
+        default=0,
+        help="minimum live callback count required for a successful smoke",
+    )
+    parser.add_argument(
+        "--report-intervals",
+        action="store_true",
+        help="include callback interval summary in the smoke result",
+    )
     return parser
 
 
@@ -75,6 +96,9 @@ def run_smoke(
     require_callback: bool,
     require_all_symbols: bool = False,
     post_stop_listen_seconds: float = 0.0,
+    duration_seconds: float = 0.0,
+    min_callbacks: int = 0,
+    report_intervals: bool = False,
 ) -> dict[str, Any]:
     settings = load_settings(
         auto_connect=True,
@@ -105,9 +129,14 @@ def run_smoke(
         "receiver_error": None,
         "post_stop_events": [],
         "post_stop_market_quote_events": 0,
+        "callback_count": 0,
+        "callback_report": None,
         "require_callback": require_callback,
         "require_all_symbols": require_all_symbols,
         "post_stop_listen_seconds": post_stop_listen_seconds,
+        "duration_seconds": duration_seconds,
+        "min_callbacks": min_callbacks,
+        "report_intervals": report_intervals,
         "trader_connected": None,
     }
 
@@ -131,11 +160,18 @@ def run_smoke(
 
             receiver = threading.Thread(
                 target=_receive_events,
-                args=(websocket, events, result, require_callback),
+                args=(websocket, events, result, require_callback, duration_seconds),
                 daemon=True,
             )
+            started_at = time.monotonic()
             receiver.start()
-            receiver.join(timeout_seconds)
+            receiver.join(duration_seconds or timeout_seconds)
+            elapsed_seconds = round(time.monotonic() - started_at, 3)
+            report = callback_report(events, elapsed_seconds=elapsed_seconds)
+            result["callback_count"] = report["callback_count"]
+            result["callback_symbols"] = list(report["callback_symbols"])
+            if report_intervals:
+                result["callback_report"] = report
 
             subscription_id = result["created"]["subscription_id"]
             if subscription_id:
@@ -164,9 +200,14 @@ def _receive_events(
     events: list[dict[str, Any]],
     result: dict[str, Any],
     require_callback: bool,
+    duration_seconds: float = 0.0,
 ) -> None:
     try:
-        for _ in range(20):
+        started_at = time.monotonic()
+        max_events = 100000 if duration_seconds > 0 else 20
+        for _ in range(max_events):
+            if duration_seconds > 0 and time.monotonic() - started_at >= duration_seconds:
+                return
             event = websocket.receive_json()
             summary = summarize_event(event)
             events.append(summary)
@@ -177,6 +218,8 @@ def _receive_events(
             if summary.get("quote_source") == "callback":
                 result["received_callback"] = True
                 _append_unique(result["callback_symbols"], summary.get("symbol"))
+            if duration_seconds > 0:
+                continue
             if not require_callback or result["received_callback"]:
                 return
     except Exception as exc:
@@ -256,6 +299,26 @@ def summarize_diagnostics(response: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def callback_report(events: list[dict[str, Any]], *, elapsed_seconds: float) -> dict[str, Any]:
+    callback_symbols: dict[str, int] = {}
+    callback_event_seq: list[int] = []
+    for event in events:
+        if event.get("type") != "market_quote" or event.get("quote_source") != "callback":
+            continue
+        symbol = str(event.get("symbol") or "")
+        if symbol:
+            callback_symbols[symbol] = callback_symbols.get(symbol, 0) + 1
+        event_seq = event.get("event_seq")
+        if isinstance(event_seq, int):
+            callback_event_seq.append(event_seq)
+    return {
+        "elapsed_seconds": elapsed_seconds,
+        "callback_count": sum(callback_symbols.values()),
+        "callback_symbols": callback_symbols,
+        "last_callback_event_seq": callback_event_seq[-1] if callback_event_seq else None,
+    }
+
+
 def smoke_ok(
     result: dict[str, Any],
     *,
@@ -276,6 +339,8 @@ def smoke_ok(
     if not result.get("diagnostics_ok"):
         return False
     if result.get("post_stop_market_quote_events"):
+        return False
+    if result.get("callback_count", 0) < result.get("min_callbacks", 0):
         return False
     if require_all_symbols:
         expected = set(result.get("symbols") or [])

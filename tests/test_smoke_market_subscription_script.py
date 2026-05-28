@@ -23,10 +23,16 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
         batch_args = module.build_parser().parse_args(["--symbols", "000001.SZ, 600000.SH"])
         legacy_args = module.build_parser().parse_args(["--symbol", "510300.SH"])
         post_stop_args = module.build_parser().parse_args(["--post-stop-listen-seconds", "3"])
+        long_args = module.build_parser().parse_args(
+            ["--duration-seconds", "120", "--min-callbacks", "3", "--report-intervals"]
+        )
 
         self.assertEqual(module.symbols_from_args(batch_args), ["000001.SZ", "600000.SH"])
         self.assertEqual(module.symbols_from_args(legacy_args), ["510300.SH"])
         self.assertEqual(post_stop_args.post_stop_listen_seconds, 3.0)
+        self.assertEqual(long_args.duration_seconds, 120.0)
+        self.assertEqual(long_args.min_callbacks, 3)
+        self.assertTrue(long_args.report_intervals)
 
     def test_smoke_ok_accepts_initial_quote_when_callback_not_required(self) -> None:
         module = load_smoke_module()
@@ -41,6 +47,8 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
             "cache_hit_symbols": ["000001.SZ"],
             "diagnostics_ok": True,
             "post_stop_market_quote_events": 0,
+            "callback_count": 0,
+            "min_callbacks": 0,
         }
 
         self.assertTrue(module.smoke_ok(result, require_callback=False, require_all_symbols=False))
@@ -58,6 +66,8 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
             "cache_hit_symbols": ["000001.SZ"],
             "diagnostics_ok": True,
             "post_stop_market_quote_events": 0,
+            "callback_count": 0,
+            "min_callbacks": 0,
         }
 
         self.assertFalse(module.smoke_ok(result, require_callback=True, require_all_symbols=False))
@@ -89,6 +99,8 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
             "cache_hit_symbols": [],
             "diagnostics_ok": True,
             "post_stop_market_quote_events": 0,
+            "callback_count": 1,
+            "min_callbacks": 0,
         }
 
         self.assertFalse(module.smoke_ok(result, require_callback=True, require_all_symbols=False))
@@ -106,6 +118,8 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
             "cache_hit_symbols": ["000001.SZ"],
             "diagnostics_ok": True,
             "post_stop_market_quote_events": 0,
+            "callback_count": 1,
+            "min_callbacks": 0,
         }
 
         self.assertFalse(module.smoke_ok(result, require_callback=True, require_all_symbols=True))
@@ -126,9 +140,47 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
             "cache_hit_symbols": ["000001.SZ"],
             "diagnostics_ok": True,
             "post_stop_market_quote_events": 1,
+            "callback_count": 1,
+            "min_callbacks": 0,
         }
 
         self.assertFalse(module.smoke_ok(result, require_callback=True, require_all_symbols=False))
+
+    def test_smoke_ok_enforces_min_callbacks(self) -> None:
+        module = load_smoke_module()
+        result = {
+            "symbols": ["000001.SZ"],
+            "quote_connected": True,
+            "created": {"ok": True},
+            "stopped_status": "stopped",
+            "received_quote": True,
+            "received_callback": True,
+            "latest_cache_hit": True,
+            "cache_hit_symbols": ["000001.SZ"],
+            "diagnostics_ok": True,
+            "post_stop_market_quote_events": 0,
+            "callback_count": 2,
+            "min_callbacks": 3,
+        }
+
+        self.assertFalse(module.smoke_ok(result, require_callback=True, require_all_symbols=False))
+
+        result["callback_count"] = 3
+        self.assertTrue(module.smoke_ok(result, require_callback=True, require_all_symbols=False))
+
+    def test_callback_report_counts_symbols_and_intervals(self) -> None:
+        module = load_smoke_module()
+        events = [
+            {"type": "market_quote", "symbol": "000001.SZ", "quote_source": "callback"},
+            {"type": "market_quote", "symbol": "600000.SH", "quote_source": "initial"},
+            {"type": "market_quote", "symbol": "000001.SZ", "quote_source": "callback"},
+        ]
+
+        report = module.callback_report(events, elapsed_seconds=5.5)
+
+        self.assertEqual(report["callback_count"], 2)
+        self.assertEqual(report["callback_symbols"], {"000001.SZ": 2})
+        self.assertEqual(report["elapsed_seconds"], 5.5)
 
     def test_summarize_latest_reports_cache_hit_symbols(self) -> None:
         module = load_smoke_module()

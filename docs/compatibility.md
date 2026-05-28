@@ -18,6 +18,7 @@ Add one row per verified environment:
 | 2026-05-28 | CPython 3.13.13 | 0.5.0 | `xtquant_250516` from local venv | `userdata_mini` | quote connection, subscription create, initial `market_quote`, live callback `market_quote`, subscription stop | Active-market readonly smoke at 13:10 local time verified `meta.quote_source=callback` with `trader_connected=false`. No trader or trading commands used. |
 | 2026-05-28 | CPython 3.13.13 | post-0.5.0 development | `xtquant_250516` from local venv | `userdata_mini` | quote connection, subscription create, initial `market_quote`, live callback `market_quote`, latest quote cache, subscription diagnostics, subscription stop | Active-market readonly smoke at 13:46 local time verified event sequence, latest cache hit, `callback_count=1`, and `trader_connected=false`. No trader or trading commands used. |
 | 2026-05-28 | CPython 3.13.13 | post-0.5.0 development | `xtquant_250516` from local venv | `userdata_mini` | batch subscription, three initial `market_quote` events, one live callback, latest quote cache, subscription diagnostics, subscription stop | Active-market readonly smoke at 13:57 local time for `000001.SZ`, `600000.SH`, and `510300.SH` verified latest cache hits for all symbols, `initial_quote_count=3`, `callback_count=1`, and `trader_connected=false`. No trader or trading commands used. |
+| 2026-05-28 | CPython 3.13.13 | post-0.5.0 development | `xtquant_250516` from local venv | `userdata_mini` | 20-second batch subscription smoke, latest quote cache, subscription diagnostics, callback report, subscription stop | Active-market readonly smoke at 14:08 local time for `000001.SZ`, `600000.SH`, and `510300.SH` collected 21 callbacks, latest cache hits for all symbols, `callback_count=21`, and `trader_connected=false`. No trader or trading commands used. |
 
 Do not record account IDs, tokens, private paths, or other local secrets.
 
@@ -33,6 +34,7 @@ Do not record account IDs, tokens, private paths, or other local secrets.
 | `GET /v1/market/quotes/latest` | qmtserver in-memory cache | Updated from normalized `market.quote.v1` events | `tests/test_market_subscriptions.py`, `tests/test_api_market.py` | Active-market readonly smoke passed for latest quote cache hit | development verified |
 | `GET /v1/market/subscriptions/{subscription_id}/diagnostics` | qmtserver in-memory diagnostics | Counts initial quotes, callback quotes, last source, and last event sequence | `tests/test_market_subscriptions.py`, `tests/test_api_market.py` | Active-market readonly smoke passed for callback and initial quote counters | development verified |
 | `scripts/smoke_market_subscription.py --symbols` | qmtserver smoke helper | Creates one multi-symbol readonly subscription and checks events, latest cache, and diagnostics | `tests/test_smoke_market_subscription_script.py` | Active-market readonly batch smoke passed with three symbols | development verified |
+| `scripts/smoke_market_subscription.py --duration-seconds` | qmtserver smoke helper | Collects callback counts and per-symbol callback report over a bounded window | `tests/test_smoke_market_subscription_script.py` | Active-market readonly 20-second batch smoke passed | development verified |
 
 ## Realtime Subscription Observations
 
@@ -92,6 +94,10 @@ quote cache lookup, and subscription diagnostics in the same readonly script. Th
 Batch active-market smoke on 2026-05-28 at 13:57 local time used one subscription for three symbols.
 It received initial quotes for all requested symbols, one live callback, latest cache hits for all
 requested symbols, and diagnostics counters for both initial and callback quote sources.
+
+Long-window active-market smoke on 2026-05-28 at 14:08 local time used a 20-second window with the
+same three symbols. It collected 21 callback events, latest cache hits for every requested symbol,
+and active callback diagnostics.
 
 trading safety:
 Readonly market data only.

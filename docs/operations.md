@@ -95,6 +95,12 @@ uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-
 uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --require-callback --require-all-symbols --timeout-seconds 60
 ```
 
+长窗口实时可靠性 smoke：
+
+```powershell
+uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --duration-seconds 180 --min-callbacks 3 --report-intervals
+```
+
 验证 stop 后本地隔离：
 
 ```powershell

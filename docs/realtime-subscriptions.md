@@ -271,6 +271,7 @@ uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ
 uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback
 uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback --post-stop-listen-seconds 5
 uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --require-callback --require-all-symbols --timeout-seconds 60
+uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --duration-seconds 180 --min-callbacks 3 --report-intervals
 ```
 
 Do not run order, cancel, transfer, or other trading commands during this smoke.
