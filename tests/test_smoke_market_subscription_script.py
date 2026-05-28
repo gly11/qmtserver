@@ -24,7 +24,14 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
         legacy_args = module.build_parser().parse_args(["--symbol", "510300.SH"])
         post_stop_args = module.build_parser().parse_args(["--post-stop-listen-seconds", "3"])
         long_args = module.build_parser().parse_args(
-            ["--duration-seconds", "120", "--min-callbacks", "3", "--report-intervals"]
+            [
+                "--duration-seconds",
+                "120",
+                "--min-callbacks",
+                "3",
+                "--report-intervals",
+                "--omit-events",
+            ]
         )
 
         self.assertEqual(module.symbols_from_args(batch_args), ["000001.SZ", "600000.SH"])
@@ -33,6 +40,23 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
         self.assertEqual(long_args.duration_seconds, 120.0)
         self.assertEqual(long_args.min_callbacks, 3)
         self.assertTrue(long_args.report_intervals)
+        self.assertTrue(long_args.omit_events)
+
+    def test_omit_events_replaces_event_list_with_count(self) -> None:
+        module = load_smoke_module()
+        result = {
+            "events": [{"type": "market_quote"}, {"type": "heartbeat"}],
+            "post_stop_events": [{"type": "heartbeat"}],
+            "callback_count": 1,
+        }
+
+        pruned = module.prune_result(result, omit_events=True)
+
+        self.assertNotIn("events", pruned)
+        self.assertEqual(pruned["event_count"], 2)
+        self.assertNotIn("post_stop_events", pruned)
+        self.assertEqual(pruned["post_stop_event_count"], 1)
+        self.assertEqual(result["events"], [{"type": "market_quote"}, {"type": "heartbeat"}])
 
     def test_smoke_ok_accepts_initial_quote_when_callback_not_required(self) -> None:
         module = load_smoke_module()

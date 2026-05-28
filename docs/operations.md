@@ -135,7 +135,7 @@ uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH
 长窗口实时可靠性 smoke：
 
 ```powershell
-uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --duration-seconds 180 --min-callbacks 3 --report-intervals
+uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --duration-seconds 180 --min-callbacks 30 --require-all-symbols --report-intervals --omit-events
 ```
 
 验证 stop 后本地隔离：

@@ -24,7 +24,9 @@ def main(argv: list[str] | None = None) -> int:
         min_callbacks=args.min_callbacks,
         report_intervals=args.report_intervals,
     )
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(prune_result(result, omit_events=args.omit_events), ensure_ascii=False, indent=2)
+    )
     return (
         0
         if smoke_ok(
@@ -80,7 +82,25 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="include callback interval summary in the smoke result",
     )
+    parser.add_argument(
+        "--omit-events",
+        action="store_true",
+        help="omit full event arrays from printed output and keep counts only",
+    )
     return parser
+
+
+def prune_result(result: dict[str, Any], *, omit_events: bool) -> dict[str, Any]:
+    if not omit_events:
+        return dict(result)
+    pruned = dict(result)
+    events = pruned.pop("events", [])
+    post_stop_events = pruned.pop("post_stop_events", [])
+    pruned["event_count"] = len(events) if isinstance(events, list) else 0
+    pruned["post_stop_event_count"] = (
+        len(post_stop_events) if isinstance(post_stop_events, list) else 0
+    )
+    return pruned
 
 
 def symbols_from_args(args: argparse.Namespace) -> list[str]:
