@@ -112,6 +112,17 @@ def get_subscription(
         return _error(exc)
 
 
+@router.get("/subscriptions/{subscription_id}/diagnostics")
+def get_subscription_diagnostics(
+    subscription_id: str,
+    service: MarketSubscriptionServiceDep,
+) -> dict[str, Any]:
+    try:
+        return _success(service.diagnostics(subscription_id))
+    except QmtServerError as exc:
+        return _error(exc)
+
+
 @router.delete("/subscriptions/{subscription_id}")
 def stop_subscription(
     subscription_id: str,
@@ -119,6 +130,17 @@ def stop_subscription(
 ) -> dict[str, Any]:
     try:
         return _success(service.stop(subscription_id).as_dict())
+    except QmtServerError as exc:
+        return _error(exc)
+
+
+@router.get("/quotes/latest")
+def latest_quotes(
+    service: MarketSubscriptionServiceDep,
+    symbols: str | None = None,
+) -> dict[str, Any]:
+    try:
+        return _success(service.latest_quotes(_symbol_list(symbols)))
     except QmtServerError as exc:
         return _error(exc)
 
@@ -133,3 +155,9 @@ def _error(exc: QmtServerError) -> dict[str, Any]:
         "data": None,
         "error": {"code": exc.code, "message": str(exc)},
     }
+
+
+def _symbol_list(symbols: str | None) -> list[str] | None:
+    if symbols is None:
+        return None
+    return [item.strip() for item in symbols.split(",") if item.strip()]

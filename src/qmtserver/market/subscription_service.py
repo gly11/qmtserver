@@ -50,6 +50,9 @@ class MarketSubscriptionService:
         self.event_bus = event_bus
         self.id_factory = id_factory or _subscription_id
         self._subscriptions: dict[str, MarketSubscription] = {}
+        self._latest_quotes: dict[str, dict[str, Any]] = {}
+        self._diagnostics: dict[str, dict[str, Any]] = {}
+        self._event_seq = 0
 
     def create(self, *, symbols: list[str], period: str = "tick") -> MarketSubscription:
         clean_symbols = self._validate(symbols, period)
@@ -64,6 +67,7 @@ class MarketSubscriptionService:
             updated_at=now,
         )
         self._subscriptions[subscription_id] = subscription
+        self._diagnostics[subscription_id] = _empty_diagnostics(subscription)
         upstream_id = self.adapter.subscribe(
             symbols=clean_symbols,
             period=period,
@@ -86,6 +90,39 @@ class MarketSubscriptionService:
         except KeyError as exc:
             raise QmtMarketSubscriptionNotFoundError(subscription_id) from exc
 
+    def diagnostics(self, subscription_id: str) -> dict[str, Any]:
+        subscription = self.get(subscription_id)
+        diagnostics = dict(self._diagnostics.get(subscription_id, _empty_diagnostics(subscription)))
+        diagnostics.update(
+            {
+                "subscription_id": subscription.subscription_id,
+                "symbols": subscription.symbols,
+                "period": subscription.period,
+                "status": subscription.status,
+                "active_symbols": subscription.symbols if subscription.status == "active" else [],
+                "last_error": subscription.last_error,
+            }
+        )
+        return diagnostics
+
+    def latest_quotes(self, symbols: list[str] | None = None) -> dict[str, Any]:
+        requested = [item.strip() for item in symbols or [] if item.strip()]
+        quote_symbols = requested or sorted(self._latest_quotes)
+
+        quotes: list[dict[str, Any]] = []
+        missing_symbols: list[str] = []
+        for symbol in quote_symbols:
+            cached = self._latest_quotes.get(symbol)
+            if cached is None:
+                missing_symbols.append(symbol)
+                continue
+            quotes.append(dict(cached))
+        return {
+            "schema": "market.latest_quotes.v1",
+            "quotes": quotes,
+            "missing_symbols": missing_symbols,
+        }
+
     def stop(self, subscription_id: str) -> MarketSubscription:
         subscription = self.get(subscription_id)
         if subscription.status != "stopped":
@@ -100,6 +137,13 @@ class MarketSubscriptionService:
             return
         quote = dict(payload)
         quote_source = quote.pop("__qmt_quote_source", "callback")
+        event_seq = self._next_event_seq()
+        self._record_quote(
+            subscription=subscription,
+            quote=quote,
+            quote_source=quote_source,
+            event_seq=event_seq,
+        )
         self.event_bus.publish_threadsafe(
             "market_quote",
             quote,
@@ -107,6 +151,7 @@ class MarketSubscriptionService:
                 "subscription_id": subscription_id,
                 "source": "xtdata",
                 "quote_source": quote_source,
+                "event_seq": event_seq,
             },
         )
 
@@ -136,6 +181,42 @@ class MarketSubscriptionService:
             {"subscription_id": subscription.subscription_id, "source": "qmtserver"},
         )
 
+    def _record_quote(
+        self,
+        *,
+        subscription: MarketSubscription,
+        quote: dict[str, Any],
+        quote_source: str,
+        event_seq: int,
+    ) -> None:
+        symbol = str(quote.get("symbol", "")).strip()
+        now = utc_now_iso()
+        if symbol:
+            self._latest_quotes[symbol] = {
+                "symbol": symbol,
+                "quote": dict(quote),
+                "quote_source": quote_source,
+                "updated_at": now,
+                "subscription_id": subscription.subscription_id,
+                "event_seq": event_seq,
+            }
+
+        current = dict(
+            self._diagnostics.get(subscription.subscription_id, _empty_diagnostics(subscription))
+        )
+        current["last_quote_at"] = now
+        current["last_quote_source"] = quote_source
+        current["last_event_seq"] = event_seq
+        if quote_source == "initial":
+            current["initial_quote_count"] = int(current["initial_quote_count"]) + 1
+        else:
+            current["callback_count"] = int(current["callback_count"]) + 1
+        self._diagnostics[subscription.subscription_id] = current
+
+    def _next_event_seq(self) -> int:
+        self._event_seq += 1
+        return self._event_seq
+
     def _validate(self, symbols: list[str], period: str) -> list[str]:
         clean_symbols = [item.strip() for item in symbols if item.strip()]
         if not clean_symbols:
@@ -147,3 +228,20 @@ class MarketSubscriptionService:
 
 def _subscription_id() -> str:
     return f"sub_{uuid.uuid4().hex}"
+
+
+def _empty_diagnostics(subscription: MarketSubscription) -> dict[str, Any]:
+    return {
+        "schema": "market.subscription_diagnostics.v1",
+        "subscription_id": subscription.subscription_id,
+        "symbols": subscription.symbols,
+        "period": subscription.period,
+        "status": subscription.status,
+        "active_symbols": subscription.symbols if subscription.status == "active" else [],
+        "callback_count": 0,
+        "initial_quote_count": 0,
+        "last_quote_at": None,
+        "last_quote_source": None,
+        "last_event_seq": None,
+        "last_error": subscription.last_error,
+    }

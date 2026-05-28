@@ -49,7 +49,14 @@ class InitialQuoteAdapter(RecordingAdapter):
         callback: Callable[[dict[str, Any]], None],
     ) -> int:
         upstream_id = super().subscribe(symbols=symbols, period=period, callback=callback)
-        callback({"schema": "market.quote.v1", "symbol": symbols[0], "last_price": 10.25})
+        callback(
+            {
+                "schema": "market.quote.v1",
+                "symbol": symbols[0],
+                "last_price": 10.25,
+                "__qmt_quote_source": "initial",
+            }
+        )
         return upstream_id
 
 
@@ -142,6 +149,85 @@ class MarketSubscriptionServiceTests(unittest.TestCase):
         quote_event = next(event for event in bus.events if event[0] == "market_quote")
         self.assertEqual(quote_event[2]["quote_source"], "callback")
         self.assertNotIn("__qmt_quote_source", quote_event[1])
+
+    def test_quote_callback_updates_latest_quote_cache_and_diagnostics(self) -> None:
+        service = MarketSubscriptionService(
+            adapter=RecordingAdapter(),
+            event_bus=RecordingBus(),
+            id_factory=lambda: "sub_test",
+        )
+        service.create(symbols=["000001.SZ"], period="tick")
+
+        service.handle_quote(
+            "sub_test",
+            {
+                "schema": "market.quote.v1",
+                "symbol": "000001.SZ",
+                "last_price": 10.25,
+                "__qmt_quote_source": "callback",
+            },
+        )
+
+        latest = service.latest_quotes(["000001.SZ", "600000.SH"])
+        diagnostics = service.diagnostics("sub_test")
+
+        self.assertEqual(latest["quotes"][0]["symbol"], "000001.SZ")
+        self.assertEqual(latest["quotes"][0]["quote"]["last_price"], 10.25)
+        self.assertEqual(latest["quotes"][0]["quote_source"], "callback")
+        self.assertEqual(latest["quotes"][0]["subscription_id"], "sub_test")
+        self.assertEqual(latest["missing_symbols"], ["600000.SH"])
+        self.assertEqual(diagnostics["callback_count"], 1)
+        self.assertEqual(diagnostics["initial_quote_count"], 0)
+        self.assertEqual(diagnostics["last_quote_source"], "callback")
+        self.assertEqual(diagnostics["active_symbols"], ["000001.SZ"])
+
+    def test_initial_and_callback_quotes_have_monotonic_event_sequence(self) -> None:
+        bus = RecordingBus()
+        service = MarketSubscriptionService(
+            adapter=InitialQuoteAdapter(),
+            event_bus=bus,
+            id_factory=lambda: "sub_test",
+        )
+
+        service.create(symbols=["000001.SZ"], period="tick")
+        service.handle_quote(
+            "sub_test",
+            {
+                "schema": "market.quote.v1",
+                "symbol": "000001.SZ",
+                "last_price": 10.26,
+                "__qmt_quote_source": "callback",
+            },
+        )
+
+        quote_events = [event for event in bus.events if event[0] == "market_quote"]
+        self.assertEqual(quote_events[0][2]["event_seq"], 1)
+        self.assertEqual(quote_events[1][2]["event_seq"], 2)
+        diagnostics = service.diagnostics("sub_test")
+        self.assertEqual(diagnostics["initial_quote_count"], 1)
+        self.assertEqual(diagnostics["callback_count"], 1)
+
+    def test_stopped_subscription_does_not_update_latest_quote_cache(self) -> None:
+        service = MarketSubscriptionService(
+            adapter=RecordingAdapter(),
+            event_bus=RecordingBus(),
+            id_factory=lambda: "sub_test",
+        )
+        service.create(symbols=["000001.SZ"], period="tick")
+        service.stop("sub_test")
+
+        service.handle_quote(
+            "sub_test",
+            {
+                "schema": "market.quote.v1",
+                "symbol": "000001.SZ",
+                "last_price": 10.25,
+                "__qmt_quote_source": "callback",
+            },
+        )
+
+        self.assertEqual(service.latest_quotes(["000001.SZ"])["missing_symbols"], ["000001.SZ"])
+        self.assertEqual(service.diagnostics("sub_test")["callback_count"], 0)
 
 
 if __name__ == "__main__":

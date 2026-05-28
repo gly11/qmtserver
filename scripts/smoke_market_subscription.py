@@ -61,6 +61,10 @@ def run_smoke(
         "events": events,
         "received_quote": False,
         "received_callback": False,
+        "latest": None,
+        "latest_cache_hit": False,
+        "diagnostics": None,
+        "diagnostics_ok": False,
         "receiver_error": None,
         "require_callback": require_callback,
         "trader_connected": None,
@@ -94,6 +98,17 @@ def run_smoke(
 
             subscription_id = result["created"]["subscription_id"]
             if subscription_id:
+                latest = client.get(f"/v1/market/quotes/latest?symbols={symbol}").json()
+                result["latest"] = summarize_latest(latest)
+                result["latest_cache_hit"] = bool(result["latest"]["quote_count"])
+                diagnostics = client.get(
+                    f"/v1/market/subscriptions/{subscription_id}/diagnostics"
+                ).json()
+                result["diagnostics"] = summarize_diagnostics(diagnostics)
+                result["diagnostics_ok"] = bool(
+                    (result["diagnostics"]["callback_count"] if require_callback else True)
+                    and result["diagnostics"]["last_quote_source"]
+                )
                 stopped = client.delete(f"/v1/market/subscriptions/{subscription_id}").json()
                 result["stopped_status"] = (stopped.get("data") or {}).get("status")
 
@@ -131,6 +146,29 @@ def summarize_event(event: dict[str, Any]) -> dict[str, Any]:
         "symbol": data.get("symbol"),
         "status": data.get("status"),
         "quote_source": meta.get("quote_source"),
+        "event_seq": meta.get("event_seq"),
+    }
+
+
+def summarize_latest(response: dict[str, Any]) -> dict[str, Any]:
+    data = response.get("data") or {}
+    return {
+        "ok": response.get("ok"),
+        "quote_count": len(data.get("quotes") or []),
+        "missing_symbols": data.get("missing_symbols") or [],
+    }
+
+
+def summarize_diagnostics(response: dict[str, Any]) -> dict[str, Any]:
+    data = response.get("data") or {}
+    return {
+        "ok": response.get("ok"),
+        "subscription_id": data.get("subscription_id"),
+        "status": data.get("status"),
+        "callback_count": data.get("callback_count", 0),
+        "initial_quote_count": data.get("initial_quote_count", 0),
+        "last_quote_source": data.get("last_quote_source"),
+        "last_event_seq": data.get("last_event_seq"),
     }
 
 
@@ -143,6 +181,10 @@ def smoke_ok(result: dict[str, Any], *, require_callback: bool) -> bool:
     if result.get("stopped_status") != "stopped":
         return False
     if not result.get("received_quote"):
+        return False
+    if not result.get("latest_cache_hit"):
+        return False
+    if not result.get("diagnostics_ok"):
         return False
     return not (require_callback and not result.get("received_callback"))
 

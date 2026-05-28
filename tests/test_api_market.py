@@ -69,6 +69,7 @@ class ApiMarketTests(unittest.TestCase):
         self.assertIn("market.bars.v1", body["data"]["schema_versions"])
         self.assertIn("market.subscription.v1", body["data"]["schema_versions"])
         self.assertIn("/v1/market/subscriptions", body["data"]["endpoints"])
+        self.assertIn("/v1/market/quotes/latest", body["data"]["endpoints"])
         self.assertIn("1m", body["data"]["periods"])
         self.assertIn("none", body["data"]["adjust_modes"])
 
@@ -216,6 +217,34 @@ class ApiMarketTests(unittest.TestCase):
         self.assertEqual(event["data"]["schema"], "market.quote.v1")
         self.assertEqual(event["data"]["symbol"], "000001.SZ")
         self.assertEqual(event["meta"]["subscription_id"], "sub_test")
+        self.assertEqual(event["meta"]["event_seq"], 1)
+
+    def test_market_latest_quotes_and_subscription_diagnostics_endpoints(self) -> None:
+        app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
+        service = SubscriptionQuoteService()
+
+        with TestClient(app) as client:
+            install_subscription_service(app, service)
+            created = client.post(
+                "/v1/market/subscriptions",
+                json={"symbols": ["000001.SZ"], "period": "tick"},
+            )
+            self.assertTrue(created.json()["ok"])
+            service.xtdata.callbacks[0]({"000001.SZ": {"lastPrice": 10.25}})
+
+            latest = client.get("/v1/market/quotes/latest?symbols=000001.SZ,600000.SH")
+            diagnostics = client.get("/v1/market/subscriptions/sub_test/diagnostics")
+
+        latest_body = latest.json()
+        diagnostics_body = diagnostics.json()
+        self.assertTrue(latest_body["ok"])
+        self.assertEqual(latest_body["data"]["quotes"][0]["symbol"], "000001.SZ")
+        self.assertEqual(latest_body["data"]["quotes"][0]["quote_source"], "callback")
+        self.assertEqual(latest_body["data"]["missing_symbols"], ["600000.SH"])
+        self.assertTrue(diagnostics_body["ok"])
+        self.assertEqual(diagnostics_body["data"]["subscription_id"], "sub_test")
+        self.assertEqual(diagnostics_body["data"]["callback_count"], 1)
+        self.assertEqual(diagnostics_body["data"]["last_quote_source"], "callback")
 
 
 if __name__ == "__main__":

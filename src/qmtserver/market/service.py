@@ -32,6 +32,7 @@ class MarketService:
                     "/v1/market/bars/daily",
                     "/v1/market/bars/intraday",
                     "/v1/market/capabilities",
+                    "/v1/market/quotes/latest",
                     "/v1/market/subscriptions",
                 ],
                 "periods": list(SUPPORTED_PERIODS),

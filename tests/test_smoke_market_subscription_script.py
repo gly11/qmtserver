@@ -25,6 +25,8 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
             "stopped_status": "stopped",
             "received_quote": True,
             "received_callback": False,
+            "latest_cache_hit": True,
+            "diagnostics_ok": True,
         }
 
         self.assertTrue(module.smoke_ok(result, require_callback=False))
@@ -37,6 +39,8 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
             "stopped_status": "stopped",
             "received_quote": True,
             "received_callback": False,
+            "latest_cache_hit": True,
+            "diagnostics_ok": True,
         }
 
         self.assertFalse(module.smoke_ok(result, require_callback=True))
@@ -47,12 +51,27 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
             {
                 "type": "market_quote",
                 "data": {"schema": "market.quote.v1", "symbol": "000001.SZ"},
-                "meta": {"quote_source": "callback"},
+                "meta": {"quote_source": "callback", "event_seq": 7},
             }
         )
 
         self.assertEqual(summary["type"], "market_quote")
         self.assertEqual(summary["quote_source"], "callback")
+        self.assertEqual(summary["event_seq"], 7)
+
+    def test_smoke_ok_requires_latest_cache_and_diagnostics(self) -> None:
+        module = load_smoke_module()
+        result = {
+            "quote_connected": True,
+            "created": {"ok": True},
+            "stopped_status": "stopped",
+            "received_quote": True,
+            "received_callback": True,
+            "latest_cache_hit": False,
+            "diagnostics_ok": True,
+        }
+
+        self.assertFalse(module.smoke_ok(result, require_callback=True))
 
     def test_receive_events_records_receiver_errors(self) -> None:
         module = load_smoke_module()
