@@ -67,15 +67,20 @@ class ApiHealthMetricsTests(unittest.TestCase):
             app.state.qmt_service.callback.on_stock_order({"order_id": 1})
             app.state.qmt_service.callback.on_stock_trade({"trade_id": 2})
             asyncio.run(app.state.event_bus.publish("stock_order", {"order_id": 1}))
+            asyncio.run(app.state.event_bus.publish("market_quote", {"symbol": "000001.SZ"}))
+            asyncio.run(app.state.event_bus.publish("market_quote", {"symbol": "600000.SH"}))
             orders = client.get("/v1/orders")
             order = client.get("/v1/orders/1")
             trades = client.get("/v1/trades")
             events = client.get("/v1/events/recent?types=stock_order")
+            market_events = client.get("/v1/events/recent?types=market_quote&symbol=000001.SZ")
 
         self.assertEqual(orders.json()["data"][0]["data"]["order_id"], 1)
         self.assertEqual(order.json()["data"]["data"]["order_id"], 1)
         self.assertEqual(trades.json()["data"][0]["data"]["trade_id"], 2)
         self.assertTrue(all(item["type"] == "stock_order" for item in events.json()["data"]))
+        self.assertEqual(len(market_events.json()["data"]), 1)
+        self.assertEqual(market_events.json()["data"][0]["data"]["symbol"], "000001.SZ")
 
 
 if __name__ == "__main__":

@@ -77,11 +77,14 @@ class EventBus:
         self,
         *,
         event_types: set[str] | None = None,
+        symbols: set[str] | None = None,
         limit: int | None = None,
     ) -> list[dict[str, Any]]:
         events = list(self._events)
         if event_types:
             events = [event for event in events if event.type in event_types]
+        if symbols:
+            events = [event for event in events if str(event.data.get("symbol", "")) in symbols]
         if limit is not None:
             events = events[-limit:]
         return [event.to_dict() for event in events]

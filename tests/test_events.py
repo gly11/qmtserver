@@ -47,6 +47,19 @@ class EventBusTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0]["type"], "stock_trade")
 
+    async def test_recent_events_filters_by_symbol(self) -> None:
+        bus = EventBus(cache_size=3)
+
+        await bus.publish("market_quote", {"symbol": "000001.SZ"})
+        await bus.publish("market_quote", {"symbol": "600000.SH"})
+        await bus.publish("stock_trade", {"symbol": "000001.SZ"})
+
+        events = bus.recent_events(event_types={"market_quote"}, symbols={"000001.SZ"})
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["type"], "market_quote")
+        self.assertEqual(events[0]["data"]["symbol"], "000001.SZ")
+
 
 class EventModelTests(unittest.TestCase):
     def test_event_is_json_friendly(self) -> None:

@@ -283,6 +283,21 @@ CSV 文件字段跟随 snapshot kind：
 
 `meta` 在 CSV 中序列化为 JSON 字符串。
 
+## Recent Events
+
+`GET /v1/events/recent` returns the in-memory recent event cache. It is useful after a WebSocket
+reconnect, but it is not persistent storage. Use latest quote cache for current market state.
+
+Examples:
+
+```text
+GET /v1/events/recent?types=market_quote&symbol=000001.SZ
+GET /v1/events/recent?types=market_quote&symbols=000001.SZ,600000.SH&limit=20
+```
+
+The `types` filter accepts comma-separated event types. `symbol` or `symbols` filters events whose
+`data.symbol` matches one of the requested symbols.
+
 ### POST /v1/snapshots
 
 创建或复用 snapshot：

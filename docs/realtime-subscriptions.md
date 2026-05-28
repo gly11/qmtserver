@@ -178,6 +178,7 @@ Responsibilities:
   because live callbacks remain the primary stream.
 - Service owns local lifecycle, registry state, status transitions, and EventBus publishing.
 - Service owns the latest quote cache, per-subscription diagnostics, and quote event sequence.
+- EventBus recent cache can be queried by event type and symbol for short reconnect recovery.
 - API routes parse HTTP input and assemble responses only.
 
 The first implementation should use the existing in-process `EventBus`. It should not introduce a

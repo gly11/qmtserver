@@ -40,12 +40,22 @@ def trades(request: Request, limit: int | None = None) -> dict[str, object]:
 def recent_events(
     request: Request,
     types: str | None = None,
+    symbol: str | None = None,
+    symbols: str | None = None,
     limit: int | None = None,
 ) -> dict[str, object]:
     get_qmt_service(request)
     event_bus: EventBus = request.app.state.event_bus
     event_types = _parse_types(types)
-    return {"ok": True, "data": event_bus.recent_events(event_types=event_types, limit=limit)}
+    event_symbols = _parse_types(symbols or symbol)
+    return {
+        "ok": True,
+        "data": event_bus.recent_events(
+            event_types=event_types,
+            symbols=event_symbols,
+            limit=limit,
+        ),
+    }
 
 
 def _order_store(request: Request, service: object) -> OrderStore:

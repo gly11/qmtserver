@@ -105,6 +105,14 @@ uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-
 脚本还会检查 latest quote cache 和 subscription diagnostics，确认服务端能通过 HTTP 返回最近
 一次 quote、回调计数、最近 callback 时间和 freshness 秒数。
 
+WebSocket 客户端断线后，可用最近事件缓存补拉短期事件：
+
+```powershell
+curl "http://127.0.0.1:8000/v1/events/recent?types=market_quote&symbols=000001.SZ,600000.SH&limit=20"
+```
+
+recent events 是短期内存事件回放；当前行情状态优先使用 `/v1/market/quotes/latest`。
+
 ## Snapshot 数据目录
 
 Snapshot/export 文件默认写入 `data/snapshots/`，可通过环境变量调整：
