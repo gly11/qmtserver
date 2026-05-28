@@ -111,6 +111,15 @@ intraday 历史行情，再检查 `/v1/market/bars/daily`、`/v1/market/bars/int
 和 snapshot manifest。`--require-rows` 会要求 daily、intraday、snapshot 和 job 都返回非空
 行数，适合作为发布前真实 MiniQMT smoke。
 
+Reference 和 instrument detail 只读 smoke：
+
+```powershell
+uv run python scripts\smoke_reference.py --symbols 000001.SZ,600000.SH
+```
+
+该脚本只检查 calendar、universe 和 instruments。输出包括日期数、股票池数量和 instrument
+detail 观察到的字段集合，不输出完整股票池或原始 instrument 明细。
+
 盘中验证 live `subscribe_quote` callback 时使用：
 
 ```powershell

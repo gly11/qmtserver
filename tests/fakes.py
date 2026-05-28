@@ -11,6 +11,9 @@ from qmtserver.trading import DailyTradingLimits
 class FakeTarget:
     non_callable = "not callable"
 
+    def __init__(self) -> None:
+        self.sector_calls: list[str] = []
+
     def get_full_tick(self, codes: list[str]) -> dict[str, object]:
         return {"codes": codes}
 
@@ -70,7 +73,7 @@ class FakeTarget:
         return ["沪深A股"]
 
     def get_stock_list_in_sector(self, sector: str) -> list[str]:
-        del sector
+        self.sector_calls.append(sector)
         return ["000001.SZ", "600000.SH"]
 
     def get_instrument_detail(self, symbol: str) -> dict[str, object]:
