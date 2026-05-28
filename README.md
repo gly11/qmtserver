@@ -95,6 +95,8 @@ GET  /v1/market/bars/daily
 GET  /v1/market/bars/intraday
 POST /v1/market/subscriptions
 GET  /v1/market/subscriptions
+GET  /v1/market/quotes/latest
+GET  /v1/market/subscriptions/{subscription_id}/diagnostics
 DELETE /v1/market/subscriptions/{subscription_id}
 POST /v1/snapshots
 POST /v1/jobs/history-download

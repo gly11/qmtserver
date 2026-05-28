@@ -21,7 +21,9 @@ GET  /v1/market/bars/intraday
 POST /v1/market/subscriptions
 GET  /v1/market/subscriptions
 GET  /v1/market/subscriptions/{subscription_id}
+GET  /v1/market/subscriptions/{subscription_id}/diagnostics
 DELETE /v1/market/subscriptions/{subscription_id}
+GET  /v1/market/quotes/latest
 POST /v1/snapshots
 GET  /v1/snapshots
 GET  /v1/snapshots/{snapshot_id}/manifest
@@ -174,7 +176,9 @@ After the upstream subscription is accepted, qmtserver also emits a best-effort 
 POST /v1/market/subscriptions
 GET /v1/market/subscriptions
 GET /v1/market/subscriptions/{subscription_id}
+GET /v1/market/subscriptions/{subscription_id}/diagnostics
 DELETE /v1/market/subscriptions/{subscription_id}
+GET /v1/market/quotes/latest?symbols=000001.SZ,600000.SH
 ```
 
 Create request:
@@ -209,6 +213,53 @@ Create response:
 Invalid requests return `INVALID_SUBSCRIPTION_REQUEST`. Missing quote connectivity returns
 `TARGET_NOT_CONNECTED`. If the local `xtquant` package cannot unsubscribe reliably, qmtserver marks
 the local subscription `stopped` and ignores later callbacks for that `subscription_id`.
+
+Latest quote cache:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "schema": "market.latest_quotes.v1",
+    "quotes": [
+      {
+        "symbol": "000001.SZ",
+        "quote": {
+          "schema": "market.quote.v1",
+          "symbol": "000001.SZ",
+          "last_price": 10.25
+        },
+        "quote_source": "callback",
+        "updated_at": "2026-05-28T05:30:00+00:00",
+        "subscription_id": "sub_...",
+        "event_seq": 2
+      }
+    ],
+    "missing_symbols": ["600000.SH"]
+  },
+  "error": null
+}
+```
+
+Subscription diagnostics:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "schema": "market.subscription_diagnostics.v1",
+    "subscription_id": "sub_...",
+    "status": "active",
+    "active_symbols": ["000001.SZ"],
+    "callback_count": 1,
+    "initial_quote_count": 1,
+    "last_quote_source": "callback",
+    "last_event_seq": 2,
+    "last_error": null
+  },
+  "error": null
+}
+```
 
 ## Snapshot API
 

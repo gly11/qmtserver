@@ -16,6 +16,7 @@ Add one row per verified environment:
 | 2026-05-27 | CPython 3.13.13 | unreleased realtime subscription work | `xtquant_250516` from local venv | `userdata_mini` | quote connection, subscription create, subscription stop, WebSocket lifecycle event | After-hours smoke at 17:27 local time. No live `market_quote` observed before initial quote seed support; rerun after seed support and during active market data. No trader or trading commands used. |
 | 2026-05-27 | CPython 3.13.13 | unreleased realtime subscription work | `xtquant_250516` from local venv | `userdata_mini` | quote connection, subscription create, initial `market_quote`, subscription stop | After-hours smoke at 17:59 local time verified the initial `get_full_tick` seed path. Live callback delivery still needs active-market smoke. No trader or trading commands used. |
 | 2026-05-28 | CPython 3.13.13 | 0.5.0 | `xtquant_250516` from local venv | `userdata_mini` | quote connection, subscription create, initial `market_quote`, live callback `market_quote`, subscription stop | Active-market readonly smoke at 13:10 local time verified `meta.quote_source=callback` with `trader_connected=false`. No trader or trading commands used. |
+| 2026-05-28 | CPython 3.13.13 | post-0.5.0 development | `xtquant_250516` from local venv | `userdata_mini` | quote connection, subscription create, initial `market_quote`, live callback `market_quote`, latest quote cache, subscription diagnostics, subscription stop | Active-market readonly smoke at 13:46 local time verified event sequence, latest cache hit, `callback_count=1`, and `trader_connected=false`. No trader or trading commands used. |
 
 Do not record account IDs, tokens, private paths, or other local secrets.
 
@@ -28,6 +29,8 @@ Do not record account IDs, tokens, private paths, or other local secrets.
 | `GET /v1/trader/*` readonly queries | `XtQuantTrader.query_*` readonly methods | Account-specific methods accept `StockAccount`; orders accept `cancelable_only` | `tests/test_trader_service.py`, `tests/test_api_trader.py` | Required before trader-query release; no real trading | stable |
 | `POST /v1/market/subscriptions` | `xtdata.subscribe_quote` | `subscribe_quote(stock_code, period='1d', start_time='', end_time='', count=0, callback=None)` | `tests/test_market_adapter.py`, `tests/test_market_normalizers.py` | Active-market readonly smoke passed for initial quote seed and live callback quote event | released in 0.5.0 |
 | `DELETE /v1/market/subscriptions/{subscription_id}` | `xtdata.unsubscribe_quote` | `unsubscribe_quote(seq)` | `tests/test_market_adapter.py` | After-hours readonly smoke passed | released in 0.5.0 |
+| `GET /v1/market/quotes/latest` | qmtserver in-memory cache | Updated from normalized `market.quote.v1` events | `tests/test_market_subscriptions.py`, `tests/test_api_market.py` | Active-market readonly smoke passed for latest quote cache hit | development verified |
+| `GET /v1/market/subscriptions/{subscription_id}/diagnostics` | qmtserver in-memory diagnostics | Counts initial quotes, callback quotes, last source, and last event sequence | `tests/test_market_subscriptions.py`, `tests/test_api_market.py` | Active-market readonly smoke passed for callback and initial quote counters | development verified |
 
 ## Realtime Subscription Observations
 
@@ -79,6 +82,10 @@ subscription create returned `active`, WebSocket received `market_quote` with sc
 `market.quote.v1`, and stop returned `stopped`. Active-market smoke on 2026-05-28 at 13:10 local
 time also received a WebSocket `market_quote` event with `meta.quote_source=callback`. The smoke
 script used `connect_trader=False`; no trader or trading commands were used.
+
+Post-0.5.0 active-market smoke on 2026-05-28 at 13:46 local time verified `event_seq`, latest
+quote cache lookup, and subscription diagnostics in the same readonly script. The script reported
+`trader_connected=false`.
 
 trading safety:
 Readonly market data only.

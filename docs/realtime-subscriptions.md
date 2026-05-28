@@ -15,6 +15,8 @@ Target user flow:
 ```text
 POST /v1/market/subscriptions
 WS   /v1/ws/events?types=market_quote,market_subscription
+GET  /v1/market/quotes/latest?symbols=000001.SZ
+GET  /v1/market/subscriptions/{subscription_id}/diagnostics
 GET  /v1/market/subscriptions
 DELETE /v1/market/subscriptions/{subscription_id}
 ```
@@ -30,6 +32,9 @@ In scope:
 - `xtdata.subscribe_quote` adapter boundary.
 - Best-effort initial quote seed from `xtdata.get_full_tick`.
 - Quote callback normalization to `market.quote.v1`.
+- In-memory latest quote cache for subscribed symbols.
+- Subscription diagnostics for callback counts, initial quote counts, and last quote metadata.
+- Monotonic `event_seq` metadata on `market_quote` WebSocket events.
 - WebSocket events for quote updates, subscription status, and subscription errors.
 - HTTP APIs for create, list, get, and stop.
 - Unit tests with fakes.
@@ -132,7 +137,8 @@ Quote event:
   "meta": {
     "subscription_id": "sub_...",
     "source": "xtdata",
-    "quote_source": "callback"
+    "quote_source": "callback",
+    "event_seq": 2
   }
 }
 ```
@@ -171,6 +177,7 @@ Responsibilities:
 - Adapter may emit one initial `get_full_tick` quote after subscription setup; failures are ignored
   because live callbacks remain the primary stream.
 - Service owns local lifecycle, registry state, status transitions, and EventBus publishing.
+- Service owns the latest quote cache, per-subscription diagnostics, and quote event sequence.
 - API routes parse HTTP input and assemble responses only.
 
 The first implementation should use the existing in-process `EventBus`. It should not introduce a
@@ -216,6 +223,9 @@ Add focused fake-based tests:
 - Invalid symbols or periods return `INVALID_SUBSCRIPTION_REQUEST`.
 - Disconnected `xtdata` returns `TARGET_NOT_CONNECTED`.
 - Callback payloads normalize to `market.quote.v1`.
+- Callback and initial quote payloads update `/v1/market/quotes/latest`.
+- Subscription diagnostics report `callback_count`, `initial_quote_count`, `last_quote_at`,
+  `last_quote_source`, and `last_event_seq`.
 - Stopping a subscription marks it `stopped`.
 - Stopped subscriptions do not publish later quote callbacks.
 - WebSocket filtering can receive `market_quote`.
@@ -232,8 +242,10 @@ Readonly smoke only:
 3. Create one subscription for a liquid symbol.
 4. Connect to `/v1/ws/events?types=market_subscription,market_quote`.
 5. Observe one lifecycle event and at least one quote event while the market data source is active.
-6. Stop the subscription.
-7. Confirm no further events for the stopped local `subscription_id`.
+6. Query `/v1/market/quotes/latest?symbols=<symbol>` and confirm the cache contains that symbol.
+7. Query `/v1/market/subscriptions/{subscription_id}/diagnostics` and confirm the quote counters.
+8. Stop the subscription.
+9. Confirm no further events for the stopped local `subscription_id`.
 
 After-hours smoke can verify the event path through the initial `get_full_tick` quote seed. Treat
 live callback delivery as verified only after observing a quote event while market data is active.

@@ -69,6 +69,8 @@ GET /v1/trader/trades
 GET /v1/market/capabilities
 POST /v1/market/subscriptions
 GET /v1/market/subscriptions
+GET /v1/market/quotes/latest
+GET /v1/market/subscriptions/{subscription_id}/diagnostics
 GET /v1/diagnostics
 GET /v1/reference/calendar
 GET /v1/rpc/methods
@@ -88,6 +90,8 @@ uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-
 ```
 
 该脚本显式使用 `connect_trader=False`，不会连接 trader，也不会执行下单、撤单或转账命令。
+脚本还会检查 latest quote cache 和 subscription diagnostics，确认服务端能通过 HTTP 返回最近
+一次 quote 和回调计数。
 
 ## Snapshot 数据目录
 
