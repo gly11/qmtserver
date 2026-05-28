@@ -17,33 +17,46 @@ def load_smoke_module() -> Any:
 
 
 class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
+    def test_parser_accepts_symbols_and_keeps_symbol_compatibility(self) -> None:
+        module = load_smoke_module()
+
+        batch_args = module.build_parser().parse_args(["--symbols", "000001.SZ, 600000.SH"])
+        legacy_args = module.build_parser().parse_args(["--symbol", "510300.SH"])
+
+        self.assertEqual(module.symbols_from_args(batch_args), ["000001.SZ", "600000.SH"])
+        self.assertEqual(module.symbols_from_args(legacy_args), ["510300.SH"])
+
     def test_smoke_ok_accepts_initial_quote_when_callback_not_required(self) -> None:
         module = load_smoke_module()
         result = {
+            "symbols": ["000001.SZ"],
             "quote_connected": True,
             "created": {"ok": True},
             "stopped_status": "stopped",
             "received_quote": True,
             "received_callback": False,
             "latest_cache_hit": True,
+            "cache_hit_symbols": ["000001.SZ"],
             "diagnostics_ok": True,
         }
 
-        self.assertTrue(module.smoke_ok(result, require_callback=False))
+        self.assertTrue(module.smoke_ok(result, require_callback=False, require_all_symbols=False))
 
     def test_smoke_ok_requires_callback_when_requested(self) -> None:
         module = load_smoke_module()
         result = {
+            "symbols": ["000001.SZ"],
             "quote_connected": True,
             "created": {"ok": True},
             "stopped_status": "stopped",
             "received_quote": True,
             "received_callback": False,
             "latest_cache_hit": True,
+            "cache_hit_symbols": ["000001.SZ"],
             "diagnostics_ok": True,
         }
 
-        self.assertFalse(module.smoke_ok(result, require_callback=True))
+        self.assertFalse(module.smoke_ok(result, require_callback=True, require_all_symbols=False))
 
     def test_summarize_event_keeps_quote_source(self) -> None:
         module = load_smoke_module()
@@ -62,16 +75,52 @@ class MarketSubscriptionSmokeScriptTests(unittest.TestCase):
     def test_smoke_ok_requires_latest_cache_and_diagnostics(self) -> None:
         module = load_smoke_module()
         result = {
+            "symbols": ["000001.SZ"],
             "quote_connected": True,
             "created": {"ok": True},
             "stopped_status": "stopped",
             "received_quote": True,
             "received_callback": True,
             "latest_cache_hit": False,
+            "cache_hit_symbols": [],
             "diagnostics_ok": True,
         }
 
-        self.assertFalse(module.smoke_ok(result, require_callback=True))
+        self.assertFalse(module.smoke_ok(result, require_callback=True, require_all_symbols=False))
+
+    def test_smoke_ok_can_require_all_symbols_in_latest_cache(self) -> None:
+        module = load_smoke_module()
+        result = {
+            "symbols": ["000001.SZ", "600000.SH"],
+            "quote_connected": True,
+            "created": {"ok": True},
+            "stopped_status": "stopped",
+            "received_quote": True,
+            "received_callback": True,
+            "latest_cache_hit": True,
+            "cache_hit_symbols": ["000001.SZ"],
+            "diagnostics_ok": True,
+        }
+
+        self.assertFalse(module.smoke_ok(result, require_callback=True, require_all_symbols=True))
+
+        result["cache_hit_symbols"] = ["000001.SZ", "600000.SH"]
+        self.assertTrue(module.smoke_ok(result, require_callback=True, require_all_symbols=True))
+
+    def test_summarize_latest_reports_cache_hit_symbols(self) -> None:
+        module = load_smoke_module()
+        summary = module.summarize_latest(
+            {
+                "ok": True,
+                "data": {
+                    "quotes": [{"symbol": "000001.SZ"}, {"symbol": "600000.SH"}],
+                    "missing_symbols": ["510300.SH"],
+                },
+            }
+        )
+
+        self.assertEqual(summary["cache_hit_symbols"], ["000001.SZ", "600000.SH"])
+        self.assertEqual(summary["missing_symbols"], ["510300.SH"])
 
     def test_receive_events_records_receiver_errors(self) -> None:
         module = load_smoke_module()

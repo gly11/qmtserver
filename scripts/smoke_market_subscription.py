@@ -14,12 +14,21 @@ from qmtserver.config import load_settings
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     result = run_smoke(
-        symbol=args.symbol,
+        symbols=symbols_from_args(args),
         timeout_seconds=args.timeout_seconds,
         require_callback=args.require_callback,
+        require_all_symbols=args.require_all_symbols,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if smoke_ok(result, require_callback=args.require_callback) else 1
+    return (
+        0
+        if smoke_ok(
+            result,
+            require_callback=args.require_callback,
+            require_all_symbols=args.require_all_symbols,
+        )
+        else 1
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,20 +36,37 @@ def build_parser() -> argparse.ArgumentParser:
         description="Readonly smoke for qmtserver market subscriptions."
     )
     parser.add_argument("--symbol", default="000001.SZ", help="symbol to subscribe")
+    parser.add_argument(
+        "--symbols",
+        default=None,
+        help="comma-separated symbols to subscribe; overrides --symbol",
+    )
     parser.add_argument("--timeout-seconds", type=float, default=8.0, help="event wait timeout")
     parser.add_argument(
         "--require-callback",
         action="store_true",
         help="require a live subscribe_quote callback instead of accepting the initial seed",
     )
+    parser.add_argument(
+        "--require-all-symbols",
+        action="store_true",
+        help="require latest quote cache hits for every requested symbol",
+    )
     return parser
+
+
+def symbols_from_args(args: argparse.Namespace) -> list[str]:
+    value = args.symbols if args.symbols else args.symbol
+    symbols = [item.strip() for item in value.split(",") if item.strip()]
+    return symbols or ["000001.SZ"]
 
 
 def run_smoke(
     *,
-    symbol: str,
+    symbols: list[str],
     timeout_seconds: float,
     require_callback: bool,
+    require_all_symbols: bool = False,
 ) -> dict[str, Any]:
     settings = load_settings(
         auto_connect=True,
@@ -54,19 +80,23 @@ def run_smoke(
     app = create_app(settings, connect_on_startup=True)
     events: list[dict[str, Any]] = []
     result: dict[str, Any] = {
-        "symbol": symbol,
+        "symbols": symbols,
         "quote_connected": False,
         "created": None,
         "stopped_status": None,
         "events": events,
         "received_quote": False,
         "received_callback": False,
+        "received_quote_symbols": [],
+        "callback_symbols": [],
         "latest": None,
         "latest_cache_hit": False,
+        "cache_hit_symbols": [],
         "diagnostics": None,
         "diagnostics_ok": False,
         "receiver_error": None,
         "require_callback": require_callback,
+        "require_all_symbols": require_all_symbols,
         "trader_connected": None,
     }
 
@@ -79,7 +109,7 @@ def run_smoke(
         ) as websocket:
             created = client.post(
                 "/v1/market/subscriptions",
-                json={"symbols": [symbol], "period": "tick"},
+                json={"symbols": symbols, "period": "tick"},
             ).json()
             result["created"] = {
                 "ok": created.get("ok"),
@@ -98,9 +128,10 @@ def run_smoke(
 
             subscription_id = result["created"]["subscription_id"]
             if subscription_id:
-                latest = client.get(f"/v1/market/quotes/latest?symbols={symbol}").json()
+                latest = client.get(f"/v1/market/quotes/latest?symbols={','.join(symbols)}").json()
                 result["latest"] = summarize_latest(latest)
                 result["latest_cache_hit"] = bool(result["latest"]["quote_count"])
+                result["cache_hit_symbols"] = result["latest"]["cache_hit_symbols"]
                 diagnostics = client.get(
                     f"/v1/market/subscriptions/{subscription_id}/diagnostics"
                 ).json()
@@ -129,8 +160,10 @@ def _receive_events(
             if summary["type"] != "market_quote":
                 continue
             result["received_quote"] = True
+            _append_unique(result["received_quote_symbols"], summary.get("symbol"))
             if summary.get("quote_source") == "callback":
                 result["received_callback"] = True
+                _append_unique(result["callback_symbols"], summary.get("symbol"))
             if not require_callback or result["received_callback"]:
                 return
     except Exception as exc:
@@ -152,9 +185,11 @@ def summarize_event(event: dict[str, Any]) -> dict[str, Any]:
 
 def summarize_latest(response: dict[str, Any]) -> dict[str, Any]:
     data = response.get("data") or {}
+    quotes = data.get("quotes") or []
     return {
         "ok": response.get("ok"),
-        "quote_count": len(data.get("quotes") or []),
+        "quote_count": len(quotes),
+        "cache_hit_symbols": [str(item.get("symbol")) for item in quotes if item.get("symbol")],
         "missing_symbols": data.get("missing_symbols") or [],
     }
 
@@ -172,7 +207,12 @@ def summarize_diagnostics(response: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def smoke_ok(result: dict[str, Any], *, require_callback: bool) -> bool:
+def smoke_ok(
+    result: dict[str, Any],
+    *,
+    require_callback: bool,
+    require_all_symbols: bool = False,
+) -> bool:
     if not result.get("quote_connected"):
         return False
     created = result.get("created") or {}
@@ -186,7 +226,20 @@ def smoke_ok(result: dict[str, Any], *, require_callback: bool) -> bool:
         return False
     if not result.get("diagnostics_ok"):
         return False
+    if require_all_symbols:
+        expected = set(result.get("symbols") or [])
+        actual = set(result.get("cache_hit_symbols") or [])
+        if expected - actual:
+            return False
     return not (require_callback and not result.get("received_callback"))
+
+
+def _append_unique(items: list[str], value: Any) -> None:
+    if not value:
+        return
+    item = str(value)
+    if item not in items:
+        items.append(item)
 
 
 if __name__ == "__main__":
