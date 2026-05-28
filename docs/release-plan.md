@@ -1,6 +1,6 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前准备发布版本为 `0.5.0`，主题是 realtime
+本文档记录 qmtserver 的版本节奏和发布门禁。当前最新已发布版本为 `0.5.0`，主题是 realtime
 market subscriptions 和 `xtquant` compatibility baseline。
 
 ## 版本节奏
@@ -10,7 +10,7 @@ market subscriptions 和 `xtquant` compatibility baseline。
 0.2.0  已完成  透明 RPC 实验模式
 0.3.0  已完成  稳定行情数据、snapshot、job 和诊断接口
 0.4.0  已发布    稳定只读交易查询 API
-0.5.0  准备发布  实时行情订阅和兼容矩阵基线
+0.5.0  已发布    实时行情订阅和兼容矩阵基线
 1.0.0  远期    稳定版本
 ```
 
@@ -95,7 +95,7 @@ market subscriptions 和 `xtquant` compatibility baseline。
 
 ## 0.5.0
 
-状态：准备发布。
+状态：已发布。
 
 `0.5.0` 聚焦实时行情订阅和 WebSocket quote event，使远程客户端可以通过 qmtserver 管理
 MiniQMT 行情订阅，而不直接依赖 `xtquant`。
@@ -108,18 +108,17 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 - 复用现有 WebSocket `/v1/ws/events`，支持 `market_quote` 和 `market_subscription` 事件。
 - 建立 `docs/compatibility.md`，作为后续 `xtquant` 适配和升级复测基线。
 
-发布限制：
+发布记录：
 
-- 普通测试必须使用 fakes，不依赖真实 MiniQMT。
+- 普通测试使用 fakes，不依赖真实 MiniQMT。
 - 真实 MiniQMT smoke 只做 readonly 行情订阅，不执行下单、撤单、转账或其他交易命令。
-- 盘后 smoke 可以验证 quote 连接、订阅生命周期和 initial `get_full_tick` quote seed。
-- 正式发布 `0.5.0` 前必须在活跃行情时段运行
+- 盘后 smoke 已验证 quote 连接、订阅生命周期和 initial `get_full_tick` quote seed。
+- 正式发布 `0.5.0` 前已在活跃行情时段运行
   `uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback`，
   并看到 `received_callback=true` 或 WebSocket 事件 `meta.quote_source=callback`。
 - 2026-05-28 13:10 本地时间已完成一次只读活跃行情 smoke，收到 `received_callback=true`
   和 `meta.quote_source=callback`，脚本报告 `trader_connected=false`。
-- 如果本地 `xtquant` 不支持可靠取消订阅，必须在 API 和兼容矩阵文档中明确 qmtserver 的本地
-  stop 行为。
+- `v0.5.0` tag 已触发 GitHub Actions 发布工作流，并发布到 PyPI。
 
 ## 发布门禁
 
