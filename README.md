@@ -21,12 +21,13 @@ HTTP RPC 和 WebSocket，方便其他机器通过网络访问。
 - CLI 连接检查：验证行情连接、交易连接、账号订阅和资金查询。
 - 本地 HTTP RPC 网关：提供 `/v1/rpc` 和白名单方法转发。
 - 稳定行情 API：提供 capabilities、daily bars、intraday bars 和标准 metadata。
+- 实时行情订阅：提供 `/v1/market/subscriptions` 生命周期 API 和 WebSocket quote event。
 - 稳定只读交易查询：提供 account status、asset、positions、orders 和 trades。
 - Snapshot 与历史任务：支持 CSV snapshot、manifest、下载任务和运行诊断。
 - 数据准备接口：提供交易日历、标的列表、instrument detail 和数据质量报告。
 - 透明 RPC 实验模式：显式开启后可受控探索白名单外的公开 `xtquant` 方法。
 - 交易保护：token 鉴权、交易开关、dry-run、账号/代码/限额校验和审计日志。
-- WebSocket 事件：推送连接状态、委托回报、成交回报和错误事件。
+- WebSocket 事件：推送连接状态、行情、订阅生命周期、委托回报、成交回报和错误事件。
 - 内置 Python 兼容客户端：用于验证 `/v1` API；独立客户端请使用 qmtclient。
 
 当前版本节奏见 [Release Plan](docs/release-plan.md)。

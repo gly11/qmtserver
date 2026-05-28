@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.0
+
+- 增加实时行情订阅 API：`POST /v1/market/subscriptions`、列表、详情和停止接口。
+- 适配 `xtdata.subscribe_quote` 和 `xtdata.unsubscribe_quote`，并保持直接 `xtquant` 调用在 adapter 边界内。
+- 增加 `market.subscription.v1` 和 `market.quote.v1` WebSocket 事件。
+- 增加 initial `get_full_tick` quote seed，并用 `meta.quote_source` 区分 `initial` 与 `callback`。
+- 增加只读实时订阅 smoke 脚本，支持 active-market callback 发布门禁。
+- 建立 `docs/compatibility.md`，记录本地 `xtquant` 版本、MiniQMT smoke 范围和适配状态。
+- 更新 realtime subscription、release plan 和 API 文档。
+
+## 0.4.0
+
+- 增加稳定只读交易查询 API：account status、asset、positions、orders 和 trades。
+- 标准化只读交易查询响应 envelope 和 `trader.readonly.v1` schema。
+- 增加账号解析、账号 allowlist 过滤和 `TRADER_ACCOUNT_REQUIRED` 错误语义。
+- 增加内置客户端只读 trader helper。
+- 补充 API、SDK、错误码、roadmap、release plan 和 `xtquant` adapter 文档。
+
 ## 0.3.0
 
 - 增加稳定 `/v1/market` 行情 API，覆盖 capabilities、daily bars 和 intraday bars。

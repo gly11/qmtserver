@@ -99,7 +99,7 @@ class SnapshotManifestTests(unittest.TestCase):
                 "coverage_start": None,
                 "coverage_end": None,
                 "generated_at": "2026-05-26T00:00:00+00:00",
-                "qmtserver_version": "0.4.0",
+                "qmtserver_version": "0.5.0",
                 "xtquant_version": None,
             }
 
