@@ -14,6 +14,17 @@ class FakeTarget:
     def get_full_tick(self, codes: list[str]) -> dict[str, object]:
         return {"codes": codes}
 
+    def download_history_data(
+        self,
+        *,
+        stock_code: str,
+        period: str,
+        start_time: str = "",
+        end_time: str = "",
+        incrementally: object = None,
+    ) -> None:
+        del stock_code, period, start_time, end_time, incrementally
+
     def get_market_data_ex(
         self,
         *,

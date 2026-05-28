@@ -100,6 +100,17 @@ uv run python scripts\smoke_trader_readonly.py --account-id $account
 脱敏账号、行数、schema 和错误码，不打印资产、持仓、委托或成交明细，也不会调用下单、撤单或
 转账命令。
 
+历史数据、snapshot 和 job 只读 smoke：
+
+```powershell
+uv run python scripts\smoke_market_history.py --symbol 000001.SZ --require-rows
+```
+
+该脚本显式使用 `connect_trader=False`。它会先通过 `/v1/jobs/history-download` 下载 daily 和
+intraday 历史行情，再检查 `/v1/market/bars/daily`、`/v1/market/bars/intraday`、daily quality
+和 snapshot manifest。`--require-rows` 会要求 daily、intraday、snapshot 和 job 都返回非空
+行数，适合作为发布前真实 MiniQMT smoke。
+
 盘中验证 live `subscribe_quote` callback 时使用：
 
 ```powershell

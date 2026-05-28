@@ -365,7 +365,9 @@ manifest 仍保留在 snapshot 目录中。
 ### POST /v1/jobs/history-download
 
 创建历史下载 job。首版 job runner 在后台线程中执行，并把成功结果关联到 snapshot manifest。
-请求体沿用 snapshot 创建参数。
+请求体沿用 snapshot 创建参数。job 会先调用 qmtserver 的 `xtdata.download_history_data` 适配层
+逐标的同步下载历史行情，然后再生成或复用 snapshot manifest。该操作只写入 MiniQMT 行情数据
+缓存和 qmtserver snapshot 目录，不连接 trader，也不执行交易命令。
 
 ### GET /v1/jobs/{job_id}
 

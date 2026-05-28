@@ -11,6 +11,7 @@ from qmtserver.market.subscription_adapter import XtDataSubscriptionAdapter
 class RecordingXtData:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
+        self.download_calls: list[dict[str, Any]] = []
         self.subscribe_calls: list[dict[str, Any]] = []
         self.unsubscribe_calls: list[int] = []
 
@@ -22,6 +23,9 @@ class RecordingXtData:
         return {
             symbol: {"lastPrice": 10.25, "volume": 1200, "amount": 12300.0} for symbol in stock_list
         }
+
+    def download_history_data(self, **kwargs: Any) -> None:
+        self.download_calls.append(kwargs)
 
     def subscribe_quote(self, **kwargs: Any) -> int:
         self.subscribe_calls.append(kwargs)
@@ -75,6 +79,27 @@ class MarketAdapterTests(unittest.TestCase):
         call = provider.xtdata.calls[0]
         self.assertEqual(call["start_time"], "20260526093000")
         self.assertEqual(call["end_time"], "20260526150000")
+
+    def test_download_history_uses_sync_single_symbol_xtdata_api(self) -> None:
+        provider = RecordingProvider()
+        adapter = XtDataMarketAdapter(provider)
+
+        adapter.download_history(
+            MarketRequest(
+                symbols=["000001.SZ", "600000.SH"],
+                start="2026-05-25",
+                end="2026-05-26",
+                adjust="none",
+                period="1d",
+            )
+        )
+
+        self.assertEqual(len(provider.xtdata.download_calls), 2)
+        call = provider.xtdata.download_calls[0]
+        self.assertEqual(call["stock_code"], "000001.SZ")
+        self.assertEqual(call["period"], "1d")
+        self.assertEqual(call["start_time"], "20260525")
+        self.assertEqual(call["end_time"], "20260526")
 
 
 class MarketSubscriptionAdapterTests(unittest.TestCase):

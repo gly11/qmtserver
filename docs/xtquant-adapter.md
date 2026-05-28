@@ -69,11 +69,12 @@ qmtserver surface:
 reuse market bars.
 
 upstream:
-`xtquant.xtdata.get_market_data_ex`.
+`xtquant.xtdata.get_market_data_ex` and `xtquant.xtdata.download_history_data`.
 
 observed signature:
 `get_market_data_ex(field_list=[], stock_list=[], period='1d', start_time='', end_time='', count=-1,
 dividend_type='none', fill_data=True)`.
+`download_history_data(stock_code, period, start_time='', end_time='', incrementally=None)`.
 
 input conversion:
 qmtserver accepts ISO dates and datetimes. The adapter converts them before calling `xtdata`:
@@ -81,6 +82,10 @@ qmtserver accepts ISO dates and datetimes. The adapter converts them before call
 - `2026-05-25` becomes `20260525`.
 - `2026-05-26T09:30:00+08:00` becomes `20260526093000`.
 - Already compact strings are passed through.
+
+History jobs call `download_history_data` once per symbol before reading bars. This is intentionally
+synchronous and conservative; local smoke showed `download_history_data2(stock_list, ...)` can return
+before qmtserver can immediately observe downloaded rows.
 
 output normalization:
 Daily bars normalize to `date`, `symbol`, `open`, `high`, `low`, `close`, `volume`, `amount`, and
@@ -97,7 +102,8 @@ unit tests:
 
 real smoke:
 Verify daily bars, intraday bars, snapshot creation, snapshot quality, and history jobs against a
-logged-in MiniQMT before release.
+logged-in MiniQMT before release. Use `scripts/smoke_market_history.py --require-rows` when local
+history data should be downloaded and observable.
 
 ### Readonly Trader Queries
 
