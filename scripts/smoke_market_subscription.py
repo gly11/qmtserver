@@ -18,6 +18,7 @@ def main(argv: list[str] | None = None) -> int:
         timeout_seconds=args.timeout_seconds,
         require_callback=args.require_callback,
         require_all_symbols=args.require_all_symbols,
+        post_stop_listen_seconds=args.post_stop_listen_seconds,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return (
@@ -52,6 +53,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="require latest quote cache hits for every requested symbol",
     )
+    parser.add_argument(
+        "--post-stop-listen-seconds",
+        type=float,
+        default=0.0,
+        help="listen briefly after stop and fail if market_quote is still published",
+    )
     return parser
 
 
@@ -67,6 +74,7 @@ def run_smoke(
     timeout_seconds: float,
     require_callback: bool,
     require_all_symbols: bool = False,
+    post_stop_listen_seconds: float = 0.0,
 ) -> dict[str, Any]:
     settings = load_settings(
         auto_connect=True,
@@ -95,8 +103,11 @@ def run_smoke(
         "diagnostics": None,
         "diagnostics_ok": False,
         "receiver_error": None,
+        "post_stop_events": [],
+        "post_stop_market_quote_events": 0,
         "require_callback": require_callback,
         "require_all_symbols": require_all_symbols,
+        "post_stop_listen_seconds": post_stop_listen_seconds,
         "trader_connected": None,
     }
 
@@ -142,6 +153,8 @@ def run_smoke(
                 )
                 stopped = client.delete(f"/v1/market/subscriptions/{subscription_id}").json()
                 result["stopped_status"] = (stopped.get("data") or {}).get("status")
+                if post_stop_listen_seconds > 0:
+                    _receive_post_stop_events(websocket, result, post_stop_listen_seconds)
 
     return result
 
@@ -168,6 +181,37 @@ def _receive_events(
                 return
     except Exception as exc:
         result["receiver_error"] = f"{type(exc).__name__}: {exc}"
+
+
+def _receive_post_stop_events(
+    websocket: Any,
+    result: dict[str, Any],
+    timeout_seconds: float,
+) -> None:
+    post_stop_events: list[dict[str, Any]] = result["post_stop_events"]
+    receiver = threading.Thread(
+        target=_receive_post_stop_events_until_quote,
+        args=(websocket, post_stop_events, result),
+        daemon=True,
+    )
+    receiver.start()
+    receiver.join(timeout_seconds)
+
+
+def _receive_post_stop_events_until_quote(
+    websocket: Any,
+    events: list[dict[str, Any]],
+    result: dict[str, Any],
+) -> None:
+    try:
+        for _ in range(20):
+            summary = summarize_event(websocket.receive_json())
+            events.append(summary)
+            if summary["type"] == "market_quote":
+                result["post_stop_market_quote_events"] += 1
+                return
+    except Exception:
+        return
 
 
 def summarize_event(event: dict[str, Any]) -> dict[str, Any]:
@@ -230,6 +274,8 @@ def smoke_ok(
     if not result.get("latest_cache_hit"):
         return False
     if not result.get("diagnostics_ok"):
+        return False
+    if result.get("post_stop_market_quote_events"):
         return False
     if require_all_symbols:
         expected = set(result.get("symbols") or [])

@@ -208,15 +208,13 @@ class MarketSubscriptionServiceTests(unittest.TestCase):
         self.assertEqual(diagnostics["initial_quote_count"], 1)
         self.assertEqual(diagnostics["callback_count"], 1)
 
-    def test_stopped_subscription_does_not_update_latest_quote_cache(self) -> None:
+    def test_stopped_subscription_does_not_update_latest_quote_cache_or_diagnostics(self) -> None:
         service = MarketSubscriptionService(
             adapter=RecordingAdapter(),
             event_bus=RecordingBus(),
             id_factory=lambda: "sub_test",
         )
         service.create(symbols=["000001.SZ"], period="tick")
-        service.stop("sub_test")
-
         service.handle_quote(
             "sub_test",
             {
@@ -226,9 +224,23 @@ class MarketSubscriptionServiceTests(unittest.TestCase):
                 "__qmt_quote_source": "callback",
             },
         )
+        service.stop("sub_test")
 
-        self.assertEqual(service.latest_quotes(["000001.SZ"])["missing_symbols"], ["000001.SZ"])
-        self.assertEqual(service.diagnostics("sub_test")["callback_count"], 0)
+        service.handle_quote(
+            "sub_test",
+            {
+                "schema": "market.quote.v1",
+                "symbol": "000001.SZ",
+                "last_price": 99.99,
+                "__qmt_quote_source": "callback",
+            },
+        )
+
+        latest = service.latest_quotes(["000001.SZ"])
+        diagnostics = service.diagnostics("sub_test")
+        self.assertEqual(latest["quotes"][0]["quote"]["last_price"], 10.25)
+        self.assertEqual(diagnostics["callback_count"], 1)
+        self.assertEqual(diagnostics["status"], "stopped")
 
     def test_diagnostics_reports_quote_freshness_times(self) -> None:
         times = iter(

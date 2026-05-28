@@ -246,7 +246,8 @@ Readonly smoke only:
 6. Query `/v1/market/quotes/latest?symbols=<symbol>` and confirm the cache contains that symbol.
 7. Query `/v1/market/subscriptions/{subscription_id}/diagnostics` and confirm the quote counters.
 8. Stop the subscription.
-9. Confirm no further events for the stopped local `subscription_id`.
+9. Optionally listen for a short post-stop window and confirm no `market_quote` events are
+   published for the stopped local `subscription_id`.
 
 After-hours smoke can verify the event path through the initial `get_full_tick` quote seed. Treat
 live callback delivery as verified only after observing a quote event while market data is active.
@@ -267,6 +268,7 @@ Helper command:
 ```powershell
 uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ
 uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback
+uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback --post-stop-listen-seconds 5
 uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --require-callback --require-all-symbols --timeout-seconds 60
 ```
 

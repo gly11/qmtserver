@@ -95,6 +95,12 @@ uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-
 uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --require-callback --require-all-symbols --timeout-seconds 60
 ```
 
+验证 stop 后本地隔离：
+
+```powershell
+uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback --post-stop-listen-seconds 5
+```
+
 该脚本显式使用 `connect_trader=False`，不会连接 trader，也不会执行下单、撤单或转账命令。
 脚本还会检查 latest quote cache 和 subscription diagnostics，确认服务端能通过 HTTP 返回最近
 一次 quote、回调计数、最近 callback 时间和 freshness 秒数。
