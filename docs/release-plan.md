@@ -116,6 +116,8 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 - 正式发布 `0.5.0` 前必须在活跃行情时段运行
   `uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback`，
   并看到 `received_callback=true` 或 WebSocket 事件 `meta.quote_source=callback`。
+- 2026-05-28 13:10 本地时间已完成一次只读活跃行情 smoke，收到 `received_callback=true`
+  和 `meta.quote_source=callback`，脚本报告 `trader_connected=false`。
 - 如果本地 `xtquant` 不支持可靠取消订阅，必须在 API 和兼容矩阵文档中明确 qmtserver 的本地
   stop 行为。
 
