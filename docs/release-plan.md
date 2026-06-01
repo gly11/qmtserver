@@ -1,7 +1,7 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前待发布版本为 `0.7.0`，主题是 trader
-diagnostics、runtime health summary 和 manual subscription recovery。
+本文档记录 qmtserver 的版本节奏和发布门禁。当前待发布版本为 `0.7.0`，主题是网关可靠性诊断
+和 Market Data Lake 基线。
 
 ## 版本节奏
 
@@ -12,7 +12,7 @@ diagnostics、runtime health summary 和 manual subscription recovery。
 0.4.0  已发布    稳定只读交易查询 API
 0.5.0  已发布    实时行情订阅和兼容矩阵基线
 0.6.0  已发布    只读实盘 smoke、历史下载可靠性和实时稳定性基线
-0.7.0  待发布    trader diagnostics、runtime health 和手动订阅恢复
+0.7.0  待发布    网关可靠性诊断和 Market Data Lake 基线
 1.0.0  远期    稳定版本
 ```
 
@@ -151,10 +151,12 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 
 ## 0.7.0
 
-状态：收口中。
+状态：待发布。
 
-`0.7.0` 聚焦网关运行可靠性基线：当 MiniQMT 或订阅状态异常时，服务端应能给出更清晰的
-诊断、健康摘要和手动恢复入口。该版本仍不新增任何真实交易命令。
+`0.7.0` 聚焦两条只读能力：网关运行可靠性诊断，以及 server 端 Market Data Lake 基线。
+当 MiniQMT 或订阅状态异常时，服务端应能给出更清晰的诊断、健康摘要和手动恢复入口；当外部
+系统需要批量行情数据时，server 端可以负责下载、缓存、查询和导出本地标准化数据。该版本仍不
+新增任何真实交易命令。
 
 范围：
 
@@ -164,11 +166,21 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
   stale callback 状态。
 - 增加 `POST /v1/market/subscriptions/{subscription_id}/recover`，手动重建已有行情订阅，复用
   原 symbols、period 和本地 `subscription_id`，并重置该订阅 diagnostics。
+- 增加 `qmtserver[data]` extra，引入 DuckDB 和 PyArrow 作为可选高性能数据依赖。
+- 增加 `/v1/market/data/download`，将历史行情下载任务持久化到 DuckDB。
+- 下载任务会先检查本地 coverage；命中完整覆盖且未设置 `force=true` 时返回 cached result，不
+  再触发 `xtdata.download_history_data`。
+- 未命中时通过 `xtdata.download_history_data` 补齐 MiniQMT 行情缓存，再读取标准 bars 并按
+  symbol/period/adjust 写入 qmtserver Parquet 文件。
+- 增加 `/v1/market/data/coverage`、`/v1/market/data/bars`、`/v1/market/data/quality` 和
+  `/v1/market/data/exports`，支持本地覆盖范围查询、本地 bars 查询、质量检查、CSV export、
+  export 下载和 export 清理。
 
 发布记录：
 
 - 普通测试使用 fakes，不依赖真实 MiniQMT。
-- 真实 MiniQMT smoke 只做 readonly 行情和 trader 诊断，不执行下单、撤单、转账或其他交易命令。
+- 真实 MiniQMT smoke 只做 readonly 行情、历史数据和 trader 诊断，不执行下单、撤单、转账或
+  其他交易命令。
 - 2026-06-01 本地时间已完成活跃行情三标的 subscription smoke：quote 连接成功，收到 live
   callback，latest cache 命中全部标的，subscription diagnostics 为 active。
 - 2026-06-01 本地时间已完成 manual recover smoke：停止后的订阅可通过 recover 恢复为
@@ -178,6 +190,8 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 - 2026-06-01 本地 trader 诊断和 trader readonly smoke 仍返回 `connect_result=-1` /
   `TARGET_NOT_CONNECTED`。该结果说明诊断链路可用，但当前 MiniQMT trader 通道未就绪；如发布说明
   要声明 trader readonly 已通过真实连接，需要在 trader 连接恢复后复测。
+- Market Data Lake 的普通测试使用 fakes 和本地临时目录，不依赖真实 MiniQMT；真实数据下载仍应
+  使用只读行情路径，不连接 trader，也不执行任何交易命令。
 
 ## 发布门禁
 
@@ -218,6 +232,15 @@ uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH
 uv run python scripts\smoke_trader_readonly.py
 uv run qmtserver diagnose trader
 ```
+
+如需人工验证 Market Data Lake，请先安装 data extra：
+
+```powershell
+uv sync --extra xtquant --extra data
+```
+
+然后启动 qmtserver，并只调用 `/v1/market/data/*` 行情数据接口。该验证不需要连接 trader，也不应
+执行任何交易命令。
 
 ## 发布原则
 
