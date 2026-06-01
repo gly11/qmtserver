@@ -77,12 +77,34 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertEqual(body["data"]["coverage"]["schema"], "market.data.coverage.v1")
         self.assertEqual(fake_jobs.coverage_requests[0]["symbols"], ["000001.SZ"])
 
+    def test_get_data_bars(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            response = client.get(
+                "/v1/market/data/bars"
+                "?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31"
+            )
+
+        body = response.json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["data"]["schema"], "market.data.bars.v1")
+        self.assertEqual(body["data"]["bars"][0]["symbol"], "000001.SZ")
+        self.assertEqual(fake_jobs.query_requests[0]["symbols"], ["000001.SZ"])
+
 
 class FakeDataJobService:
     def __init__(self) -> None:
         self.jobs: dict[str, DataJobRecord] = {}
         self.requests: list[dict[str, Any]] = []
         self.coverage_requests: list[dict[str, Any]] = []
+        self.query_requests: list[dict[str, Any]] = []
 
     def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
         self.requests.append(request)
@@ -116,6 +138,16 @@ class FakeDataJobService:
                 }
             ],
             "missing_symbols": [],
+        }
+
+    def query_bars(self, request: dict[str, Any]) -> dict[str, Any]:
+        self.query_requests.append(request)
+        return {
+            "schema": "market.data.bars.v1",
+            "request": request,
+            "bars": [{"symbol": "000001.SZ", "date": "2026-01-02", "close": 10.3}],
+            "row_count": 1,
+            "truncated": False,
         }
 
 

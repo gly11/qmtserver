@@ -33,6 +33,10 @@ class DataCoverageRequest(BaseModel):
     period: str | None = None
 
 
+class DataBarsRequest(DataCoverageRequest):
+    limit: int = Field(default=1000, ge=1, le=10000)
+
+
 @router.post("/download")
 def create_data_download(
     payload: DataDownloadRequest,
@@ -42,6 +46,36 @@ def create_data_download(
         service = _get_data_job_service(request)
         job = service.submit_download(payload.model_dump())
         return _success({"job": job})
+    except QmtServerError as exc:
+        return _error(exc.code, str(exc))
+
+
+@router.get("/bars")
+def get_data_bars(
+    request: Request,
+    kind: str = "daily_bars",
+    symbols: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    adjust: str = "none",
+    period: str | None = None,
+    limit: int = 1000,
+) -> dict[str, Any]:
+    try:
+        service = _get_data_job_service(request)
+        return _success(
+            service.query_bars(
+                DataBarsRequest(
+                    kind=kind,
+                    symbols=_symbol_list(symbols),
+                    start=start,
+                    end=end,
+                    adjust=adjust,
+                    period=period,
+                    limit=limit,
+                ).model_dump()
+            )
+        )
     except QmtServerError as exc:
         return _error(exc.code, str(exc))
 

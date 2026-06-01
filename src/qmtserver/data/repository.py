@@ -157,6 +157,34 @@ class DataJobRepository:
         finally:
             connection.close()
 
+    def list_files(self, request: dict[str, Any]) -> list[dict[str, Any]]:
+        symbols = {str(symbol) for symbol in request.get("symbols", [])}
+        connection = self.backend.connect(str(self.backend.database_path))
+        try:
+            cursor = connection.execute(
+                """
+                SELECT file_id, job_id, kind, symbol, period, adjust, format, path, hash,
+                       row_count, coverage_start, coverage_end, schema_version,
+                       qmtserver_version, xtquant_version, created_at
+                FROM data_files
+                WHERE kind = ? AND period = ? AND adjust = ?
+                ORDER BY symbol, coverage_start
+                """,
+                (
+                    request.get("kind"),
+                    _period(request),
+                    request.get("adjust", "none"),
+                ),
+            )
+            files = [_file_from_row(row) for row in cursor.fetchall()]
+            return [
+                file_record
+                for file_record in files
+                if _file_matches_request(file_record, request, symbols=symbols)
+            ]
+        finally:
+            connection.close()
+
     def _execute(self, sql: str, parameters: tuple[Any, ...]) -> Any:
         connection = self.backend.connect(str(self.backend.database_path))
         try:
@@ -241,6 +269,44 @@ def _coverage_from_row(row: tuple[Any, ...]) -> dict[str, Any]:
         "file_count": int(row[8]),
         "updated_at": str(row[9]),
     }
+
+
+def _file_from_row(row: tuple[Any, ...]) -> dict[str, Any]:
+    return {
+        "file_id": str(row[0]),
+        "job_id": str(row[1]) if row[1] else None,
+        "kind": str(row[2]),
+        "symbol": str(row[3]),
+        "period": str(row[4]),
+        "adjust": str(row[5]),
+        "format": str(row[6]),
+        "path": str(row[7]),
+        "hash": str(row[8]),
+        "row_count": int(row[9]),
+        "coverage_start": str(row[10]) if row[10] else None,
+        "coverage_end": str(row[11]) if row[11] else None,
+        "schema_version": str(row[12]),
+        "qmtserver_version": str(row[13]),
+        "xtquant_version": str(row[14]) if row[14] else None,
+        "created_at": str(row[15]),
+    }
+
+
+def _file_matches_request(
+    file_record: dict[str, Any],
+    request: dict[str, Any],
+    *,
+    symbols: set[str],
+) -> bool:
+    if symbols and str(file_record["symbol"]) not in symbols:
+        return False
+    start = request.get("start")
+    end = request.get("end")
+    coverage_start = file_record.get("coverage_start")
+    coverage_end = file_record.get("coverage_end")
+    if isinstance(end, str) and isinstance(coverage_start, str) and coverage_start > end:
+        return False
+    return not (isinstance(start, str) and isinstance(coverage_end, str) and coverage_end < start)
 
 
 def _coverage_id(record: dict[str, Any]) -> str:

@@ -305,9 +305,16 @@ GET /v1/market/data/jobs/{job_id}
 GET /v1/market/data/coverage?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31
 ```
 
+查询本地 bars：
+
+```text
+GET /v1/market/data/bars?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31&limit=1000
+```
+
 当前阶段该 worker 会先检查本地 coverage。命中时直接返回 cached job；未命中或
 `force=true` 时触发 MiniQMT 行情缓存下载，随后读取标准 bars 并按 symbol 写入
 `QMT_DATA_DIR/raw/bars/.../*.parquet`，同时持久化 job 状态、data file 元数据和 coverage。
+`/v1/market/data/bars` 只读取本地 Parquet/DuckDB，不触发新的 MiniQMT 下载。
 
 详细规划见 [Market Data Lake](market-data-lake.md)。
 

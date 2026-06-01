@@ -7,6 +7,7 @@ from qmtserver.data.backend import DuckDbDataBackend
 from qmtserver.data.coverage import CoveragePlanner
 from qmtserver.data.files import ParquetBarWriter
 from qmtserver.data.models import DataJobRecord, DataJobStatus
+from qmtserver.data.query import DuckDbParquetBarReader, LocalBarQuery
 from qmtserver.data.readers import XtDataBarReader
 from qmtserver.data.repository import DataJobRepository
 from qmtserver.market.adapter import XtDataMarketAdapter
@@ -58,6 +59,10 @@ class BarWriter(Protocol):
     ) -> list[dict[str, Any]]: ...
 
 
+class BarQuery(Protocol):
+    def query_bars(self, request: dict[str, Any]) -> dict[str, Any]: ...
+
+
 class DataDownloadJobService:
     def __init__(
         self,
@@ -68,6 +73,7 @@ class DataDownloadJobService:
         file_writer: BarWriter | None = None,
         file_repository: DataFileRepositoryProtocol | None = None,
         coverage_planner: CoveragePlannerProtocol | None = None,
+        bar_query: BarQuery | None = None,
         run_async: bool = True,
     ) -> None:
         self.repository = repository
@@ -76,6 +82,7 @@ class DataDownloadJobService:
         self.file_writer = file_writer
         self.file_repository = file_repository
         self.coverage_planner = coverage_planner
+        self.bar_query = bar_query
         self.run_async = run_async
 
     def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -108,6 +115,18 @@ class DataDownloadJobService:
                 "missing_symbols": [str(symbol) for symbol in request.get("symbols", [])],
             }
         return self.coverage_planner.coverage(request)
+
+    def query_bars(self, request: dict[str, Any]) -> dict[str, Any]:
+        if self.bar_query is None:
+            return {
+                "schema": "market.data.bars.v1",
+                "request": request,
+                "bars": [],
+                "row_count": 0,
+                "source_file_count": 0,
+                "truncated": False,
+            }
+        return self.bar_query.query_bars(request)
 
     def _run_download(self, job_id: str, request: dict[str, Any]) -> None:
         self.repository.mark_running(job_id)
@@ -176,6 +195,7 @@ def create_data_job_service(
         file_writer=ParquetBarWriter(backend.data_dir),
         file_repository=repository,
         coverage_planner=CoveragePlanner(repository),
+        bar_query=LocalBarQuery(repository, reader=DuckDbParquetBarReader(backend)),
         run_async=run_async,
     )
 

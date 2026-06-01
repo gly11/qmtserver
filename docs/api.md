@@ -30,6 +30,7 @@ GET  /v1/snapshots
 GET  /v1/snapshots/{snapshot_id}/manifest
 GET  /v1/snapshots/{snapshot_id}/download
 POST /v1/market/data/download
+GET  /v1/market/data/bars
 GET  /v1/market/data/coverage
 GET  /v1/market/data/jobs/{job_id}
 POST /v1/jobs/history-download
@@ -358,7 +359,8 @@ format，以及 intraday 请求的 period。
 `/v1/market/data` 是后续高性能行情数据缓存的 server 端入口。当前阶段提供持久化下载 job、
 coverage 查询和缓存命中判断：任务写入 DuckDB 元数据，worker 先检查本地覆盖范围；未命中时
 触发只读 `xtdata.download_history_data` 补齐 MiniQMT 行情缓存，再读取标准 bars 并按 symbol
-写入 qmtserver Parquet 文件。本地查询会在后续阶段接入。
+写入 qmtserver Parquet 文件。`/v1/market/data/bars` 从本地 Parquet/DuckDB 读取数据，不触发
+MiniQMT 下载。
 
 ### POST /v1/market/data/download
 
@@ -388,6 +390,17 @@ GET /v1/market/data/coverage?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&
 ```
 
 响应使用 `market.data.coverage.v1`，包含 `fully_covered`、`coverage` 和 `missing_symbols`。
+
+### GET /v1/market/data/bars
+
+从本地 data lake 查询 bars：
+
+```text
+GET /v1/market/data/bars?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31&adjust=none&limit=1000
+```
+
+该接口只读取已登记的本地 Parquet 文件。若没有匹配文件，返回 `ok=true`、`bars=[]`、
+`row_count=0`。大结果默认通过 `limit` 截断，后续批量导出应使用 export API。
 
 ### GET /v1/market/data/jobs/{job_id}
 
