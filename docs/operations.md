@@ -47,6 +47,48 @@ asset 只读查询。输出会脱敏账号，不打印真实账号；该诊断�
 
 ## 启动
 
+### 本地配置切换
+
+可以在本机保留多套被 git 忽略的配置文件，例如：
+
+```text
+.env.sim
+.env.live
+```
+
+切换时使用：
+
+```powershell
+uv run qmtserver env use sim
+uv run qmtserver env use live
+```
+
+该命令会把对应 profile 复制为当前生效的 `.env`，并在覆盖前备份到 `.env.previous`。输出只
+显示 userdata 摘要、路径是否存在、账号/token 是否已设置以及交易安全开关，不打印账号或
+token。切换到 live profile 不会自动打开真实交易；仍需显式配置 `QMT_ENABLE_TRADING` 和
+`QMT_TRADING_DRY_RUN`。
+
+也可以不覆盖 `.env`，临时读取某个 profile：
+
+```powershell
+uv run qmtserver check --profile sim
+uv run qmtserver diagnose trader --profile sim
+uv run qmtserver serve --profile live
+```
+
+便捷别名也可用：
+
+```powershell
+uv run qmtserver check --use-sim-account
+uv run qmtserver check --use-live-account
+```
+
+如果当前 PowerShell 执行策略禁止直接运行 `.ps1`，仍可使用兼容脚本：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\switch-env.ps1 -Profile sim
+```
+
 开发模式：
 
 ```powershell
@@ -213,6 +255,27 @@ CSV 字段按 snapshot kind 固定：
 其中 `meta` 字段在 CSV 中为 JSON 字符串。manifest 记录 request、request_hash、schema、
 format、hash、row_count、symbol_count、coverage_start、coverage_end、generated_at、
 qmtserver_version 和 xtquant_version。
+
+## Market Data Lake 目录
+
+高性能行情数据缓存使用独立目录，默认配置为：
+
+```env
+QMT_DATA_DIR=data/market
+QMT_DATA_FORMAT=parquet
+QMT_DATA_DB=data/market/db/qmtserver.duckdb
+QMT_DATA_ENABLE_DUCKDB=true
+```
+
+该目录面向后续标准化 Parquet 行情文件和 DuckDB 元数据。当前阶段只提供配置、可选依赖检测
+和 DuckDB schema 初始化骨架；现有 history-download job 与 snapshot/export 行为保持不变。
+启用该能力需要安装：
+
+```powershell
+uv sync --extra xtquant --extra data
+```
+
+详细规划见 [Market Data Lake](market-data-lake.md)。
 
 ## Jobs 与诊断
 

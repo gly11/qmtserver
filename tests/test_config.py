@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
-from qmtserver.config import load_settings
+from qmtserver.config import load_settings, profile_env_file
 
 
 class SettingsTests(unittest.TestCase):
@@ -75,6 +78,45 @@ class SettingsTests(unittest.TestCase):
         settings = load_settings(transparent_rpc_targets="xtdata, trader")
 
         self.assertEqual(settings.transparent_rpc_allowed_targets(), {"xtdata", "trader"})
+
+    def test_profile_env_file_uses_named_local_profile(self) -> None:
+        self.assertEqual(profile_env_file("sim"), Path(".env.sim"))
+        self.assertEqual(profile_env_file("live"), Path(".env.live"))
+
+    def test_load_settings_reads_named_profile(self) -> None:
+        with temporary_working_directory() as cwd:
+            (cwd / ".env.sim").write_text(
+                "\n".join(
+                    [
+                        "QMT_USERDATA=sim_userdata",
+                        "QMT_ACCOUNT_ID=sim-account",
+                        "QMT_PORT=9100",
+                        "QMT_TRADER_TIMEOUT_MS=30000",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            settings = load_settings(profile="sim")
+
+        self.assertEqual(settings.userdata, Path("sim_userdata"))
+        self.assertEqual(settings.account_id, "sim-account")
+        self.assertEqual(settings.port, 9100)
+        self.assertEqual(settings.trader_timeout_ms, 30000)
+
+
+@contextmanager
+def temporary_working_directory() -> Iterator[Path]:
+    import os
+
+    previous = Path.cwd()
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = Path(tmp)
+        os.chdir(cwd)
+        try:
+            yield cwd
+        finally:
+            os.chdir(previous)
 
 
 if __name__ == "__main__":

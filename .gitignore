@@ -14,7 +14,7 @@ logs/
 userdata/
 userdata_mini/
 datadir/
-data/
+/data/
 dist/
 build/
 *.egg-info/

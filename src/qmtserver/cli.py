@@ -3,10 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import Any
 
-from .config import load_settings
+from .config import PROFILE_NAMES, load_settings, profile_env_file
 from .miniqmt import (
     QuoteCheckConfig,
     TraderCheckConfig,
@@ -19,6 +20,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
+    if args.command == "env":
+        return _run_env(args)
     if args.command == "check":
         return _run_check(args)
     if args.command == "diagnose":
@@ -34,13 +37,20 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="qmtserver")
     subparsers = parser.add_subparsers(dest="command")
 
+    env = subparsers.add_parser("env", help="manage local qmtserver env profiles")
+    env_subparsers = env.add_subparsers(dest="env_action")
+    env_use = env_subparsers.add_parser("use", help="copy .env.<profile> to .env")
+    env_use.add_argument("profile", choices=sorted(PROFILE_NAMES), help="env profile to activate")
+    env_use.add_argument("--no-backup", action="store_true", help="do not back up current .env")
+
     check = subparsers.add_parser("check", help="verify MiniQMT connectivity")
+    _add_profile_args(check)
     check.add_argument("--userdata", type=Path, help="MiniQMT userdata_mini directory")
     check.add_argument("--account-id", help="fund account id")
-    check.add_argument("--account-type", default="STOCK", help="account type, default: STOCK")
+    check.add_argument("--account-type", help="account type, default: STOCK")
     check.add_argument("--session-id", type=int, help="xtquant session id")
-    check.add_argument("--timeout-ms", type=int, default=5000, help="trader request timeout")
-    check.add_argument("--quote-code", default="000001.SZ", help="symbol for quote check")
+    check.add_argument("--timeout-ms", type=int, help="trader request timeout")
+    check.add_argument("--quote-code", help="symbol for quote check")
     check.add_argument("--quote-ip", default="", help="quote service ip, normally empty")
     check.add_argument("--quote-port", type=int, help="quote service port")
     check.add_argument("--skip-quote", action="store_true", help="skip quote connection check")
@@ -49,6 +59,7 @@ def _build_parser() -> argparse.ArgumentParser:
     diagnose = subparsers.add_parser("diagnose", help="diagnose qmtserver runtime targets")
     diagnose_subparsers = diagnose.add_subparsers(dest="diagnose_target")
     trader = diagnose_subparsers.add_parser("trader", help="diagnose readonly trader connection")
+    _add_profile_args(trader)
     trader.add_argument("--userdata", type=Path, help="MiniQMT userdata_mini directory")
     trader.add_argument("--account-id", help="fund account id")
     trader.add_argument("--account-type", default=None, help="account type, default from settings")
@@ -57,6 +68,7 @@ def _build_parser() -> argparse.ArgumentParser:
     trader.add_argument("--json", action="store_true", help="print machine-readable JSON")
 
     serve = subparsers.add_parser("serve", help="start readonly RPC gateway")
+    _add_profile_args(serve)
     serve.add_argument("--userdata", type=Path, help="MiniQMT userdata_mini directory")
     serve.add_argument("--account-id", help="fund account id")
     serve.add_argument("--account-type", help="account type")
@@ -68,19 +80,77 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _add_profile_args(parser: argparse.ArgumentParser) -> None:
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--profile", choices=sorted(PROFILE_NAMES), help="read .env.<profile>")
+    group.add_argument(
+        "--use-sim-account",
+        action="store_const",
+        dest="profile",
+        const="sim",
+        help="alias for --profile sim",
+    )
+    group.add_argument(
+        "--use-live-account",
+        action="store_const",
+        dest="profile",
+        const="live",
+        help="alias for --profile live",
+    )
+
+
+def _run_env(args: argparse.Namespace) -> int:
+    if args.env_action == "use":
+        return _run_env_use(args)
+    return 2
+
+
+def _run_env_use(args: argparse.Namespace) -> int:
+    source = profile_env_file(args.profile)
+    target = Path(".env")
+    backup = Path(".env.previous")
+    if not source.exists():
+        print(f"Profile file not found: {source}")
+        return 1
+    if target.exists() and not args.no_backup:
+        shutil.copy2(target, backup)
+    shutil.copy2(source, target)
+    settings = _read_env_file(source)
+    print(f"Switched qmtserver env profile: {args.profile}")
+    print("Active file: .env")
+    print(f"Source file: {source}")
+    if not args.no_backup:
+        print("Previous backup: .env.previous")
+    print(f"userdata: {_display_path(settings.get('QMT_USERDATA', ''))}")
+    print(f"userdata exists: {_path_exists(settings.get('QMT_USERDATA', ''))}")
+    print(f"account id: {_secret_state(settings.get('QMT_ACCOUNT_ID', ''))}")
+    print(f"api token: {_secret_state(settings.get('QMT_API_TOKEN', ''))}")
+    print(f"enable trading: {settings.get('QMT_ENABLE_TRADING', '')}")
+    print(f"trading dry run: {settings.get('QMT_TRADING_DRY_RUN', '')}")
+    print(f"connect quote: {settings.get('QMT_CONNECT_QUOTE', '')}")
+    print(f"connect trader: {settings.get('QMT_CONNECT_TRADER', '')}")
+    return 0
+
+
 def _run_check(args: argparse.Namespace) -> int:
+    settings = load_settings(profile=args.profile) if args.profile else None
     quote = None
     if not args.skip_quote:
-        quote = QuoteCheckConfig(code=args.quote_code, ip=args.quote_ip, port=args.quote_port)
+        quote = QuoteCheckConfig(
+            code=args.quote_code or (settings.quote_code if settings else "000001.SZ"),
+            ip=args.quote_ip,
+            port=args.quote_port,
+        )
 
     trader = None
-    if args.userdata:
+    userdata = args.userdata or (settings.userdata if settings else None)
+    if userdata:
         trader = TraderCheckConfig(
-            userdata=args.userdata,
-            account_id=args.account_id,
-            account_type=args.account_type,
+            userdata=userdata,
+            account_id=args.account_id or (settings.account_id if settings else None),
+            account_type=args.account_type or (settings.account_type if settings else "STOCK"),
             session_id=args.session_id,
-            timeout_ms=args.timeout_ms,
+            timeout_ms=args.timeout_ms or (settings.trader_timeout_ms if settings else 5000),
         )
 
     report = build_connectivity_report(quote=quote, trader=trader)
@@ -100,7 +170,7 @@ def _run_diagnose(args: argparse.Namespace) -> int:
 
 
 def _run_diagnose_trader(args: argparse.Namespace) -> int:
-    settings = load_settings()
+    settings = load_settings(profile=args.profile)
     userdata = args.userdata or settings.userdata
     if userdata is None:
         report = {
@@ -193,7 +263,7 @@ def _run_serve(args: argparse.Namespace) -> int:
 
     import uvicorn
 
-    settings = load_settings()
+    settings = load_settings(profile=args.profile)
     uvicorn.run(
         "qmtserver.main:create_app",
         factory=True,
@@ -216,3 +286,32 @@ def _apply_serve_env(args: argparse.Namespace) -> None:
     for key, value in values.items():
         if value is not None:
             os.environ[key] = value
+
+
+def _read_env_file(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        value = line.strip()
+        if not value or value.startswith("#") or "=" not in value:
+            continue
+        key, raw = value.split("=", 1)
+        values[key.strip()] = raw.strip()
+    return values
+
+
+def _secret_state(value: str) -> str:
+    return "<set>" if value.strip().strip('"') else "<empty>"
+
+
+def _display_path(value: str) -> str:
+    text = value.strip().strip('"')
+    if not text:
+        return "<empty>"
+    path = Path(text)
+    parent = path.parent.name
+    return f"{parent}\\{path.name}" if parent else path.name
+
+
+def _path_exists(value: str) -> bool:
+    text = value.strip().strip('"')
+    return bool(text and Path(text).exists())

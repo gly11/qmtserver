@@ -35,6 +35,10 @@ classifiers = [
 xtquant = [
     "xtquant>=250516.1.1,<260000",
 ]
+data = [
+    "duckdb>=1.3,<2",
+    "pyarrow>=19,<23",
+]
 
 [project.urls]
 Homepage = "https://github.com/gly11/qmtserver"

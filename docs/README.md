@@ -11,6 +11,7 @@
 - [Realtime Market Subscriptions](realtime-subscriptions.md)：实时行情订阅和 WebSocket quote
   event 的设计、验证记录和 smoke 命令。
 - [Compatibility Matrix](compatibility.md)：`xtquant` 版本、签名和真实 MiniQMT smoke 记录。
+- [Market Data Lake](market-data-lake.md)：行情下载、高性能本地缓存和 DuckDB/Parquet 数据层规划。
 - [Release Plan](release-plan.md)：版本定位、发布门禁、实时订阅 smoke 和后续节奏。
 - [API Reference](api.md)：稳定 HTTP RPC 和 WebSocket 契约。
 - [Error Codes](errors.md)：错误码和错误响应结构。

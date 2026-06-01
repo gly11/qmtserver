@@ -1,7 +1,7 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前待发布版本为 `0.6.0`，主题是 readonly smoke
-baseline、history download reliability 和 realtime stability verification。
+本文档记录 qmtserver 的版本节奏和发布门禁。当前待发布版本为 `0.7.0`，主题是 trader
+diagnostics、runtime health summary 和 manual subscription recovery。
 
 ## 版本节奏
 
@@ -11,7 +11,8 @@ baseline、history download reliability 和 realtime stability verification。
 0.3.0  已完成  稳定行情数据、snapshot、job 和诊断接口
 0.4.0  已发布    稳定只读交易查询 API
 0.5.0  已发布    实时行情订阅和兼容矩阵基线
-0.6.0  待发布    只读实盘 smoke、历史下载可靠性和实时稳定性基线
+0.6.0  已发布    只读实盘 smoke、历史下载可靠性和实时稳定性基线
+0.7.0  待发布    trader diagnostics、runtime health 和手动订阅恢复
 1.0.0  远期    稳定版本
 ```
 
@@ -123,7 +124,7 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 
 ## 0.6.0
 
-状态：待发布。
+状态：已发布。
 
 `0.6.0` 聚焦发布前可复跑的实盘只读验证基线，补强历史数据下载、snapshot/job 验证、reference
 字段基线和实时行情长窗口稳定性记录。
@@ -147,6 +148,36 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 - 2026-05-28 本地时间已完成 180 秒三标的 realtime subscription smoke，收到 180 个 callback。
 - 只读 trader smoke 脚本已完成；当前本机 trader 连接返回 `connect_result=-1`，需在交易侧连接正常
   后复测，不影响行情/history/reference 只读能力发布。
+
+## 0.7.0
+
+状态：收口中。
+
+`0.7.0` 聚焦网关运行可靠性基线：当 MiniQMT 或订阅状态异常时，服务端应能给出更清晰的
+诊断、健康摘要和手动恢复入口。该版本仍不新增任何真实交易命令。
+
+范围：
+
+- 增加 `qmtserver diagnose trader`，用于分步骤检查 `xtquant` 导入、userdata、trader class、
+  trader start、`connect()` 返回码和账号只读查询。
+- `/v1/diagnostics` 增加 `data.runtime_health`，汇总 quote、trader、订阅数量、degraded 状态和
+  stale callback 状态。
+- 增加 `POST /v1/market/subscriptions/{subscription_id}/recover`，手动重建已有行情订阅，复用
+  原 symbols、period 和本地 `subscription_id`，并重置该订阅 diagnostics。
+
+发布记录：
+
+- 普通测试使用 fakes，不依赖真实 MiniQMT。
+- 真实 MiniQMT smoke 只做 readonly 行情和 trader 诊断，不执行下单、撤单、转账或其他交易命令。
+- 2026-06-01 本地时间已完成活跃行情三标的 subscription smoke：quote 连接成功，收到 live
+  callback，latest cache 命中全部标的，subscription diagnostics 为 active。
+- 2026-06-01 本地时间已完成 manual recover smoke：停止后的订阅可通过 recover 恢复为
+  `active`，保留相同 `subscription_id`，diagnostics callback count 重置为 `0`。
+- 2026-06-01 本地时间已完成 runtime health smoke：quote connected、trader disabled、一个 active
+  subscription 时 `runtime_health.status=ok`。
+- 2026-06-01 本地 trader 诊断和 trader readonly smoke 仍返回 `connect_result=-1` /
+  `TARGET_NOT_CONNECTED`。该结果说明诊断链路可用，但当前 MiniQMT trader 通道未就绪；如发布说明
+  要声明 trader readonly 已通过真实连接，需要在 trader 连接恢复后复测。
 
 ## 发布门禁
 
@@ -178,13 +209,14 @@ uv run qmtserver serve --userdata $userdata --account-id $account
 - token 鉴权开启。
 - 远程电脑可访问 `/v1/health`。
 - 远程客户端可调用 `status()` 和至少一个只读行情方法。
-- `0.6.0` 发布前可运行只读 smoke：
+- `0.7.0` 发布前可运行只读 smoke：
 
 ```powershell
 uv run python scripts\smoke_market_history.py --symbol 000001.SZ --require-rows
 uv run python scripts\smoke_reference.py --symbols 000001.SZ,600000.SH
 uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --duration-seconds 180 --min-callbacks 30 --require-all-symbols --report-intervals --omit-events
 uv run python scripts\smoke_trader_readonly.py
+uv run qmtserver diagnose trader
 ```
 
 ## 发布原则

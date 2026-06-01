@@ -67,6 +67,13 @@ python -m pip install "qmtserver[xtquant]"
 uv sync --extra xtquant
 ```
 
+如果需要启用高性能行情数据缓存、DuckDB 元数据和后续 Parquet 数据湖能力，可以额外安装
+`data` extra：
+
+```powershell
+uv sync --extra xtquant --extra data
+```
+
 ### 方式二：下载新版并覆盖安装
 
 如果 PyPI 版本落后于券商客户端随附或迅投发布的版本，可以从迅投知识库下载新版：

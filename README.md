@@ -55,6 +55,11 @@ uv sync --extra xtquant
 ```
 
 `uv sync --extra xtquant` 会安装项目依赖和 PyPI 版 `xtquant`。
+如需启用后续高性能行情数据缓存骨架，可使用：
+
+```powershell
+uv sync --extra xtquant --extra data
+```
 
 如果 PyPI 版落后，也可以从迅投知识库下载新版后覆盖安装：
 
@@ -72,6 +77,13 @@ uv run qmtserver check --userdata $userdata --account-id $account
 
 ```powershell
 uv run qmtserver serve --userdata $userdata --account-id $account
+```
+
+如果本机同时保留模拟和实盘配置，可以使用本地 profile 切换：
+
+```powershell
+uv run qmtserver env use sim
+uv run qmtserver serve --profile sim
 ```
 
 默认监听：

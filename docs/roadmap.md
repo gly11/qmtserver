@@ -69,6 +69,21 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 这些能力需要明确区分“从本地缓存读取”和“触发 MiniQMT 下载”的行为，避免用户误以为所有
 接口都是即时、无副作用、无等待的查询。
 
+### Market Data Lake
+
+下一条主线是把历史行情下载升级为 server 端高性能本地数据层。设计目标见
+[Market Data Lake](market-data-lake.md)。
+
+- 使用 `qmtserver[data]` extra 引入 DuckDB 和 PyArrow。
+- 保持 MiniQMT `userdata_mini/datadir` 为上游缓存，不直接修改。
+- 在 `data/market` 下维护 qmtserver 标准化行情文件和 DuckDB 元数据。
+- 将 download job、data file、coverage 和 quality 信息持久化。
+- 后续从本地 Parquet/DuckDB 查询和导出，减少重复访问 MiniQMT。
+- client 只提交任务、查询状态和下载结果，不直接 import `xtquant`。
+
+该方向会分阶段推进：先落配置、依赖和 schema 骨架，再实现持久化 job、Parquet writer、
+coverage planner、本地查询 API 和 export。
+
 ### Subscriptions And Events
 
 在稳定查询 API 之后，逐步增强订阅和事件：

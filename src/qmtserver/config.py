@@ -6,6 +6,8 @@ from typing import Any
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+PROFILE_NAMES = {"sim", "live"}
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -42,6 +44,10 @@ class Settings(BaseSettings):
     log_max_bytes: int = Field(default=10485760, ge=1)
     log_backup_count: int = Field(default=10, ge=0)
     snapshot_dir: Path = Path("data/snapshots")
+    data_dir: Path = Path("data/market")
+    data_format: str = "parquet"
+    data_db: Path = Path("data/market/db/qmtserver.duckdb")
+    data_enable_duckdb: bool = True
     api_token: str | None = None
     require_token: bool = False
     audit_log: bool = True
@@ -80,10 +86,19 @@ class Settings(BaseSettings):
 
 
 def load_settings(**overrides: Any) -> Settings:
+    profile = overrides.pop("profile", None)
+    if profile is not None and "_env_file" not in overrides:
+        overrides["_env_file"] = profile_env_file(str(profile))
     values = {
         key: value for key, value in overrides.items() if value is not None or key.startswith("_")
     }
     return Settings(**values)
+
+
+def profile_env_file(profile: str) -> Path:
+    if profile not in PROFILE_NAMES:
+        raise ValueError(f"unknown qmtserver env profile: {profile}")
+    return Path(f".env.{profile}")
 
 
 def _split_csv(value: str | None) -> set[str]:

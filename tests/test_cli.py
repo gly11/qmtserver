@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import io
 import os
+import tempfile
 import unittest
-from contextlib import redirect_stdout
+from collections.abc import Iterator
+from contextlib import contextmanager, redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
 
 from qmtserver.cli import main
@@ -97,6 +100,66 @@ class CliTests(unittest.TestCase):
         self.assertIn("trader diagnostics", output.getvalue())
         self.assertIn("MiniQMT may not be started", output.getvalue())
         self.assertNotIn("123456789", output.getvalue())
+
+    def test_env_use_copies_profile_to_active_env_and_redacts_output(self) -> None:
+        with temporary_working_directory() as cwd:
+            (cwd / ".env.sim").write_text(
+                "QMT_USERDATA=sim_userdata\nQMT_ACCOUNT_ID=123456789\nQMT_API_TOKEN=secret\n",
+                encoding="utf-8",
+            )
+            (cwd / ".env").write_text("QMT_USERDATA=old\n", encoding="utf-8")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(["env", "use", "sim"])
+
+            active = (cwd / ".env").read_text(encoding="utf-8")
+            backup = (cwd / ".env.previous").read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("QMT_USERDATA=sim_userdata", active)
+        self.assertIn("QMT_USERDATA=old", backup)
+        self.assertIn("Switched qmtserver env profile: sim", output.getvalue())
+        self.assertIn("account id: <set>", output.getvalue())
+        self.assertIn("api token: <set>", output.getvalue())
+        self.assertNotIn("123456789", output.getvalue())
+        self.assertNotIn("secret", output.getvalue())
+
+    def test_check_profile_uses_profile_userdata_and_account_defaults(self) -> None:
+        report = {
+            "ok": True,
+            "python": {"implementation": "CPython", "version": "3.13.0"},
+            "xtquant": {"ok": True, "path": "site-packages/xtquant"},
+            "quote": None,
+            "trader": {"ok": True, "session_id": 123},
+        }
+        with temporary_working_directory() as cwd:
+            (cwd / ".env.sim").write_text(
+                "QMT_USERDATA=sim_userdata\nQMT_ACCOUNT_ID=sim-account\nQMT_TRADER_TIMEOUT_MS=30000\n",
+                encoding="utf-8",
+            )
+            with patch("qmtserver.cli.build_connectivity_report", return_value=report) as build:
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    exit_code = main(["check", "--profile", "sim", "--skip-quote"])
+
+        self.assertEqual(exit_code, 0)
+        trader = build.call_args.kwargs["trader"]
+        self.assertEqual(trader.userdata, Path("sim_userdata"))
+        self.assertEqual(trader.account_id, "sim-account")
+        self.assertEqual(trader.timeout_ms, 30000)
+
+
+@contextmanager
+def temporary_working_directory() -> Iterator[Path]:
+    previous = Path.cwd()
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = Path(tmp)
+        os.chdir(cwd)
+        try:
+            yield cwd
+        finally:
+            os.chdir(previous)
 
 
 if __name__ == "__main__":
