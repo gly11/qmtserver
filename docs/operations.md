@@ -18,6 +18,18 @@ uv run qmtserver check --userdata $userdata
 uv run qmtserver check --userdata $userdata --account-id $account
 ```
 
+如果 trader 连接失败，先运行只读诊断：
+
+```powershell
+uv run qmtserver diagnose trader --userdata $userdata --account-id $account
+```
+
+需要机器可读输出时使用：
+
+```powershell
+uv run qmtserver diagnose trader --userdata $userdata --account-id $account --json
+```
+
 常用参数：
 
 - `--userdata`：MiniQMT / QMT 交易端目录下的 `userdata_mini` 完整路径。
@@ -28,6 +40,10 @@ uv run qmtserver check --userdata $userdata --account-id $account
 - `--json`：输出完整 JSON，便于脚本消费。
 
 连接成功时命令退出码为 `0`；失败时退出码为 `1`，终端会打印失败原因。
+
+`diagnose trader` 会检查 `xtquant` 导入、`userdata_mini` 路径、trader class 加载、
+`XtQuantTrader.start()`、`connect()` 返回码、账号状态查询，以及配置账号后的 subscribe 和
+asset 只读查询。输出会脱敏账号，不打印真实账号；该诊断不会调用下单、撤单或转账命令。
 
 ## 启动
 

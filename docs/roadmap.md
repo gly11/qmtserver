@@ -113,6 +113,7 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 
 qmtserver 进入长期稳定阶段前，需要持续强化：
 
+- trader 连接诊断和失败 hint，尤其是 `connect_result=-1` 的定位路径。
 - API schema 和错误码稳定性。
 - Windows + MiniQMT 真实 smoke 流程。
 - qmtclient 兼容性验证。

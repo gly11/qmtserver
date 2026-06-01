@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from .config import load_settings
-from .miniqmt import QuoteCheckConfig, TraderCheckConfig, build_connectivity_report
+from .miniqmt import (
+    QuoteCheckConfig,
+    TraderCheckConfig,
+    build_connectivity_report,
+)
+from .trader.diagnostics import build_trader_diagnostics
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -16,6 +21,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "check":
         return _run_check(args)
+    if args.command == "diagnose":
+        return _run_diagnose(args)
     if args.command == "serve":
         return _run_serve(args)
 
@@ -38,6 +45,16 @@ def _build_parser() -> argparse.ArgumentParser:
     check.add_argument("--quote-port", type=int, help="quote service port")
     check.add_argument("--skip-quote", action="store_true", help="skip quote connection check")
     check.add_argument("--json", action="store_true", help="print machine-readable JSON")
+
+    diagnose = subparsers.add_parser("diagnose", help="diagnose qmtserver runtime targets")
+    diagnose_subparsers = diagnose.add_subparsers(dest="diagnose_target")
+    trader = diagnose_subparsers.add_parser("trader", help="diagnose readonly trader connection")
+    trader.add_argument("--userdata", type=Path, help="MiniQMT userdata_mini directory")
+    trader.add_argument("--account-id", help="fund account id")
+    trader.add_argument("--account-type", default=None, help="account type, default from settings")
+    trader.add_argument("--session-id", type=int, help="xtquant session id")
+    trader.add_argument("--timeout-ms", type=int, default=None, help="trader request timeout")
+    trader.add_argument("--json", action="store_true", help="print machine-readable JSON")
 
     serve = subparsers.add_parser("serve", help="start readonly RPC gateway")
     serve.add_argument("--userdata", type=Path, help="MiniQMT userdata_mini directory")
@@ -74,6 +91,69 @@ def _run_check(args: argparse.Namespace) -> int:
         _print_summary(report)
 
     return 0 if report["ok"] else 1
+
+
+def _run_diagnose(args: argparse.Namespace) -> int:
+    if args.diagnose_target == "trader":
+        return _run_diagnose_trader(args)
+    return 2
+
+
+def _run_diagnose_trader(args: argparse.Namespace) -> int:
+    settings = load_settings()
+    userdata = args.userdata or settings.userdata
+    if userdata is None:
+        report = {
+            "ok": False,
+            "userdata": {"configured": False, "exists": False, "name": None},
+            "account": {
+                "configured": bool(args.account_id or settings.account_id),
+                "account_id": None,
+                "account_type": args.account_type or settings.account_type,
+            },
+            "connect_result": None,
+            "steps": [{"name": "userdata_path", "ok": False, "detail": "not configured"}],
+            "hints": ["Set QMT_USERDATA or pass --userdata with the userdata_mini directory."],
+        }
+    else:
+        report = build_trader_diagnostics(
+            TraderCheckConfig(
+                userdata=userdata,
+                account_id=args.account_id or settings.account_id,
+                account_type=args.account_type or settings.account_type,
+                session_id=args.session_id,
+                timeout_ms=args.timeout_ms or settings.trader_timeout_ms,
+            )
+        )
+
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        _print_trader_diagnostics(report)
+    return 0 if report["ok"] else 1
+
+
+def _print_trader_diagnostics(report: dict[str, Any]) -> None:
+    print("qmtserver trader diagnostics")
+    userdata = report.get("userdata") or {}
+    print(f"- userdata: {userdata.get('name') or 'not configured'}")
+    account = report.get("account") or {}
+    if account.get("configured"):
+        print(f"- account: {account.get('account_id')} ({account.get('account_type')})")
+    connect_result = report.get("connect_result")
+    if connect_result is not None:
+        print(f"- connect result: {connect_result}")
+    for step in report.get("steps") or []:
+        status = "OK" if step.get("ok") else "FAILED"
+        detail = step.get("detail")
+        suffix = f" ({detail})" if detail else ""
+        print(f"- {step.get('name')}: {status}{suffix}")
+    hints = report.get("hints") or []
+    if hints:
+        print("Hints:")
+        for hint in hints:
+            print(f"- {hint}")
+    print(f"- result: {'OK' if report.get('ok') else 'FAILED'}")
 
 
 def _print_summary(report: dict[str, Any]) -> None:

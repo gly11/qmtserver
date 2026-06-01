@@ -54,6 +54,35 @@ ws://127.0.0.1:8000/v1/ws/events?token=<QMT_API_TOKEN>
 
 检查 `/qmt/status` 的 `trader.connected`、`account_subscribed` 和 `last_error` 字段。常见原因是 MiniQMT 未登录、账号不匹配、`userdata_mini` 路径错误或交易端口未就绪。
 
+优先运行 trader 只读诊断：
+
+```powershell
+$userdata = "D:\path\to\MiniQMT\userdata_mini"
+$account = "资金账号"
+uv run qmtserver diagnose trader --userdata $userdata --account-id $account
+```
+
+诊断会按步骤输出：
+
+- `xtquant_import`：当前 Python 环境是否能导入 `xtquant`。
+- `userdata_path`：传入的 `userdata_mini` 是否存在。
+- `trader_classes`：`XtQuantTrader` 和 `StockAccount` 是否能加载。
+- `trader_start`：trader 对象是否能启动。
+- `trader_connect`：`connect()` 返回码。
+- `query_account_status`：是否能读取账号状态。
+- `account_subscribe` 和 `query_stock_asset`：配置账号后的只读账号检查。
+
+`connect_result=-1` 通常表示 MiniQMT 未启动、未登录、userdata 与当前运行实例不匹配、trader
+session 状态异常或 timeout 太短。可以依次确认：
+
+- MiniQMT 已启动并完成登录。
+- `--userdata` 指向正在运行的 MiniQMT 目录下的 `userdata_mini`。
+- `--account-id` 和 `--account-type` 与 MiniQMT 内账号一致。
+- 尝试传入新的 `--session-id` 或增大 `--timeout-ms`。
+- 确认本地 `xtquant` 版本与 MiniQMT 版本兼容。
+
+该诊断只做连接和只读查询，不执行下单、撤单或转账。
+
 ## WebSocket 收不到事件
 
 先确认 `/v1/ws/events` 能收到 heartbeat；交易回报事件需要 trader 成功连接并触发对应 xtquant 回调。

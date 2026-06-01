@@ -69,6 +69,35 @@ class CliTests(unittest.TestCase):
         self.assertEqual(run.call_args.kwargs["host"], "0.0.0.0")
         self.assertEqual(run.call_args.kwargs["port"], 9001)
 
+    def test_diagnose_trader_prints_hints_and_returns_failure(self) -> None:
+        report = {
+            "ok": False,
+            "userdata": {"configured": True, "exists": True, "name": "userdata_mini"},
+            "account": {"configured": True, "account_id": "123****789", "account_type": "STOCK"},
+            "connect_result": -1,
+            "steps": [{"name": "trader_connect", "ok": False, "detail": "connect_result=-1"}],
+            "hints": ["MiniQMT may not be started or logged in."],
+        }
+
+        with patch("qmtserver.cli.build_trader_diagnostics", return_value=report):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "diagnose",
+                        "trader",
+                        "--userdata",
+                        "userdata_mini",
+                        "--account-id",
+                        "123456789",
+                    ]
+                )
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("trader diagnostics", output.getvalue())
+        self.assertIn("MiniQMT may not be started", output.getvalue())
+        self.assertNotIn("123456789", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
