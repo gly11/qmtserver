@@ -87,6 +87,17 @@ session 状态异常或 timeout 太短。可以依次确认：
 
 先确认 `/v1/ws/events` 能收到 heartbeat；交易回报事件需要 trader 成功连接并触发对应 xtquant 回调。
 
+实时行情订阅已创建但长时间没有 callback 时，检查：
+
+```text
+GET /v1/diagnostics
+GET /v1/market/subscriptions/{subscription_id}/diagnostics
+```
+
+如果 `/v1/diagnostics` 的 `data.runtime_health.status` 为 `degraded`，并且 `reasons` 包含
+`subscription_callback_stale`，说明 qmtserver 仍有活跃订阅，但最近 callback 已超过 freshness
+阈值。此时先确认 MiniQMT 行情源仍在更新，再考虑停止并重建订阅。
+
 ## history job 没有结果
 
 先检查 job 状态：

@@ -217,6 +217,9 @@ GET /v1/metrics
 ```
 
 `/v1/diagnostics` 返回 MiniQMT/qmtserver 状态、server clock、版本信息和 sample symbol smoke。
+其中 `data.runtime_health` 汇总 quote、trader 和订阅状态；如果 `status=degraded`，优先查看
+`reasons`，常见值包括 `quote_disconnected`、`subscription_degraded` 和
+`subscription_callback_stale`。
 `/v1/metrics` 包含 job status 计数，便于观察 queued、running、succeeded、failed 和 cancelled
 分布。
 

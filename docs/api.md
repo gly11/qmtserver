@@ -386,6 +386,28 @@ manifest 仍保留在 snapshot 目录中。
 返回 MiniQMT/qmtserver 状态、server clock、qmtserver/xtquant 版本和 sample symbol smoke 信息，
 用于排查连接和行情源状态。
 
+`data.runtime_health` 提供长期运行摘要：
+
+```json
+{
+  "schema": "runtime.health.v1",
+  "status": "degraded",
+  "reasons": ["subscription_callback_stale"],
+  "quote": {"status": "connected", "connected": true, "enabled": true},
+  "trader": {"status": "connected", "connected": true, "enabled": true},
+  "subscriptions": {
+    "total": 1,
+    "active": 1,
+    "degraded": 0,
+    "stopped": 0,
+    "stale_callbacks": 1
+  }
+}
+```
+
+`status` 为 `ok` 或 `degraded`。`degraded` 表示 quote 未连接、订阅 degraded，或活跃订阅的
+callback 已过期。该摘要只用于运维健康判断，不改变交易保护规则。
+
 ## RPC Request
 
 默认模式下 RPC 是白名单 RPC，不是全透明 `xtquant` 代理。白名单外方法会返回
