@@ -29,6 +29,8 @@ POST /v1/snapshots
 GET  /v1/snapshots
 GET  /v1/snapshots/{snapshot_id}/manifest
 GET  /v1/snapshots/{snapshot_id}/download
+POST /v1/market/data/download
+GET  /v1/market/data/jobs/{job_id}
 POST /v1/jobs/history-download
 GET  /v1/jobs/{job_id}
 GET  /v1/jobs/{job_id}/result
@@ -349,6 +351,32 @@ format，以及 intraday 请求的 period。
 ### GET /v1/snapshots/{snapshot_id}/quality
 
 基于 snapshot CSV 和 manifest request 生成基础数据质量报告。
+
+## Market Data Lake API
+
+`/v1/market/data` 是后续高性能行情数据缓存的 server 端入口。当前阶段提供持久化下载 job
+骨架：任务写入 DuckDB 元数据，worker 只触发只读 `xtdata.download_history_data` 补齐
+MiniQMT 行情缓存；标准化 Parquet 写入和本地查询会在后续阶段接入。
+
+### POST /v1/market/data/download
+
+```json
+{
+  "kind": "daily_bars",
+  "symbols": ["000001.SZ"],
+  "start": "2026-01-01",
+  "end": "2026-01-31",
+  "adjust": "none",
+  "format": "parquet"
+}
+```
+
+如果未安装 `qmtserver[data]`，返回 `DATA_BACKEND_UNAVAILABLE`。该接口不连接 trader，
+也不执行任何交易命令。
+
+### GET /v1/market/data/jobs/{job_id}
+
+查询 data download job 状态。状态会写入 DuckDB 元数据，设计上用于服务重启后的状态查询。
 
 ## Reference and Quality API
 

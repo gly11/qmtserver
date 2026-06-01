@@ -80,7 +80,8 @@ class FakeDuckDbConnection:
     def __init__(self) -> None:
         self.executed: list[str] = []
 
-    def execute(self, sql: str) -> None:
+    def execute(self, sql: str, parameters: tuple[object, ...] | None = None) -> None:
+        del parameters
         self.executed.append(sql)
 
     def close(self) -> None:

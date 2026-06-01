@@ -275,6 +275,33 @@ QMT_DATA_ENABLE_DUCKDB=true
 uv sync --extra xtquant --extra data
 ```
 
+提交持久化 data download job：
+
+```powershell
+$body = @{
+  kind = "daily_bars"
+  symbols = @("000001.SZ")
+  start = "2026-01-01"
+  end = "2026-01-31"
+  adjust = "none"
+  format = "parquet"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post `
+  -Uri "http://127.0.0.1:8000/v1/market/data/download" `
+  -Body $body `
+  -ContentType "application/json"
+```
+
+查询任务：
+
+```text
+GET /v1/market/data/jobs/{job_id}
+```
+
+当前阶段该 worker 只触发 MiniQMT 行情缓存下载并持久化 job 状态；标准化 Parquet 文件写入会在
+后续阶段实现。
+
 详细规划见 [Market Data Lake](market-data-lake.md)。
 
 ## Jobs 与诊断

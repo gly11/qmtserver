@@ -13,7 +13,7 @@ OPTIONAL_MODULES = ("duckdb", "pyarrow")
 
 
 class DuckDbConnection(Protocol):
-    def execute(self, sql: str) -> Any: ...
+    def execute(self, sql: str, parameters: tuple[Any, ...] | None = None) -> Any: ...
 
     def close(self) -> None: ...
 
@@ -32,7 +32,7 @@ class DuckDbDataBackend:
         connect: Callable[[str], DuckDbConnection],
     ) -> None:
         self.settings = settings
-        self.connect = connect
+        self._connect = connect
 
     @property
     def data_dir(self) -> Path:
@@ -50,6 +50,9 @@ class DuckDbDataBackend:
             connection.execute(schema_sql())
         finally:
             connection.close()
+
+    def connect(self, path: str) -> DuckDbConnection:
+        return self._connect(path)
 
 
 def check_data_backend_dependencies(

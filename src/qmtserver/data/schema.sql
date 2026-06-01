@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS data_jobs (
     job_type VARCHAR NOT NULL,
     status VARCHAR NOT NULL,
     request_json VARCHAR NOT NULL,
+    result_json VARCHAR,
     error_code VARCHAR,
     error_message VARCHAR,
     created_at TIMESTAMP NOT NULL,
