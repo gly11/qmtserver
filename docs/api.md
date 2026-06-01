@@ -354,9 +354,9 @@ format，以及 intraday 请求的 period。
 
 ## Market Data Lake API
 
-`/v1/market/data` 是后续高性能行情数据缓存的 server 端入口。当前阶段提供持久化下载 job
-骨架：任务写入 DuckDB 元数据，worker 只触发只读 `xtdata.download_history_data` 补齐
-MiniQMT 行情缓存；标准化 Parquet 写入和本地查询会在后续阶段接入。
+`/v1/market/data` 是后续高性能行情数据缓存的 server 端入口。当前阶段提供持久化下载 job：
+任务写入 DuckDB 元数据，worker 先触发只读 `xtdata.download_history_data` 补齐 MiniQMT
+行情缓存，再读取标准 bars 并按 symbol 写入 qmtserver Parquet 文件。本地查询会在后续阶段接入。
 
 ### POST /v1/market/data/download
 
@@ -376,7 +376,8 @@ MiniQMT 行情缓存；标准化 Parquet 写入和本地查询会在后续阶段
 
 ### GET /v1/market/data/jobs/{job_id}
 
-查询 data download job 状态。状态会写入 DuckDB 元数据，设计上用于服务重启后的状态查询。
+查询 data download job 状态。成功结果包含 `file_count`、`row_count` 和写入的 Parquet 文件摘要。
+状态会写入 DuckDB 元数据，设计上用于服务重启后的状态查询。
 
 ## Reference and Quality API
 

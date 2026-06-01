@@ -299,8 +299,8 @@ Invoke-RestMethod -Method Post `
 GET /v1/market/data/jobs/{job_id}
 ```
 
-当前阶段该 worker 只触发 MiniQMT 行情缓存下载并持久化 job 状态；标准化 Parquet 文件写入会在
-后续阶段实现。
+当前阶段该 worker 会触发 MiniQMT 行情缓存下载，随后读取标准 bars 并按 symbol 写入
+`QMT_DATA_DIR/raw/bars/.../*.parquet`，同时持久化 job 状态和 data file 元数据。
 
 详细规划见 [Market Data Lake](market-data-lake.md)。
 

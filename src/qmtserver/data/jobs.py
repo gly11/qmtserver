@@ -8,9 +8,13 @@ from threading import Thread
 from typing import Any, Protocol
 from uuid import uuid4
 
+from qmtserver import __version__
 from qmtserver.data.backend import DuckDbDataBackend
+from qmtserver.data.files import ParquetBarWriter
+from qmtserver.data.readers import XtDataBarReader
 from qmtserver.market.adapter import XtDataMarketAdapter
 from qmtserver.market.models import MarketRequest
+from qmtserver.miniqmt import check_xtquant_import
 
 
 class DataJobStatus(StrEnum):
@@ -33,8 +37,24 @@ class DataJobRepositoryProtocol(Protocol):
     def mark_failed(self, job_id: str, error: dict[str, str]) -> None: ...
 
 
+class DataFileRepositoryProtocol(Protocol):
+    def record_file(self, file_record: dict[str, Any]) -> None: ...
+
+
 class HistoryDownloader(Protocol):
     def download_history(self, request: dict[str, Any]) -> None: ...
+
+
+class BarReader(Protocol):
+    def read_bars(self, request: dict[str, Any]) -> list[dict[str, Any]]: ...
+
+
+class BarWriter(Protocol):
+    def write_bars(
+        self,
+        request: dict[str, Any],
+        bars: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]: ...
 
 
 class DuckDbBackendProtocol(Protocol):
@@ -159,6 +179,37 @@ class DataJobRepository:
             ),
         )
 
+    def record_file(self, file_record: dict[str, Any]) -> None:
+        xtquant = check_xtquant_import()
+        self._execute(
+            """
+            INSERT INTO data_files (
+                file_id, job_id, kind, symbol, period, adjust, format, path, hash, row_count,
+                coverage_start, coverage_end, schema_version, qmtserver_version, xtquant_version,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                file_record["file_id"],
+                file_record.get("job_id"),
+                file_record["kind"],
+                file_record["symbol"],
+                file_record["period"],
+                file_record["adjust"],
+                file_record["format"],
+                file_record["path"],
+                file_record["hash"],
+                file_record["row_count"],
+                file_record.get("coverage_start"),
+                file_record.get("coverage_end"),
+                file_record.get("schema_version", "market.data.file.v1"),
+                __version__,
+                xtquant.get("version") if xtquant["ok"] else None,
+                _now(),
+            ),
+        )
+
     def _execute(self, sql: str, parameters: tuple[Any, ...]) -> Any:
         connection = self.backend.connect(str(self.backend.database_path))
         try:
@@ -173,10 +224,16 @@ class DataDownloadJobService:
         repository: DataJobRepositoryProtocol,
         *,
         downloader: HistoryDownloader,
+        bar_reader: BarReader | None = None,
+        file_writer: BarWriter | None = None,
+        file_repository: DataFileRepositoryProtocol | None = None,
         run_async: bool = True,
     ) -> None:
         self.repository = repository
         self.downloader = downloader
+        self.bar_reader = bar_reader
+        self.file_writer = file_writer
+        self.file_repository = file_repository
         self.run_async = run_async
 
     def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -199,12 +256,24 @@ class DataDownloadJobService:
         self.repository.mark_running(job_id)
         try:
             self.downloader.download_history(request)
-            self.repository.mark_succeeded(job_id, _download_result(request))
+            files = self._write_files(job_id, request)
+            self.repository.mark_succeeded(job_id, _download_result(request, files))
         except Exception as exc:
             self.repository.mark_failed(
                 job_id,
                 {"code": "DATA_DOWNLOAD_FAILED", "message": f"{type(exc).__name__}: {exc}"},
             )
+
+    def _write_files(self, job_id: str, request: dict[str, Any]) -> list[dict[str, Any]]:
+        if self.bar_reader is None or self.file_writer is None:
+            return []
+        bars = self.bar_reader.read_bars(request)
+        files = self.file_writer.write_bars(request, bars)
+        for file_record in files:
+            file_record["job_id"] = job_id
+            if self.file_repository is not None:
+                self.file_repository.record_file(file_record)
+        return files
 
 
 class XtDataHistoryDownloader:
@@ -237,23 +306,31 @@ def create_data_job_service(
     run_async: bool = True,
 ) -> DataDownloadJobService:
     backend.initialize()
+    repository = DataJobRepository(backend)
     return DataDownloadJobService(
-        DataJobRepository(backend),
+        repository,
         downloader=XtDataHistoryDownloader(qmt_service),
+        bar_reader=XtDataBarReader(qmt_service),
+        file_writer=ParquetBarWriter(backend.data_dir),
+        file_repository=repository,
         run_async=run_async,
     )
 
 
-def _download_result(request: dict[str, Any]) -> dict[str, Any]:
+def _download_result(request: dict[str, Any], files: list[dict[str, Any]]) -> dict[str, Any]:
     symbols = request.get("symbols")
+    row_count = sum(int(file_record.get("row_count", 0)) for file_record in files)
     return {
         "schema": "market.data.download.v1",
         "downloaded": True,
         "symbols": symbols if isinstance(symbols, list) else [],
         "kind": request.get("kind"),
         "period": "1d" if request.get("kind") == "daily_bars" else request.get("period"),
-        "storage": "miniqmt_cache",
-        "next_step": "parquet_writer_pending",
+        "storage": "qmtserver_data_lake" if files else "miniqmt_cache",
+        "file_count": len(files),
+        "row_count": row_count,
+        "files": files,
+        "next_step": None if files else "parquet_writer_pending",
     }
 
 

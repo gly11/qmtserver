@@ -37,8 +37,8 @@ data/market/
 data/snapshots/ # 现有 snapshot/export 文件
 ```
 
-当前已经初始化配置、可选依赖检测、DuckDB schema 和持久化 data download job。Parquet 写入、
-覆盖范围规划和本地查询 API 会在后续阶段逐步接入。
+当前已经初始化配置、可选依赖检测、DuckDB schema、持久化 data download job 和按 symbol
+分区的 Parquet 写入。覆盖范围规划和本地查询 API 会在后续阶段逐步接入。
 
 ## 安装
 
@@ -87,22 +87,19 @@ POST /v1/market/data/download
 GET /v1/market/data/jobs/{job_id}
 ```
 
-该 worker 当前只触发 `xtdata.download_history_data` 补齐 MiniQMT 行情缓存，并把 job 状态写入
-DuckDB。标准化 Parquet 文件写入会在后续阶段接入。
+该 worker 当前会触发 `xtdata.download_history_data` 补齐 MiniQMT 行情缓存，然后读取标准
+bars，按 symbol 写入 Parquet，并把 job 状态和 data file 元数据写入 DuckDB。
 
 ## 后续阶段
 
-1. Parquet Writer
-   从稳定 market adapter 读取 daily/intraday bars，写入分区 Parquet 文件。
-
-2. Coverage Planner
+1. Coverage Planner
    查询本地已有覆盖范围，只下载缺失区间，并支持 `force=true` 强制重建。
 
-3. Local Query API
+2. Local Query API
    从本地 Parquet/DuckDB 查询 bars，返回稳定 JSON schema；大结果建议走 export。
 
-4. Export From Data Lake
+3. Export From Data Lake
    从本地数据湖生成 CSV 或 Parquet export，逐步复用现有 snapshot manifest 设计。
 
-5. Quality And Maintenance
+4. Quality And Maintenance
    增加缺失交易日、重复行、OHLC 异常、成交量异常检查，以及清理和压缩策略。

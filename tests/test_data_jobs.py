@@ -15,9 +15,15 @@ class DataDownloadJobServiceTests(unittest.TestCase):
     def test_submit_download_persists_and_runs_history_download(self) -> None:
         repository = FakeDataJobRepository()
         downloader = FakeHistoryDownloader()
+        reader = FakeBarReader()
+        writer = FakeBarWriter()
+        files = FakeDataFileRepository()
         service = DataDownloadJobService(
             repository,
             downloader=downloader,
+            bar_reader=reader,
+            file_writer=writer,
+            file_repository=files,
             run_async=False,
         )
         request = {
@@ -39,7 +45,12 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         self.assertEqual(downloader.requests, [request])
         self.assertIsNotNone(persisted.result)
         assert persisted.result is not None
+        self.assertEqual(reader.requests, [request])
+        self.assertEqual(writer.requests, [request])
+        self.assertEqual(files.records, writer.files)
         self.assertEqual(persisted.result["symbols"], ["000001.SZ"])
+        self.assertEqual(persisted.result["file_count"], 1)
+        self.assertEqual(persisted.result["row_count"], 1)
 
     def test_submit_download_marks_job_failed_when_downloader_raises(self) -> None:
         repository = FakeDataJobRepository()
@@ -118,6 +129,52 @@ class FakeHistoryDownloader:
 
     def download_history(self, request: dict[str, Any]) -> None:
         self.requests.append(request)
+
+
+class FakeBarReader:
+    def __init__(self) -> None:
+        self.requests: list[dict[str, Any]] = []
+
+    def read_bars(self, request: dict[str, Any]) -> list[dict[str, Any]]:
+        self.requests.append(request)
+        return [{"symbol": "000001.SZ", "date": "2026-01-02", "close": 10.3}]
+
+
+class FakeBarWriter:
+    def __init__(self) -> None:
+        self.requests: list[dict[str, Any]] = []
+        self.files = [
+            {
+                "file_id": "file-1",
+                "kind": "daily_bars",
+                "symbol": "000001.SZ",
+                "period": "1d",
+                "adjust": "none",
+                "format": "parquet",
+                "path": "data/market/raw/bars/kind=daily_bars/period=1d/file.parquet",
+                "hash": "sha256:test",
+                "row_count": 1,
+                "coverage_start": "2026-01-02",
+                "coverage_end": "2026-01-02",
+            }
+        ]
+
+    def write_bars(
+        self,
+        request: dict[str, Any],
+        bars: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        del bars
+        self.requests.append(request)
+        return self.files
+
+
+class FakeDataFileRepository:
+    def __init__(self) -> None:
+        self.records: list[dict[str, Any]] = []
+
+    def record_file(self, file_record: dict[str, Any]) -> None:
+        self.records.append(file_record)
 
 
 class FailingHistoryDownloader:
