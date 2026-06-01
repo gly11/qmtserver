@@ -82,7 +82,8 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 - client 只提交任务、查询状态和下载结果，不直接 import `xtquant`。
 
 该方向已完成配置、依赖和 schema 骨架、持久化 job、Parquet writer、coverage planner、本地
-查询 API 以及 CSV export。后续继续推进质量检查和维护能力。
+查询 API、CSV export、质量检查和 export 维护入口。后续可以继续推进 Parquet 原始数据清理、
+压缩和索引重建。
 
 ### Subscriptions And Events
 

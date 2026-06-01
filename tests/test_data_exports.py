@@ -39,12 +39,16 @@ class DataExportServiceTests(unittest.TestCase):
                 }
             )
             manifest = response["data"]["manifest"]
+            listed = service.list_exports()
             download_path = service.download_path(str(manifest["export_id"]))
+            deleted = service.delete(str(manifest["export_id"]))
 
         self.assertTrue(response["ok"])
         self.assertEqual(manifest["row_count"], 1)
+        self.assertEqual(listed[0]["export_id"], manifest["export_id"])
         self.assertTrue(manifest["hash"].startswith("sha256:"))
         self.assertEqual(download_path.suffix, ".csv")
+        self.assertTrue(deleted)
         self.assertEqual(query.requests[0]["symbols"], ["000001.SZ"])
 
 

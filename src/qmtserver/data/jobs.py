@@ -11,6 +11,7 @@ from qmtserver.data.models import DataJobRecord, DataJobStatus
 from qmtserver.data.query import DuckDbParquetBarReader, LocalBarQuery
 from qmtserver.data.readers import XtDataBarReader
 from qmtserver.data.repository import DataJobRepository
+from qmtserver.data_quality.service import quality_response
 from qmtserver.market.adapter import XtDataMarketAdapter
 from qmtserver.market.models import MarketRequest
 
@@ -67,9 +68,13 @@ class BarQuery(Protocol):
 class ExportService(Protocol):
     def create(self, request: dict[str, Any]) -> dict[str, Any]: ...
 
+    def list_exports(self) -> list[dict[str, Any]]: ...
+
     def manifest(self, export_id: str) -> dict[str, Any]: ...
 
     def download_path(self, export_id: str) -> Any: ...
+
+    def delete(self, export_id: str) -> bool: ...
 
 
 class DataDownloadJobService:
@@ -139,6 +144,14 @@ class DataDownloadJobService:
             }
         return self.bar_query.query_bars(request)
 
+    def quality(self, request: dict[str, Any]) -> dict[str, Any]:
+        response = self.query_bars(request)
+        return quality_response(
+            response["bars"],
+            start=request.get("start") if isinstance(request.get("start"), str) else None,
+            end=request.get("end") if isinstance(request.get("end"), str) else None,
+        )
+
     def create_export(self, request: dict[str, Any]) -> dict[str, Any]:
         if self.export_service is None:
             return {
@@ -152,6 +165,11 @@ class DataDownloadJobService:
             }
         return self.export_service.create(request)
 
+    def list_exports(self) -> list[dict[str, Any]]:
+        if self.export_service is None:
+            return []
+        return self.export_service.list_exports()
+
     def export_manifest(self, export_id: str) -> dict[str, Any] | None:
         if self.export_service is None:
             return None
@@ -161,6 +179,11 @@ class DataDownloadJobService:
         if self.export_service is None:
             return None
         return self.export_service.download_path(export_id)
+
+    def delete_export(self, export_id: str) -> bool:
+        if self.export_service is None:
+            return False
+        return self.export_service.delete(export_id)
 
     def _run_download(self, job_id: str, request: dict[str, Any]) -> None:
         self.repository.mark_running(job_id)

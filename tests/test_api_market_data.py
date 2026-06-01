@@ -120,13 +120,37 @@ class ApiMarketDataTests(unittest.TestCase):
                 },
             )
             export_id = created.json()["data"]["manifest"]["export_id"]
+            listed = client.get("/v1/market/data/exports")
             manifest = client.get(f"/v1/market/data/exports/{export_id}")
             download = client.get(f"/v1/market/data/exports/{export_id}/download")
+            deleted = client.delete(f"/v1/market/data/exports/{export_id}")
 
         self.assertEqual(created.status_code, 200)
+        self.assertEqual(listed.status_code, 200)
         self.assertEqual(manifest.status_code, 200)
         self.assertEqual(download.status_code, 200)
+        self.assertEqual(deleted.status_code, 200)
         self.assertEqual(fake_jobs.export_requests[0]["symbols"], ["000001.SZ"])
+
+    def test_get_data_quality(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            response = client.get(
+                "/v1/market/data/quality"
+                "?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31"
+            )
+
+        body = response.json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["meta"]["schema"], "market.quality.v1")
+        self.assertEqual(fake_jobs.quality_requests[0]["symbols"], ["000001.SZ"])
 
 
 class FakeDataJobService:
@@ -135,6 +159,7 @@ class FakeDataJobService:
         self.requests: list[dict[str, Any]] = []
         self.coverage_requests: list[dict[str, Any]] = []
         self.query_requests: list[dict[str, Any]] = []
+        self.quality_requests: list[dict[str, Any]] = []
         self.export_requests: list[dict[str, Any]] = []
         self.exports: dict[str, dict[str, Any]] = {}
 
@@ -199,6 +224,9 @@ class FakeDataJobService:
             "meta": {},
         }
 
+    def list_exports(self) -> list[dict[str, Any]]:
+        return list(self.exports.values())
+
     def export_manifest(self, export_id: str) -> dict[str, Any] | None:
         manifest = self.exports.get(export_id)
         if manifest is None:
@@ -210,6 +238,23 @@ class FakeDataJobService:
         path.parent.mkdir(exist_ok=True)
         path.write_text("date,symbol,close\n2026-01-02,000001.SZ,10.3\n", encoding="utf-8")
         return path
+
+    def delete_export(self, export_id: str) -> bool:
+        return self.exports.pop(export_id, None) is not None
+
+    def quality(self, request: dict[str, Any]) -> dict[str, Any]:
+        self.quality_requests.append(request)
+        return {
+            "ok": True,
+            "data": {
+                "missing_dates": [],
+                "duplicate_rows": [],
+                "price_anomalies": [],
+                "volume_anomalies": [],
+            },
+            "error": None,
+            "meta": {"schema": "market.quality.v1", "row_count": 1},
+        }
 
 
 if __name__ == "__main__":

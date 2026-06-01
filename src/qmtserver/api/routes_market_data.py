@@ -68,6 +68,15 @@ def create_data_export(
         return _error(exc.code, str(exc))
 
 
+@router.get("/exports")
+def list_data_exports(request: Request) -> dict[str, Any]:
+    try:
+        service = _get_data_job_service(request)
+        return _success({"exports": service.list_exports()})
+    except QmtServerError as exc:
+        return _error(exc.code, str(exc))
+
+
 @router.get("/exports/{export_id}")
 def get_data_export(export_id: str, request: Request) -> dict[str, Any]:
     try:
@@ -90,6 +99,18 @@ def download_data_export(export_id: str, request: Request) -> FileResponse | dic
     except QmtServerError as exc:
         return _error(exc.code, str(exc))
     return FileResponse(path, media_type="text/csv", filename=path.name)
+
+
+@router.delete("/exports/{export_id}")
+def delete_data_export(export_id: str, request: Request) -> dict[str, Any]:
+    try:
+        service = _get_data_job_service(request)
+        deleted = service.delete_export(export_id)
+        if not deleted:
+            return _error(QmtSnapshotNotFoundError.code, f"data export not found: {export_id}")
+        return _success({"deleted": True, "export_id": export_id})
+    except QmtServerError as exc:
+        return _error(exc.code, str(exc))
 
 
 @router.get("/bars")
@@ -117,6 +138,34 @@ def get_data_bars(
                     limit=limit,
                 ).model_dump()
             )
+        )
+    except QmtServerError as exc:
+        return _error(exc.code, str(exc))
+
+
+@router.get("/quality")
+def get_data_quality(
+    request: Request,
+    kind: str = "daily_bars",
+    symbols: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    adjust: str = "none",
+    period: str | None = None,
+    limit: int = 10000,
+) -> dict[str, Any]:
+    try:
+        service = _get_data_job_service(request)
+        return service.quality(
+            DataBarsRequest(
+                kind=kind,
+                symbols=_symbol_list(symbols),
+                start=start,
+                end=end,
+                adjust=adjust,
+                period=period,
+                limit=limit,
+            ).model_dump()
         )
     except QmtServerError as exc:
         return _error(exc.code, str(exc))

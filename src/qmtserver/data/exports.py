@@ -57,12 +57,29 @@ class DataExportService:
             raise QmtSnapshotNotFoundError(f"data export not found: {export_id}")
         return _strip_snapshot_id(manifest)
 
+    def list_exports(self) -> list[dict[str, Any]]:
+        return [_strip_snapshot_id(manifest) for manifest in self.registry.list_manifests()]
+
     def download_path(self, export_id: str) -> Path:
         manifest = self.manifest(export_id)
         path = self.registry.data_path(export_id, str(manifest["format"]))
         if not path.exists():
             raise QmtSnapshotNotFoundError(f"data export file not found: {export_id}")
         return path
+
+    def delete(self, export_id: str) -> bool:
+        manifest = self.registry.get(export_id)
+        if manifest is None:
+            return False
+        format_name = str(manifest.get("format", "csv"))
+        data_path = self.registry.data_path(export_id, format_name)
+        manifest_path = self.registry.root / f"{export_id}.manifest.json"
+        deleted = False
+        for path in (data_path, manifest_path):
+            if path.exists():
+                path.unlink()
+                deleted = True
+        return deleted
 
 
 def _canonical_request(request: dict[str, Any]) -> dict[str, Any]:

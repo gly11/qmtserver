@@ -32,8 +32,10 @@ GET  /v1/snapshots/{snapshot_id}/download
 POST /v1/market/data/download
 GET  /v1/market/data/bars
 GET  /v1/market/data/coverage
+GET  /v1/market/data/quality
 GET  /v1/market/data/jobs/{job_id}
 POST /v1/market/data/exports
+GET  /v1/market/data/exports
 GET  /v1/market/data/exports/{export_id}
 GET  /v1/market/data/exports/{export_id}/download
 POST /v1/jobs/history-download
@@ -405,6 +407,17 @@ GET /v1/market/data/bars?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=
 该接口只读取已登记的本地 Parquet 文件。若没有匹配文件，返回 `ok=true`、`bars=[]`、
 `row_count=0`。大结果默认通过 `limit` 截断，后续批量导出应使用 export API。
 
+### GET /v1/market/data/quality
+
+基于本地 data lake bars 返回 `market.quality.v1` 质量报告：
+
+```text
+GET /v1/market/data/quality?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31
+```
+
+该接口复用 qmtserver 的保守质量检查，包括缺失日期、重复行、价格异常和成交量异常。它只读取
+本地 Parquet/DuckDB，不触发新的 MiniQMT 下载。
+
 ### POST /v1/market/data/exports
 
 从本地 data lake 生成 CSV export：
@@ -424,9 +437,13 @@ GET /v1/market/data/bars?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=
 `market.data.export.v1`。
 
 ```text
+GET /v1/market/data/exports
 GET /v1/market/data/exports/{export_id}
 GET /v1/market/data/exports/{export_id}/download
+DELETE /v1/market/data/exports/{export_id}
 ```
+
+`DELETE` 只删除 qmtserver 本地 export CSV 和 manifest，不删除 MiniQMT 缓存或 Parquet 原始数据。
 
 ### GET /v1/market/data/jobs/{job_id}
 

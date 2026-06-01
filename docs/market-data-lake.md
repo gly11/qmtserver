@@ -38,7 +38,8 @@ data/snapshots/ # 现有 snapshot/export 文件
 ```
 
 当前已经初始化配置、可选依赖检测、DuckDB schema、持久化 data download job、按 symbol
-分区的 Parquet 写入、coverage planner、本地 bars 查询 API 和 CSV export。
+分区的 Parquet 写入、coverage planner、本地 bars 查询 API、CSV export、质量检查和 export
+清理入口。
 
 ## 安装
 
@@ -97,23 +98,26 @@ GET /v1/market/data/coverage
 
 ```text
 GET /v1/market/data/bars
+GET /v1/market/data/quality
 ```
 
 创建和下载 CSV export：
 
 ```text
 POST /v1/market/data/exports
+GET /v1/market/data/exports
 GET /v1/market/data/exports/{export_id}
 GET /v1/market/data/exports/{export_id}/download
+DELETE /v1/market/data/exports/{export_id}
 ```
 
 该 worker 当前会先检查 DuckDB 中的 coverage。命中完整覆盖且未设置 `force=true` 时，job
 直接返回 cached result；未命中时触发 `xtdata.download_history_data` 补齐 MiniQMT 行情缓存，
 然后读取标准 bars，按 symbol 写入 Parquet，并把 job 状态、data file 元数据和 coverage 写入
-DuckDB。`/v1/market/data/bars` 和 export API 只读取本地 Parquet/DuckDB，不触发新的
-MiniQMT 下载。
+DuckDB。`/v1/market/data/bars`、quality 和 export API 只读取本地 Parquet/DuckDB，不触发新的
+MiniQMT 下载。删除 export 只清理本地 CSV 和 manifest，不删除 MiniQMT 缓存或 Parquet 原始数据。
 
 ## 后续阶段
 
-1. Quality And Maintenance
-   增加缺失交易日、重复行、OHLC 异常、成交量异常检查，以及清理和压缩策略。
+1. Storage Maintenance
+   后续可继续增加 Parquet 原始数据清理、压缩、重建索引和更精细的 coverage 修复策略。
