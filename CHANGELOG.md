@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.0
+
+- 增加只读 trader smoke 脚本，用于验证 account status、asset、positions、orders 和 trades
+  的服务端契约，输出脱敏账号和行数摘要。
+- 历史下载 job 改为在生成 snapshot 前逐标的调用 `xtdata.download_history_data`，提升
+  daily/intraday bars 与 snapshot 的真实 MiniQMT 可验证性。
+- 增加历史数据、snapshot、job 和质量报告的只读 smoke 脚本，支持 `--require-rows` 作为发布
+  前非空数据门禁。
+- 增加 reference/instrument detail 只读 smoke 脚本，并记录 `all_a` 股票池和 instrument 字段
+  兼容基线。
+- 记录 180 秒三标的实时行情稳定性 smoke，并为长窗口脚本增加 `--omit-events` 精简输出。
+- 更新 operations、API、adapter guide、compatibility matrix 和 release plan 文档。
+
 ## 0.5.0
 
 - 增加实时行情订阅 API：`POST /v1/market/subscriptions`、列表、详情和停止接口。

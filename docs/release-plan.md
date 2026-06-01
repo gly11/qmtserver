@@ -1,7 +1,7 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前最新已发布版本为 `0.5.0`，主题是 realtime
-market subscriptions 和 `xtquant` compatibility baseline。
+本文档记录 qmtserver 的版本节奏和发布门禁。当前待发布版本为 `0.6.0`，主题是 readonly smoke
+baseline、history download reliability 和 realtime stability verification。
 
 ## 版本节奏
 
@@ -11,6 +11,7 @@ market subscriptions 和 `xtquant` compatibility baseline。
 0.3.0  已完成  稳定行情数据、snapshot、job 和诊断接口
 0.4.0  已发布    稳定只读交易查询 API
 0.5.0  已发布    实时行情订阅和兼容矩阵基线
+0.6.0  待发布    只读实盘 smoke、历史下载可靠性和实时稳定性基线
 1.0.0  远期    稳定版本
 ```
 
@@ -120,6 +121,33 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
   和 `meta.quote_source=callback`，脚本报告 `trader_connected=false`。
 - `v0.5.0` tag 已触发 GitHub Actions 发布工作流，并发布到 PyPI。
 
+## 0.6.0
+
+状态：待发布。
+
+`0.6.0` 聚焦发布前可复跑的实盘只读验证基线，补强历史数据下载、snapshot/job 验证、reference
+字段基线和实时行情长窗口稳定性记录。
+
+范围：
+
+- 增加 `scripts/smoke_trader_readonly.py`，只调用 trader readonly GET 端点，输出脱敏摘要。
+- 增加 `scripts/smoke_market_history.py`，覆盖 history download job、daily/intraday bars、
+  snapshot manifest 和 daily quality，并支持 `--require-rows`。
+- 将 history download job 调整为先逐标的调用同步 `xtdata.download_history_data`，再生成 snapshot。
+- 增加 `scripts/smoke_reference.py`，记录 calendar、`all_a` universe 和 instrument detail 字段集合。
+- 增强 realtime subscription smoke，支持 `--omit-events`，并记录 180 秒三标的活跃行情稳定性 smoke。
+
+发布记录：
+
+- 普通测试使用 fakes，不依赖真实 MiniQMT。
+- 真实 MiniQMT smoke 只做 readonly 行情、reference、history 和 trader 查询验证，不执行下单、
+  撤单、转账或其他交易命令。
+- 2026-05-28 本地时间已完成 history/download/snapshot 非空行 smoke，`trader_connected=false`。
+- 2026-05-28 本地时间已完成 reference/instrument detail smoke，`trader_connected=false`。
+- 2026-05-28 本地时间已完成 180 秒三标的 realtime subscription smoke，收到 180 个 callback。
+- 只读 trader smoke 脚本已完成；当前本机 trader 连接返回 `connect_result=-1`，需在交易侧连接正常
+  后复测，不影响行情/history/reference 只读能力发布。
+
 ## 发布门禁
 
 发布前至少运行：
@@ -150,10 +178,13 @@ uv run qmtserver serve --userdata $userdata --account-id $account
 - token 鉴权开启。
 - 远程电脑可访问 `/v1/health`。
 - 远程客户端可调用 `status()` 和至少一个只读行情方法。
-- `0.5.0` 发布前可运行只读实时订阅 smoke：
+- `0.6.0` 发布前可运行只读 smoke：
 
 ```powershell
-uv run python scripts\smoke_market_subscription.py --symbol 000001.SZ --require-callback
+uv run python scripts\smoke_market_history.py --symbol 000001.SZ --require-rows
+uv run python scripts\smoke_reference.py --symbols 000001.SZ,600000.SH
+uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --duration-seconds 180 --min-callbacks 30 --require-all-symbols --report-intervals --omit-events
+uv run python scripts\smoke_trader_readonly.py
 ```
 
 ## 发布原则

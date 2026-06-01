@@ -82,7 +82,7 @@ Market data endpoints use the same stable envelope shape as RPC endpoints:
     "request": {},
     "row_count": 0,
     "generated_at": "2026-05-26T00:00:00+00:00",
-    "qmtserver_version": "0.5.0",
+    "qmtserver_version": "0.6.0",
     "xtquant_version": null
   }
 }
