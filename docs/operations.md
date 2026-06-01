@@ -299,8 +299,15 @@ Invoke-RestMethod -Method Post `
 GET /v1/market/data/jobs/{job_id}
 ```
 
-当前阶段该 worker 会触发 MiniQMT 行情缓存下载，随后读取标准 bars 并按 symbol 写入
-`QMT_DATA_DIR/raw/bars/.../*.parquet`，同时持久化 job 状态和 data file 元数据。
+查询覆盖范围：
+
+```text
+GET /v1/market/data/coverage?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31
+```
+
+当前阶段该 worker 会先检查本地 coverage。命中时直接返回 cached job；未命中或
+`force=true` 时触发 MiniQMT 行情缓存下载，随后读取标准 bars 并按 symbol 写入
+`QMT_DATA_DIR/raw/bars/.../*.parquet`，同时持久化 job 状态、data file 元数据和 coverage。
 
 详细规划见 [Market Data Lake](market-data-lake.md)。
 

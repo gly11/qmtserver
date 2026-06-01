@@ -18,12 +18,14 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         reader = FakeBarReader()
         writer = FakeBarWriter()
         files = FakeDataFileRepository()
+        coverage = FakeCoveragePlanner(fully_covered=False)
         service = DataDownloadJobService(
             repository,
             downloader=downloader,
             bar_reader=reader,
             file_writer=writer,
             file_repository=files,
+            coverage_planner=coverage,
             run_async=False,
         )
         request = {
@@ -51,6 +53,61 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         self.assertEqual(persisted.result["symbols"], ["000001.SZ"])
         self.assertEqual(persisted.result["file_count"], 1)
         self.assertEqual(persisted.result["row_count"], 1)
+
+    def test_submit_download_uses_cached_coverage_unless_force_is_set(self) -> None:
+        repository = FakeDataJobRepository()
+        downloader = FakeHistoryDownloader()
+        coverage = FakeCoveragePlanner(fully_covered=True)
+        service = DataDownloadJobService(
+            repository,
+            downloader=downloader,
+            coverage_planner=coverage,
+            run_async=False,
+        )
+
+        job = service.submit_download(
+            {
+                "kind": "daily_bars",
+                "symbols": ["000001.SZ"],
+                "start": "2026-01-01",
+                "end": "2026-01-31",
+                "adjust": "none",
+                "force": False,
+            }
+        )
+
+        persisted = repository.get(str(job["job_id"]))
+        self.assertIsNotNone(persisted)
+        assert persisted is not None
+        self.assertEqual(persisted.status, DataJobStatus.SUCCEEDED)
+        self.assertEqual(downloader.requests, [])
+        self.assertIsNotNone(persisted.result)
+        assert persisted.result is not None
+        self.assertTrue(persisted.result["cached"])
+        self.assertEqual(persisted.result["storage"], "qmtserver_data_lake")
+
+    def test_submit_download_force_bypasses_cached_coverage(self) -> None:
+        repository = FakeDataJobRepository()
+        downloader = FakeHistoryDownloader()
+        coverage = FakeCoveragePlanner(fully_covered=True)
+        service = DataDownloadJobService(
+            repository,
+            downloader=downloader,
+            coverage_planner=coverage,
+            run_async=False,
+        )
+        request = {
+            "kind": "daily_bars",
+            "symbols": ["000001.SZ"],
+            "start": "2026-01-01",
+            "end": "2026-01-31",
+            "adjust": "none",
+            "force": True,
+        }
+
+        service.submit_download(request)
+
+        self.assertEqual(downloader.requests, [request])
 
     def test_submit_download_marks_job_failed_when_downloader_raises(self) -> None:
         repository = FakeDataJobRepository()
@@ -96,6 +153,54 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         self.assertEqual(fetched.request["symbols"], ["000001.SZ"])
         self.assertEqual(fetched.result, {"downloaded": True})
         self.assertIn("INSERT INTO data_jobs", backend.connection.executed[0][0])
+
+    def test_duckdb_repository_records_file_and_lists_coverage(self) -> None:
+        backend = FakeDuckDbBackend()
+        repository = DataJobRepository(backend)
+        backend.connection.rows = [
+            (
+                "daily_bars:000001.SZ:1d:none",
+                "daily_bars",
+                "000001.SZ",
+                "1d",
+                "none",
+                "2026-01-01",
+                "2026-01-31",
+                20,
+                1,
+                "2026-06-02T01:00:00+00:00",
+            )
+        ]
+
+        repository.record_file(
+            {
+                "file_id": "file-1",
+                "job_id": "job-1",
+                "kind": "daily_bars",
+                "symbol": "000001.SZ",
+                "period": "1d",
+                "adjust": "none",
+                "format": "parquet",
+                "path": "data/market/raw/file.parquet",
+                "hash": "sha256:test",
+                "row_count": 20,
+                "coverage_start": "2026-01-01",
+                "coverage_end": "2026-01-31",
+            }
+        )
+        coverage = repository.list_coverage(
+            {
+                "kind": "daily_bars",
+                "symbols": ["000001.SZ"],
+                "adjust": "none",
+            }
+        )
+
+        executed_sql = "\n".join(sql for sql, _ in backend.connection.executed)
+        self.assertIn("INSERT INTO data_files", executed_sql)
+        self.assertIn("INSERT INTO data_coverage", executed_sql)
+        self.assertEqual(coverage[0]["symbol"], "000001.SZ")
+        self.assertEqual(coverage[0]["coverage_end"], "2026-01-31")
 
 
 class FakeDataJobRepository:
@@ -177,6 +282,29 @@ class FakeDataFileRepository:
         self.records.append(file_record)
 
 
+class FakeCoveragePlanner:
+    def __init__(self, *, fully_covered: bool) -> None:
+        self.result = {
+            "schema": "market.data.coverage.v1",
+            "fully_covered": fully_covered,
+            "coverage": [
+                {
+                    "symbol": "000001.SZ",
+                    "coverage_start": "2026-01-01",
+                    "coverage_end": "2026-01-31",
+                    "row_count": 20,
+                    "file_count": 1,
+                }
+            ],
+            "missing_symbols": [] if fully_covered else ["000001.SZ"],
+        }
+        self.requests: list[dict[str, Any]] = []
+
+    def coverage(self, request: dict[str, Any]) -> dict[str, Any]:
+        self.requests.append(request)
+        return self.result
+
+
 class FailingHistoryDownloader:
     def download_history(self, request: dict[str, Any]) -> None:
         del request
@@ -199,6 +327,7 @@ class FakeDuckDbConnection:
     def __init__(self) -> None:
         self.executed: list[tuple[str, tuple[Any, ...]]] = []
         self.row: tuple[Any, ...] | None = None
+        self.rows: list[tuple[Any, ...]] = []
 
     def execute(
         self,
@@ -210,6 +339,9 @@ class FakeDuckDbConnection:
 
     def fetchone(self) -> tuple[Any, ...] | None:
         return self.row
+
+    def fetchall(self) -> list[tuple[Any, ...]]:
+        return self.rows
 
     def close(self) -> None:
         return None

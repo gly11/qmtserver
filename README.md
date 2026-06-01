@@ -114,6 +114,7 @@ POST /v1/market/subscriptions/{subscription_id}/recover
 POST /v1/snapshots
 POST /v1/jobs/history-download
 POST /v1/market/data/download
+GET  /v1/market/data/coverage
 GET  /v1/market/data/jobs/{job_id}
 GET  /v1/diagnostics
 GET  /v1/reference/calendar

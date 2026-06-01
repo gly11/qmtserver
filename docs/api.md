@@ -30,6 +30,7 @@ GET  /v1/snapshots
 GET  /v1/snapshots/{snapshot_id}/manifest
 GET  /v1/snapshots/{snapshot_id}/download
 POST /v1/market/data/download
+GET  /v1/market/data/coverage
 GET  /v1/market/data/jobs/{job_id}
 POST /v1/jobs/history-download
 GET  /v1/jobs/{job_id}
@@ -354,9 +355,10 @@ format，以及 intraday 请求的 period。
 
 ## Market Data Lake API
 
-`/v1/market/data` 是后续高性能行情数据缓存的 server 端入口。当前阶段提供持久化下载 job：
-任务写入 DuckDB 元数据，worker 先触发只读 `xtdata.download_history_data` 补齐 MiniQMT
-行情缓存，再读取标准 bars 并按 symbol 写入 qmtserver Parquet 文件。本地查询会在后续阶段接入。
+`/v1/market/data` 是后续高性能行情数据缓存的 server 端入口。当前阶段提供持久化下载 job、
+coverage 查询和缓存命中判断：任务写入 DuckDB 元数据，worker 先检查本地覆盖范围；未命中时
+触发只读 `xtdata.download_history_data` 补齐 MiniQMT 行情缓存，再读取标准 bars 并按 symbol
+写入 qmtserver Parquet 文件。本地查询会在后续阶段接入。
 
 ### POST /v1/market/data/download
 
@@ -373,6 +375,19 @@ format，以及 intraday 请求的 period。
 
 如果未安装 `qmtserver[data]`，返回 `DATA_BACKEND_UNAVAILABLE`。该接口不连接 trader，
 也不执行任何交易命令。
+
+当 `force=false` 且本地 coverage 已完整覆盖请求的 symbol/date range 时，job 会直接标记成功，
+结果中 `cached=true`、`downloaded=false`，不会调用 `xtdata.download_history_data`。
+
+### GET /v1/market/data/coverage
+
+查询本地 Parquet 数据覆盖范围：
+
+```text
+GET /v1/market/data/coverage?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31&adjust=none
+```
+
+响应使用 `market.data.coverage.v1`，包含 `fully_covered`、`coverage` 和 `missing_symbols`。
 
 ### GET /v1/market/data/jobs/{job_id}
 

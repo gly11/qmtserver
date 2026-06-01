@@ -1,28 +1,25 @@
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from enum import StrEnum
 from threading import Thread
 from typing import Any, Protocol
-from uuid import uuid4
 
-from qmtserver import __version__
 from qmtserver.data.backend import DuckDbDataBackend
+from qmtserver.data.coverage import CoveragePlanner
 from qmtserver.data.files import ParquetBarWriter
+from qmtserver.data.models import DataJobRecord, DataJobStatus
 from qmtserver.data.readers import XtDataBarReader
+from qmtserver.data.repository import DataJobRepository
 from qmtserver.market.adapter import XtDataMarketAdapter
 from qmtserver.market.models import MarketRequest
-from qmtserver.miniqmt import check_xtquant_import
 
-
-class DataJobStatus(StrEnum):
-    QUEUED = "queued"
-    RUNNING = "running"
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
+__all__ = [
+    "DataDownloadJobService",
+    "DataJobRecord",
+    "DataJobRepository",
+    "DataJobStatus",
+    "XtDataHistoryDownloader",
+    "create_data_job_service",
+]
 
 
 class DataJobRepositoryProtocol(Protocol):
@@ -41,6 +38,10 @@ class DataFileRepositoryProtocol(Protocol):
     def record_file(self, file_record: dict[str, Any]) -> None: ...
 
 
+class CoveragePlannerProtocol(Protocol):
+    def coverage(self, request: dict[str, Any]) -> dict[str, Any]: ...
+
+
 class HistoryDownloader(Protocol):
     def download_history(self, request: dict[str, Any]) -> None: ...
 
@@ -57,167 +58,6 @@ class BarWriter(Protocol):
     ) -> list[dict[str, Any]]: ...
 
 
-class DuckDbBackendProtocol(Protocol):
-    database_path: Any
-
-    def connect(self, path: str) -> Any: ...
-
-
-def _now() -> str:
-    return datetime.now(UTC).isoformat()
-
-
-@dataclass
-class DataJobRecord:
-    job_type: str
-    request: dict[str, Any]
-    job_id: str = field(default_factory=lambda: str(uuid4()))
-    status: DataJobStatus = DataJobStatus.QUEUED
-    created_at: str = field(default_factory=_now)
-    started_at: str | None = None
-    finished_at: str | None = None
-    result: dict[str, Any] | None = None
-    error: dict[str, str] | None = None
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "job_id": self.job_id,
-            "kind": self.job_type,
-            "status": self.status.value,
-            "request": self.request,
-            "created_at": self.created_at,
-            "started_at": self.started_at,
-            "finished_at": self.finished_at,
-            "result": self.result,
-            "error": self.error,
-        }
-
-
-class DataJobRepository:
-    def __init__(self, backend: DuckDbBackendProtocol) -> None:
-        self.backend = backend
-
-    def create(self, job_type: str, request: dict[str, Any]) -> DataJobRecord:
-        job = DataJobRecord(job_type=job_type, request=request)
-        self._execute(
-            """
-            INSERT INTO data_jobs (
-                job_id, job_type, status, request_json, result_json, error_code, error_message,
-                created_at, started_at, finished_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                job.job_id,
-                job.job_type,
-                job.status.value,
-                json.dumps(job.request, ensure_ascii=False, sort_keys=True),
-                None,
-                None,
-                None,
-                job.created_at,
-                None,
-                None,
-            ),
-        )
-        return job
-
-    def get(self, job_id: str) -> DataJobRecord | None:
-        connection = self.backend.connect(str(self.backend.database_path))
-        try:
-            cursor = connection.execute(
-                """
-                SELECT job_id, job_type, status, request_json, result_json, error_code,
-                       error_message, created_at, started_at, finished_at
-                FROM data_jobs
-                WHERE job_id = ?
-                """,
-                (job_id,),
-            )
-            row = cursor.fetchone()
-            if row is None:
-                return None
-            return _record_from_row(row)
-        finally:
-            connection.close()
-
-    def mark_running(self, job_id: str) -> None:
-        self._execute(
-            "UPDATE data_jobs SET status = ?, started_at = ? WHERE job_id = ?",
-            (DataJobStatus.RUNNING.value, _now(), job_id),
-        )
-
-    def mark_succeeded(self, job_id: str, result: dict[str, Any]) -> None:
-        self._execute(
-            """
-            UPDATE data_jobs
-            SET status = ?, result_json = ?, error_code = NULL, error_message = NULL,
-                finished_at = ?
-            WHERE job_id = ?
-            """,
-            (
-                DataJobStatus.SUCCEEDED.value,
-                json.dumps(result, ensure_ascii=False, sort_keys=True),
-                _now(),
-                job_id,
-            ),
-        )
-
-    def mark_failed(self, job_id: str, error: dict[str, str]) -> None:
-        self._execute(
-            """
-            UPDATE data_jobs
-            SET status = ?, error_code = ?, error_message = ?, finished_at = ?
-            WHERE job_id = ?
-            """,
-            (
-                DataJobStatus.FAILED.value,
-                error.get("code", "DATA_DOWNLOAD_FAILED"),
-                error.get("message", "data download failed"),
-                _now(),
-                job_id,
-            ),
-        )
-
-    def record_file(self, file_record: dict[str, Any]) -> None:
-        xtquant = check_xtquant_import()
-        self._execute(
-            """
-            INSERT INTO data_files (
-                file_id, job_id, kind, symbol, period, adjust, format, path, hash, row_count,
-                coverage_start, coverage_end, schema_version, qmtserver_version, xtquant_version,
-                created_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                file_record["file_id"],
-                file_record.get("job_id"),
-                file_record["kind"],
-                file_record["symbol"],
-                file_record["period"],
-                file_record["adjust"],
-                file_record["format"],
-                file_record["path"],
-                file_record["hash"],
-                file_record["row_count"],
-                file_record.get("coverage_start"),
-                file_record.get("coverage_end"),
-                file_record.get("schema_version", "market.data.file.v1"),
-                __version__,
-                xtquant.get("version") if xtquant["ok"] else None,
-                _now(),
-            ),
-        )
-
-    def _execute(self, sql: str, parameters: tuple[Any, ...]) -> Any:
-        connection = self.backend.connect(str(self.backend.database_path))
-        try:
-            return connection.execute(sql, parameters)
-        finally:
-            connection.close()
-
-
 class DataDownloadJobService:
     def __init__(
         self,
@@ -227,6 +67,7 @@ class DataDownloadJobService:
         bar_reader: BarReader | None = None,
         file_writer: BarWriter | None = None,
         file_repository: DataFileRepositoryProtocol | None = None,
+        coverage_planner: CoveragePlannerProtocol | None = None,
         run_async: bool = True,
     ) -> None:
         self.repository = repository
@@ -234,11 +75,16 @@ class DataDownloadJobService:
         self.bar_reader = bar_reader
         self.file_writer = file_writer
         self.file_repository = file_repository
+        self.coverage_planner = coverage_planner
         self.run_async = run_async
 
     def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
         job = self.repository.create("market_data_download", request)
         initial = job.as_dict()
+        if self._is_cached(request):
+            coverage = self.coverage_planner.coverage(request) if self.coverage_planner else {}
+            self.repository.mark_succeeded(job.job_id, _cached_result(request, coverage))
+            return initial
         if self.run_async:
             worker = Thread(target=self._run_download, args=(job.job_id, request), daemon=True)
             worker.start()
@@ -251,6 +97,17 @@ class DataDownloadJobService:
         if job is None:
             return None
         return job.as_dict()
+
+    def coverage(self, request: dict[str, Any]) -> dict[str, Any]:
+        if self.coverage_planner is None:
+            return {
+                "schema": "market.data.coverage.v1",
+                "request": request,
+                "fully_covered": False,
+                "coverage": [],
+                "missing_symbols": [str(symbol) for symbol in request.get("symbols", [])],
+            }
+        return self.coverage_planner.coverage(request)
 
     def _run_download(self, job_id: str, request: dict[str, Any]) -> None:
         self.repository.mark_running(job_id)
@@ -274,6 +131,11 @@ class DataDownloadJobService:
             if self.file_repository is not None:
                 self.file_repository.record_file(file_record)
         return files
+
+    def _is_cached(self, request: dict[str, Any]) -> bool:
+        if request.get("force") or self.coverage_planner is None:
+            return False
+        return bool(self.coverage_planner.coverage(request).get("fully_covered"))
 
 
 class XtDataHistoryDownloader:
@@ -313,6 +175,7 @@ def create_data_job_service(
         bar_reader=XtDataBarReader(qmt_service),
         file_writer=ParquetBarWriter(backend.data_dir),
         file_repository=repository,
+        coverage_planner=CoveragePlanner(repository),
         run_async=run_async,
     )
 
@@ -325,7 +188,7 @@ def _download_result(request: dict[str, Any], files: list[dict[str, Any]]) -> di
         "downloaded": True,
         "symbols": symbols if isinstance(symbols, list) else [],
         "kind": request.get("kind"),
-        "period": "1d" if request.get("kind") == "daily_bars" else request.get("period"),
+        "period": _period(request),
         "storage": "qmtserver_data_lake" if files else "miniqmt_cache",
         "file_count": len(files),
         "row_count": row_count,
@@ -334,18 +197,27 @@ def _download_result(request: dict[str, Any], files: list[dict[str, Any]]) -> di
     }
 
 
-def _record_from_row(row: tuple[Any, ...]) -> DataJobRecord:
-    error = None
-    if row[5] or row[6]:
-        error = {"code": str(row[5]), "message": str(row[6])}
-    return DataJobRecord(
-        job_id=str(row[0]),
-        job_type=str(row[1]),
-        status=DataJobStatus(str(row[2])),
-        request=json.loads(str(row[3])),
-        result=json.loads(str(row[4])) if row[4] else None,
-        error=error,
-        created_at=str(row[7]),
-        started_at=str(row[8]) if row[8] else None,
-        finished_at=str(row[9]) if row[9] else None,
-    )
+def _cached_result(request: dict[str, Any], coverage: dict[str, Any]) -> dict[str, Any]:
+    rows = coverage.get("coverage", [])
+    row_count = sum(int(row.get("row_count", 0)) for row in rows if isinstance(row, dict))
+    file_count = sum(int(row.get("file_count", 0)) for row in rows if isinstance(row, dict))
+    return {
+        "schema": "market.data.download.v1",
+        "downloaded": False,
+        "cached": True,
+        "symbols": [str(symbol) for symbol in request.get("symbols", [])],
+        "kind": request.get("kind"),
+        "period": _period(request),
+        "storage": "qmtserver_data_lake",
+        "file_count": file_count,
+        "row_count": row_count,
+        "coverage": coverage,
+        "files": [],
+        "next_step": None,
+    }
+
+
+def _period(request: dict[str, Any]) -> str:
+    if request.get("kind") == "daily_bars":
+        return "1d"
+    return str(request.get("period") or "unknown")

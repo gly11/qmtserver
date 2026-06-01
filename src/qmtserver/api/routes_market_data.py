@@ -24,6 +24,15 @@ class DataDownloadRequest(BaseModel):
     force: bool = False
 
 
+class DataCoverageRequest(BaseModel):
+    kind: str = "daily_bars"
+    symbols: list[str] = Field(default_factory=list)
+    start: str | None = None
+    end: str | None = None
+    adjust: str = "none"
+    period: str | None = None
+
+
 @router.post("/download")
 def create_data_download(
     payload: DataDownloadRequest,
@@ -33,6 +42,33 @@ def create_data_download(
         service = _get_data_job_service(request)
         job = service.submit_download(payload.model_dump())
         return _success({"job": job})
+    except QmtServerError as exc:
+        return _error(exc.code, str(exc))
+
+
+@router.get("/coverage")
+def get_data_coverage(
+    request: Request,
+    kind: str = "daily_bars",
+    symbols: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    adjust: str = "none",
+    period: str | None = None,
+) -> dict[str, Any]:
+    try:
+        service = _get_data_job_service(request)
+        coverage = service.coverage(
+            DataCoverageRequest(
+                kind=kind,
+                symbols=_symbol_list(symbols),
+                start=start,
+                end=end,
+                adjust=adjust,
+                period=period,
+            ).model_dump()
+        )
+        return _success({"coverage": coverage})
     except QmtServerError as exc:
         return _error(exc.code, str(exc))
 
@@ -63,3 +99,9 @@ def _success(data: Any) -> dict[str, Any]:
 
 def _error(code: str, message: str) -> dict[str, Any]:
     return {"ok": False, "data": None, "error": {"code": code, "message": message}, "meta": {}}
+
+
+def _symbol_list(symbols: str | None) -> list[str]:
+    if symbols is None:
+        return []
+    return [item.strip() for item in symbols.split(",") if item.strip()]

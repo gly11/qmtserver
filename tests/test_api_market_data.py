@@ -57,11 +57,32 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertFalse(body["ok"])
         self.assertEqual(body["error"]["code"], "JOB_NOT_FOUND")
 
+    def test_get_data_coverage(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            response = client.get(
+                "/v1/market/data/coverage"
+                "?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31"
+            )
+
+        body = response.json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["data"]["coverage"]["schema"], "market.data.coverage.v1")
+        self.assertEqual(fake_jobs.coverage_requests[0]["symbols"], ["000001.SZ"])
+
 
 class FakeDataJobService:
     def __init__(self) -> None:
         self.jobs: dict[str, DataJobRecord] = {}
         self.requests: list[dict[str, Any]] = []
+        self.coverage_requests: list[dict[str, Any]] = []
 
     def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
         self.requests.append(request)
@@ -79,6 +100,23 @@ class FakeDataJobService:
         if job is None:
             return None
         return job.as_dict()
+
+    def coverage(self, request: dict[str, Any]) -> dict[str, Any]:
+        self.coverage_requests.append(request)
+        return {
+            "schema": "market.data.coverage.v1",
+            "fully_covered": True,
+            "coverage": [
+                {
+                    "symbol": "000001.SZ",
+                    "coverage_start": "2026-01-01",
+                    "coverage_end": "2026-01-31",
+                    "row_count": 20,
+                    "file_count": 1,
+                }
+            ],
+            "missing_symbols": [],
+        }
 
 
 if __name__ == "__main__":
