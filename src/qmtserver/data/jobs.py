@@ -5,6 +5,7 @@ from typing import Any, Protocol
 
 from qmtserver.data.backend import DuckDbDataBackend
 from qmtserver.data.coverage import CoveragePlanner
+from qmtserver.data.exports import DataExportService
 from qmtserver.data.files import ParquetBarWriter
 from qmtserver.data.models import DataJobRecord, DataJobStatus
 from qmtserver.data.query import DuckDbParquetBarReader, LocalBarQuery
@@ -63,6 +64,14 @@ class BarQuery(Protocol):
     def query_bars(self, request: dict[str, Any]) -> dict[str, Any]: ...
 
 
+class ExportService(Protocol):
+    def create(self, request: dict[str, Any]) -> dict[str, Any]: ...
+
+    def manifest(self, export_id: str) -> dict[str, Any]: ...
+
+    def download_path(self, export_id: str) -> Any: ...
+
+
 class DataDownloadJobService:
     def __init__(
         self,
@@ -74,6 +83,7 @@ class DataDownloadJobService:
         file_repository: DataFileRepositoryProtocol | None = None,
         coverage_planner: CoveragePlannerProtocol | None = None,
         bar_query: BarQuery | None = None,
+        export_service: ExportService | None = None,
         run_async: bool = True,
     ) -> None:
         self.repository = repository
@@ -83,6 +93,7 @@ class DataDownloadJobService:
         self.file_repository = file_repository
         self.coverage_planner = coverage_planner
         self.bar_query = bar_query
+        self.export_service = export_service
         self.run_async = run_async
 
     def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -127,6 +138,29 @@ class DataDownloadJobService:
                 "truncated": False,
             }
         return self.bar_query.query_bars(request)
+
+    def create_export(self, request: dict[str, Any]) -> dict[str, Any]:
+        if self.export_service is None:
+            return {
+                "ok": False,
+                "data": None,
+                "error": {
+                    "code": "DATA_EXPORT_UNAVAILABLE",
+                    "message": "data export is unavailable",
+                },
+                "meta": {},
+            }
+        return self.export_service.create(request)
+
+    def export_manifest(self, export_id: str) -> dict[str, Any] | None:
+        if self.export_service is None:
+            return None
+        return self.export_service.manifest(export_id)
+
+    def export_path(self, export_id: str) -> Any:
+        if self.export_service is None:
+            return None
+        return self.export_service.download_path(export_id)
 
     def _run_download(self, job_id: str, request: dict[str, Any]) -> None:
         self.repository.mark_running(job_id)
@@ -188,6 +222,7 @@ def create_data_job_service(
 ) -> DataDownloadJobService:
     backend.initialize()
     repository = DataJobRepository(backend)
+    query = LocalBarQuery(repository, reader=DuckDbParquetBarReader(backend))
     return DataDownloadJobService(
         repository,
         downloader=XtDataHistoryDownloader(qmt_service),
@@ -195,7 +230,8 @@ def create_data_job_service(
         file_writer=ParquetBarWriter(backend.data_dir),
         file_repository=repository,
         coverage_planner=CoveragePlanner(repository),
-        bar_query=LocalBarQuery(repository, reader=DuckDbParquetBarReader(backend)),
+        bar_query=query,
+        export_service=DataExportService(query, root=backend.data_dir / "exports"),
         run_async=run_async,
     )
 

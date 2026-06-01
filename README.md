@@ -117,6 +117,8 @@ POST /v1/market/data/download
 GET  /v1/market/data/bars
 GET  /v1/market/data/coverage
 GET  /v1/market/data/jobs/{job_id}
+POST /v1/market/data/exports
+GET  /v1/market/data/exports/{export_id}/download
 GET  /v1/diagnostics
 GET  /v1/reference/calendar
 GET  /v1/market/bars/daily/quality

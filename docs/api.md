@@ -33,6 +33,9 @@ POST /v1/market/data/download
 GET  /v1/market/data/bars
 GET  /v1/market/data/coverage
 GET  /v1/market/data/jobs/{job_id}
+POST /v1/market/data/exports
+GET  /v1/market/data/exports/{export_id}
+GET  /v1/market/data/exports/{export_id}/download
 POST /v1/jobs/history-download
 GET  /v1/jobs/{job_id}
 GET  /v1/jobs/{job_id}/result
@@ -401,6 +404,29 @@ GET /v1/market/data/bars?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=
 
 该接口只读取已登记的本地 Parquet 文件。若没有匹配文件，返回 `ok=true`、`bars=[]`、
 `row_count=0`。大结果默认通过 `limit` 截断，后续批量导出应使用 export API。
+
+### POST /v1/market/data/exports
+
+从本地 data lake 生成 CSV export：
+
+```json
+{
+  "kind": "daily_bars",
+  "symbols": ["000001.SZ"],
+  "start": "2026-01-01",
+  "end": "2026-01-31",
+  "adjust": "none",
+  "format": "csv"
+}
+```
+
+该接口只读取本地 Parquet/DuckDB，不触发新的 MiniQMT 下载。响应 manifest 使用
+`market.data.export.v1`。
+
+```text
+GET /v1/market/data/exports/{export_id}
+GET /v1/market/data/exports/{export_id}/download
+```
 
 ### GET /v1/market/data/jobs/{job_id}
 

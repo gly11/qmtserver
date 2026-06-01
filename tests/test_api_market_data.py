@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -98,6 +99,35 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertEqual(body["data"]["bars"][0]["symbol"], "000001.SZ")
         self.assertEqual(fake_jobs.query_requests[0]["symbols"], ["000001.SZ"])
 
+    def test_create_get_and_download_data_export(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            created = client.post(
+                "/v1/market/data/exports",
+                json={
+                    "kind": "daily_bars",
+                    "symbols": ["000001.SZ"],
+                    "start": "2026-01-01",
+                    "end": "2026-01-31",
+                    "format": "csv",
+                },
+            )
+            export_id = created.json()["data"]["manifest"]["export_id"]
+            manifest = client.get(f"/v1/market/data/exports/{export_id}")
+            download = client.get(f"/v1/market/data/exports/{export_id}/download")
+
+        self.assertEqual(created.status_code, 200)
+        self.assertEqual(manifest.status_code, 200)
+        self.assertEqual(download.status_code, 200)
+        self.assertEqual(fake_jobs.export_requests[0]["symbols"], ["000001.SZ"])
+
 
 class FakeDataJobService:
     def __init__(self) -> None:
@@ -105,6 +135,8 @@ class FakeDataJobService:
         self.requests: list[dict[str, Any]] = []
         self.coverage_requests: list[dict[str, Any]] = []
         self.query_requests: list[dict[str, Any]] = []
+        self.export_requests: list[dict[str, Any]] = []
+        self.exports: dict[str, dict[str, Any]] = {}
 
     def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
         self.requests.append(request)
@@ -149,6 +181,35 @@ class FakeDataJobService:
             "row_count": 1,
             "truncated": False,
         }
+
+    def create_export(self, request: dict[str, Any]) -> dict[str, Any]:
+        self.export_requests.append(request)
+        manifest = {
+            "export_id": "export-test",
+            "format": "csv",
+            "request": request,
+            "row_count": 1,
+            "hash": "sha256:test",
+        }
+        self.exports["export-test"] = manifest
+        return {
+            "ok": True,
+            "data": {"manifest": manifest, "cached": False},
+            "error": None,
+            "meta": {},
+        }
+
+    def export_manifest(self, export_id: str) -> dict[str, Any] | None:
+        manifest = self.exports.get(export_id)
+        if manifest is None:
+            return None
+        return manifest
+
+    def export_path(self, export_id: str) -> Path:
+        path = Path("data") / f"{export_id}.csv"
+        path.parent.mkdir(exist_ok=True)
+        path.write_text("date,symbol,close\n2026-01-02,000001.SZ,10.3\n", encoding="utf-8")
+        return path
 
 
 if __name__ == "__main__":

@@ -3,12 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from qmtserver.api.dependencies import get_qmt_service
 from qmtserver.data.backend import create_data_backend
 from qmtserver.data.jobs import create_data_job_service
-from qmtserver.errors import QmtJobNotFoundError, QmtServerError
+from qmtserver.errors import QmtJobNotFoundError, QmtServerError, QmtSnapshotNotFoundError
 
 router = APIRouter(prefix="/market/data", tags=["market-data"])
 
@@ -37,6 +38,11 @@ class DataBarsRequest(DataCoverageRequest):
     limit: int = Field(default=1000, ge=1, le=10000)
 
 
+class DataExportRequest(DataCoverageRequest):
+    format: str = "csv"
+    limit: int = Field(default=10000, ge=1, le=1000000)
+
+
 @router.post("/download")
 def create_data_download(
     payload: DataDownloadRequest,
@@ -48,6 +54,42 @@ def create_data_download(
         return _success({"job": job})
     except QmtServerError as exc:
         return _error(exc.code, str(exc))
+
+
+@router.post("/exports")
+def create_data_export(
+    payload: DataExportRequest,
+    request: Request,
+) -> dict[str, Any]:
+    try:
+        service = _get_data_job_service(request)
+        return service.create_export(payload.model_dump())
+    except QmtServerError as exc:
+        return _error(exc.code, str(exc))
+
+
+@router.get("/exports/{export_id}")
+def get_data_export(export_id: str, request: Request) -> dict[str, Any]:
+    try:
+        service = _get_data_job_service(request)
+        manifest = service.export_manifest(export_id)
+        if manifest is None:
+            return _error(QmtSnapshotNotFoundError.code, f"data export not found: {export_id}")
+        return _success({"manifest": manifest})
+    except QmtServerError as exc:
+        return _error(exc.code, str(exc))
+
+
+@router.get("/exports/{export_id}/download", response_model=None)
+def download_data_export(export_id: str, request: Request) -> FileResponse | dict[str, Any]:
+    try:
+        service = _get_data_job_service(request)
+        path = service.export_path(export_id)
+        if path is None:
+            return _error(QmtSnapshotNotFoundError.code, f"data export not found: {export_id}")
+    except QmtServerError as exc:
+        return _error(exc.code, str(exc))
+    return FileResponse(path, media_type="text/csv", filename=path.name)
 
 
 @router.get("/bars")

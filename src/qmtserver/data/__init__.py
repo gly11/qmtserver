@@ -5,6 +5,7 @@ from qmtserver.data.backend import (
     create_data_backend,
 )
 from qmtserver.data.coverage import CoveragePlanner
+from qmtserver.data.exports import DataExportService
 from qmtserver.data.jobs import DataDownloadJobService, DataJobRecord, DataJobStatus
 from qmtserver.data.query import LocalBarQuery
 
@@ -12,6 +13,7 @@ __all__ = [
     "CoveragePlanner",
     "DataBackendDependencyStatus",
     "DataDownloadJobService",
+    "DataExportService",
     "DataJobRecord",
     "DataJobStatus",
     "DuckDbDataBackend",
