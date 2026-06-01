@@ -32,6 +32,7 @@ qmtserver 当前已经具备一个安全优先的本地网关基础：
 - 订单、成交和事件内存缓存。
 - 内置 Python 兼容客户端；独立客户端能力由 qmtclient 项目承接。
 - 日志、metrics、request ID 和 Windows helper scripts。
+- trader 只读诊断、runtime health summary 和手动行情订阅恢复基线。
 - 稳定行情 API、daily/intraday bars schema、snapshot/export、history job、diagnostics、
   reference 和 data quality endpoints。
 - 稳定只读交易查询 API：account status、asset、positions、orders 和 trades。
@@ -74,7 +75,7 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 
 - `xtdata.subscribe_quote` 适配。
 - 实时行情事件标准化。
-- 断线重连后的重订阅。
+- 断线重连后的手动恢复和后续自动重订阅策略。
 - WebSocket backpressure 和事件缓存策略。
 - 订阅生命周期管理 API。
 

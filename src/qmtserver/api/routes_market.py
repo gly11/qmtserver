@@ -134,6 +134,17 @@ def stop_subscription(
         return _error(exc)
 
 
+@router.post("/subscriptions/{subscription_id}/recover")
+def recover_subscription(
+    subscription_id: str,
+    service: MarketSubscriptionServiceDep,
+) -> dict[str, Any]:
+    try:
+        return _success(service.recover(subscription_id).as_dict())
+    except QmtServerError as exc:
+        return _error(exc)
+
+
 @router.get("/quotes/latest")
 def latest_quotes(
     service: MarketSubscriptionServiceDep,

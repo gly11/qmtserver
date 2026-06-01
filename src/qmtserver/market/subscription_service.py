@@ -159,6 +159,40 @@ class MarketSubscriptionService:
         self._publish_subscription(stopped)
         return stopped
 
+    def recover(self, subscription_id: str) -> MarketSubscription:
+        subscription = self.get(subscription_id)
+        if subscription.status == "active":
+            self.adapter.unsubscribe(subscription.upstream_id)
+        try:
+            upstream_id = self.adapter.subscribe(
+                symbols=subscription.symbols,
+                period=subscription.period,
+                callback=lambda payload: self.handle_quote(subscription_id, payload),
+            )
+        except Exception as exc:
+            degraded = self._set_status(
+                subscription_id,
+                "degraded",
+                last_error=f"{type(exc).__name__}: {exc}",
+            )
+            self._diagnostics[subscription_id] = _empty_diagnostics(degraded)
+            self._publish_subscription(degraded)
+            return degraded
+        recovered = self._set_status(
+            subscription_id,
+            "active",
+            upstream_id=upstream_id,
+            last_error=None,
+        )
+        self._diagnostics[subscription_id] = _empty_diagnostics(recovered)
+        self._publish_subscription(recovered)
+        self.event_bus.publish_threadsafe(
+            "market_subscription_recovered",
+            recovered.as_dict(),
+            {"subscription_id": subscription_id, "source": "qmtserver"},
+        )
+        return recovered
+
     def handle_quote(self, subscription_id: str, payload: dict[str, Any]) -> None:
         subscription = self.get(subscription_id)
         if subscription.status not in {"starting", "active"}:

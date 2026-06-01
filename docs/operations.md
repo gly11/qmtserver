@@ -87,6 +87,7 @@ POST /v1/market/subscriptions
 GET /v1/market/subscriptions
 GET /v1/market/quotes/latest
 GET /v1/market/subscriptions/{subscription_id}/diagnostics
+POST /v1/market/subscriptions/{subscription_id}/recover
 GET /v1/diagnostics
 GET /v1/reference/calendar
 GET /v1/rpc/methods
@@ -173,8 +174,17 @@ curl "http://127.0.0.1:8000/v1/events/recent?types=market_quote&symbols=000001.S
 recent events 是短期内存事件回放；当前行情状态优先使用 `/v1/market/quotes/latest`。
 
 如果订阅状态为 `degraded`，先查看
-`/v1/market/subscriptions/{subscription_id}/diagnostics` 中的 `degraded_reason`。当前可靠性
-基线只记录 degraded 状态，不自动重连或重订阅。
+`/v1/market/subscriptions/{subscription_id}/diagnostics` 中的 `degraded_reason`。如果 MiniQMT
+行情源已经恢复，或 `/v1/diagnostics` 报告 `subscription_callback_stale`，可以手动重建同一个
+本地订阅：
+
+```powershell
+curl -X POST "http://127.0.0.1:8000/v1/market/subscriptions/{subscription_id}/recover"
+```
+
+recover 会复用原来的 symbols 和 period，保留同一个 `subscription_id`，重置该订阅的
+diagnostics 计数，并发布 `market_subscription_recovered` 事件。它只恢复行情订阅，不连接
+trader，也不会执行下单、撤单或转账命令。当前可靠性基线不做自动重连或自动重订阅。
 
 ## Snapshot 数据目录
 

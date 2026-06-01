@@ -18,6 +18,7 @@ WS   /v1/ws/events?types=market_quote,market_subscription
 GET  /v1/market/quotes/latest?symbols=000001.SZ
 GET  /v1/market/subscriptions/{subscription_id}/diagnostics
 GET  /v1/market/subscriptions
+POST /v1/market/subscriptions/{subscription_id}/recover
 DELETE /v1/market/subscriptions/{subscription_id}
 ```
 
@@ -99,6 +100,18 @@ DELETE /v1/market/subscriptions/{subscription_id}
 If upstream cancellation is unavailable or unreliable, qmtserver still marks the subscription as
 `stopped` and drops later callbacks for that local subscription. The exact behavior must be recorded
 in [Compatibility Matrix](compatibility.md).
+
+Recover:
+
+```http
+POST /v1/market/subscriptions/{subscription_id}/recover
+```
+
+Recovery manually rebuilds an existing market subscription with the same `symbols` and `period`,
+keeps the same local `subscription_id`, resets diagnostics counters, and emits
+`market_subscription_recovered`. It is a readonly market-data operation and must not connect trader
+or call order, cancel, transfer, or other trading methods. Automatic recovery remains out of scope
+for the first reliability baseline.
 
 ## Event Contract
 
@@ -206,6 +219,10 @@ Rules:
 - `stopped`: user stopped the subscription, or qmtserver intentionally ignores later callbacks.
 - `error`: create or runtime failure.
 
+Manual recovery can transition `stopped` or `degraded` subscriptions back to `active` if upstream
+subscribe succeeds. If recovery fails, qmtserver keeps the local subscription in `degraded` and
+records `last_error`.
+
 ## Error Codes
 
 Add or reuse stable codes:
@@ -234,6 +251,8 @@ Add focused fake-based tests:
   `last_quote_source`, and `last_event_seq`.
 - Stopping a subscription marks it `stopped`.
 - Stopped subscriptions do not publish later quote callbacks.
+- Recovering a stopped or degraded subscription resubscribes with the same symbols and period,
+  resets diagnostics, and publishes `market_subscription_recovered`.
 - WebSocket filtering can receive `market_quote`.
 - EventBus queue behavior remains bounded.
 
@@ -253,6 +272,8 @@ Readonly smoke only:
 8. Stop the subscription.
 9. Optionally listen for a short post-stop window and confirm no `market_quote` events are
    published for the stopped local `subscription_id`.
+10. Optionally call recover and confirm the same `subscription_id` returns to `active` without any
+    trader connection or trading command.
 
 After-hours smoke can verify the event path through the initial `get_full_tick` quote seed. Treat
 live callback delivery as verified only after observing a quote event while market data is active.

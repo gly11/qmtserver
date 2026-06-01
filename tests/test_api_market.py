@@ -172,6 +172,7 @@ class ApiMarketTests(unittest.TestCase):
             listed = client.get("/v1/market/subscriptions")
             fetched = client.get("/v1/market/subscriptions/sub_test")
             stopped = client.delete("/v1/market/subscriptions/sub_test")
+            recovered = client.post("/v1/market/subscriptions/sub_test/recover")
 
         self.assertEqual(created.status_code, 200)
         self.assertTrue(created.json()["ok"])
@@ -180,6 +181,7 @@ class ApiMarketTests(unittest.TestCase):
         self.assertEqual(listed.json()["data"]["subscriptions"][0]["subscription_id"], "sub_test")
         self.assertEqual(fetched.json()["data"]["subscription_id"], "sub_test")
         self.assertEqual(stopped.json()["data"]["status"], "stopped")
+        self.assertEqual(recovered.json()["data"]["status"], "active")
         self.assertEqual(service.xtdata.unsubscribe_calls, [1])
 
     def test_market_subscription_rejects_invalid_request_with_stable_error(self) -> None:

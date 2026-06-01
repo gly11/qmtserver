@@ -318,6 +318,29 @@ class MarketSubscriptionServiceTests(unittest.TestCase):
         self.assertEqual(bus.events[-1][0], "market_subscription")
         self.assertEqual(bus.events[-1][1]["status"], "degraded")
 
+    def test_recover_rebuilds_subscription_and_publishes_recovered_event(self) -> None:
+        adapter = RecordingAdapter()
+        bus = RecordingBus()
+        service = MarketSubscriptionService(
+            adapter=adapter,
+            event_bus=bus,
+            id_factory=lambda: "sub_test",
+        )
+        service.create(symbols=["000001.SZ"], period="tick")
+        service.stop("sub_test")
+
+        recovered = service.recover("sub_test")
+
+        self.assertEqual(recovered.status, "active")
+        self.assertEqual(recovered.upstream_id, 7)
+        self.assertEqual(len(adapter.subscribe_calls), 2)
+        self.assertEqual(adapter.subscribe_calls[1]["symbols"], ["000001.SZ"])
+        event_types = [event[0] for event in bus.events]
+        self.assertIn("market_subscription_recovered", event_types)
+        diagnostics = service.diagnostics("sub_test")
+        self.assertEqual(diagnostics["status"], "active")
+        self.assertEqual(diagnostics["callback_count"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

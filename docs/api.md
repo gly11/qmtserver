@@ -23,6 +23,7 @@ GET  /v1/market/subscriptions
 GET  /v1/market/subscriptions/{subscription_id}
 GET  /v1/market/subscriptions/{subscription_id}/diagnostics
 DELETE /v1/market/subscriptions/{subscription_id}
+POST /v1/market/subscriptions/{subscription_id}/recover
 GET  /v1/market/quotes/latest
 POST /v1/snapshots
 GET  /v1/snapshots
@@ -178,6 +179,7 @@ GET /v1/market/subscriptions
 GET /v1/market/subscriptions/{subscription_id}
 GET /v1/market/subscriptions/{subscription_id}/diagnostics
 DELETE /v1/market/subscriptions/{subscription_id}
+POST /v1/market/subscriptions/{subscription_id}/recover
 GET /v1/market/quotes/latest?symbols=000001.SZ,600000.SH
 ```
 
@@ -217,6 +219,18 @@ creation fails after local state is created, qmtserver marks the subscription `d
 reliably, qmtserver marks the local subscription `stopped` and ignores later callbacks for that
 `subscription_id`.
 Stopped subscriptions do not update latest quote cache or subscription diagnostics.
+
+Recover manually rebuilds one existing market subscription with the same `symbols` and `period`:
+
+```http
+POST /v1/market/subscriptions/{subscription_id}/recover
+```
+
+The response uses the normal subscription envelope and keeps the same `subscription_id`. Recovery
+resets the subscription diagnostics counters and publishes `market_subscription` plus
+`market_subscription_recovered` events. It only calls the market subscription adapter; it does not
+connect trader and does not place, cancel, or modify orders. If the upstream subscribe call fails,
+qmtserver marks the subscription `degraded` and records the failure in `last_error`.
 
 Latest quote cache:
 
