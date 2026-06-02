@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+from datetime import UTC, date, datetime
 from typing import Any
 
 from qmtserver.market.models import DailyBar, IntradayBar
@@ -44,7 +45,7 @@ def normalize_daily_bars(raw: Any) -> list[DailyBar]:
     for record in _records(raw):
         symbol = _text(_first(record, "symbol", "stock_code", "code"))
         bar: DailyBar = {
-            "date": _text(_first(record, "date", "time", "timestamp", "datetime")),
+            "date": _date_text(_first(record, "date", "time", "timestamp", "datetime")),
             "symbol": symbol,
             "open": _float(record.get("open")),
             "high": _float(record.get("high")),
@@ -105,7 +106,7 @@ def _records(raw: Any) -> list[dict[str, Any]]:
     if raw is None:
         return []
     if hasattr(raw, "to_dict"):
-        converted = raw.to_dict("records")
+        converted = _table_records(raw)
         return _records(converted)
     if isinstance(raw, Mapping):
         return _records_from_mapping(raw)
@@ -115,6 +116,22 @@ def _records(raw: Any) -> list[dict[str, Any]]:
             result.extend(_records(item))
         return result
     return []
+
+
+def _table_records(raw: Any) -> list[dict[str, Any]]:
+    converted = raw.to_dict("records")
+    if not isinstance(converted, list) or not hasattr(raw, "index"):
+        return converted
+    index_values = list(raw.index)
+    if len(index_values) != len(converted):
+        return converted
+    records: list[dict[str, Any]] = []
+    for index, record in zip(index_values, converted, strict=True):
+        if isinstance(record, Mapping):
+            item = dict(record)
+            item.setdefault("date", index)
+            records.append(item)
+    return records
 
 
 def _records_from_mapping(raw: Mapping[Any, Any]) -> list[dict[str, Any]]:
@@ -196,6 +213,38 @@ def _number(value: Any) -> int | float:
 
 def _text(value: Any) -> str:
     return "" if value is None else str(value)
+
+
+def _date_text(value: Any) -> str:
+    text = _text(value).strip()
+    if not text:
+        return ""
+    if len(text) >= 10 and text[4:5] == "-" and text[7:8] == "-":
+        return text[:10]
+    if text.isdigit() and len(text) == 8:
+        try:
+            return date(int(text[:4]), int(text[4:6]), int(text[6:8])).isoformat()
+        except ValueError:
+            return text
+    if text.isdigit():
+        converted = _epoch_date_text(int(text), len(text))
+        return converted or text
+    return text
+
+
+def _epoch_date_text(value: int, text_length: int) -> str | None:
+    try:
+        if text_length >= 19:
+            seconds = value / 1_000_000_000
+        elif text_length >= 16:
+            seconds = value / 1_000_000
+        elif text_length >= 13:
+            seconds = value / 1_000
+        else:
+            seconds = value
+        return datetime.fromtimestamp(seconds, UTC).date().isoformat()
+    except (OSError, OverflowError, ValueError):
+        return None
 
 
 def _meta(record: Mapping[str, Any]) -> dict[str, Any]:

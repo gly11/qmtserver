@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -169,6 +170,36 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertTrue(body["ok"])
         self.assertEqual(body["meta"]["schema"], "market.quality.v1")
         self.assertEqual(fake_jobs.quality_requests[0]["symbols"], ["000001.SZ"])
+
+    def test_data_job_service_is_cached_when_created_lazily(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with (
+            patch("qmtserver.api.routes_market_data.create_data_backend", return_value=object()),
+            patch(
+                "qmtserver.api.routes_market_data.create_data_job_service",
+                return_value=fake_jobs,
+            ) as create_service,
+            TestClient(app) as client,
+        ):
+            app.state.qmt_service = FakeService()
+            first = client.get(
+                "/v1/market/data/coverage"
+                "?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31"
+            )
+            second = client.get(
+                "/v1/market/data/bars"
+                "?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31"
+            )
+
+        self.assertTrue(first.json()["ok"])
+        self.assertTrue(second.json()["ok"])
+        create_service.assert_called_once()
+        self.assertIs(app.state.data_job_service, fake_jobs)
 
 
 class FakeDataJobService:

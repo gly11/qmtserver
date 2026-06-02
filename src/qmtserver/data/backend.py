@@ -4,6 +4,7 @@ import importlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 from typing import Any, Protocol
 
 from qmtserver.config import Settings
@@ -33,6 +34,7 @@ class DuckDbDataBackend:
     ) -> None:
         self.settings = settings
         self._connect = connect
+        self._connection_lock = Lock()
 
     @property
     def data_dir(self) -> Path:
@@ -52,7 +54,32 @@ class DuckDbDataBackend:
             connection.close()
 
     def connect(self, path: str) -> DuckDbConnection:
-        return self._connect(path)
+        self._connection_lock.acquire()
+        try:
+            connection = self._connect(path)
+        except Exception:
+            self._connection_lock.release()
+            raise
+        return _LockedDuckDbConnection(connection, release=self._connection_lock.release)
+
+
+class _LockedDuckDbConnection:
+    def __init__(self, connection: DuckDbConnection, *, release: Callable[[], None]) -> None:
+        self.connection = connection
+        self.release = release
+        self.closed = False
+
+    def execute(self, sql: str, parameters: tuple[Any, ...] | None = None) -> Any:
+        return self.connection.execute(sql, parameters)
+
+    def close(self) -> None:
+        if self.closed:
+            return
+        try:
+            self.connection.close()
+        finally:
+            self.closed = True
+            self.release()
 
 
 def check_data_backend_dependencies(

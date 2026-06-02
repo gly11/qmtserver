@@ -231,7 +231,9 @@ def _get_data_job_service(request: Request) -> Any:
     if hasattr(request.app.state, "data_job_service"):
         return request.app.state.data_job_service
     backend = create_data_backend(request.app.state.settings)
-    return create_data_job_service(backend, request.app.state.qmt_service)
+    service = create_data_job_service(backend, request.app.state.qmt_service)
+    request.app.state.data_job_service = service
+    return service
 
 
 def _success(data: Any) -> dict[str, Any]:

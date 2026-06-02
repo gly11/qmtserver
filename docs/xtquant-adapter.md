@@ -92,6 +92,12 @@ Daily bars normalize to `date`, `symbol`, `open`, `high`, `low`, `close`, `volum
 `meta`. Intraday bars normalize to `timestamp`, `symbol`, `period`, `open`, `high`, `low`, `close`,
 `volume`, `amount`, and `meta`.
 
+For local `xtquant_250516`, daily `get_market_data_ex(..., period='1d')` can return a pandas-style
+table where the DataFrame index contains compact trading dates such as `20260525`, while the `time`
+column contains epoch milliseconds. qmtserver prefers the table index for daily `date`
+normalization and converts it to ISO `YYYY-MM-DD`; this keeps public bars, snapshots, and data lake
+coverage aligned with the requested trading-date window.
+
 error mapping:
 Connection failures map to `TARGET_NOT_CONNECTED`. Invalid qmtserver request parameters map to
 `INVALID_MARKET_REQUEST`. Unexpected upstream failures map to `MARKET_DATA_ERROR`.
@@ -104,6 +110,15 @@ real smoke:
 Verify daily bars, intraday bars, snapshot creation, snapshot quality, and history jobs against a
 logged-in MiniQMT before release. Use `scripts/smoke_market_history.py --require-rows` when local
 history data should be downloaded and observable.
+
+For Market Data Lake releases, also run:
+
+```powershell
+uv run python scripts\smoke_market_data_lake.py --symbol 000001.SZ --require-rows
+```
+
+On 2026-06-02 this readonly smoke passed with `connect_trader=false`, verified 6 downloaded rows, 6
+local bars, 6 exported rows, complete coverage, and a cached second download.
 
 ### Readonly Trader Queries
 

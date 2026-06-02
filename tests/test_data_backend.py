@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from threading import Event, Thread
 
 from qmtserver.config import load_settings
 from qmtserver.data.backend import (
@@ -64,6 +65,30 @@ class DataBackendTests(unittest.TestCase):
 
         self.assertEqual(connector.paths, [Path(tmp) / "market" / "db" / "qmtserver.duckdb"])
         self.assertIn("CREATE TABLE IF NOT EXISTS data_jobs", connector.connection.executed[0])
+
+    def test_duckdb_backend_serializes_connections_until_close(self) -> None:
+        settings = load_settings(_env_file=None)
+        connector = FakeDuckDbConnector()
+        backend = DuckDbDataBackend(settings, connect=connector.connect)
+        first = backend.connect("first.duckdb")
+        second_connected = Event()
+
+        def connect_second() -> None:
+            second = backend.connect("second.duckdb")
+            try:
+                second_connected.set()
+            finally:
+                second.close()
+
+        worker = Thread(target=connect_second)
+        worker.start()
+        self.assertFalse(second_connected.wait(0.1))
+
+        first.close()
+        worker.join(timeout=1)
+
+        self.assertTrue(second_connected.is_set())
+        self.assertEqual(connector.paths, [Path("first.duckdb"), Path("second.duckdb")])
 
 
 class FakeDuckDbConnector:

@@ -19,6 +19,12 @@ class TableLike:
         return self.records
 
 
+class IndexedTableLike(TableLike):
+    def __init__(self, records: list[dict[str, object]], index: list[object]) -> None:
+        super().__init__(records)
+        self.index = index
+
+
 class MarketNormalizerTests(unittest.TestCase):
     def test_daily_normalizer_converts_symbol_mapping(self) -> None:
         bars = normalize_daily_bars(
@@ -43,6 +49,47 @@ class MarketNormalizerTests(unittest.TestCase):
         self.assertEqual(bars[0]["open"], 10.1)
         self.assertEqual(bars[0]["volume"], 1200000)
         self.assertEqual(bars[0]["meta"], {})
+
+    def test_daily_normalizer_converts_epoch_millisecond_dates(self) -> None:
+        bars = normalize_daily_bars(
+            {
+                "000001.SZ": [
+                    {
+                        "date": "1779724800000",
+                        "open": 10.1,
+                        "high": 10.5,
+                        "low": 10.0,
+                        "close": 10.3,
+                        "volume": 1200000,
+                        "amount": 12345678.9,
+                    }
+                ]
+            }
+        )
+
+        self.assertEqual(bars[0]["date"], "2026-05-25")
+
+    def test_daily_normalizer_prefers_table_index_dates(self) -> None:
+        bars = normalize_daily_bars(
+            {
+                "000001.SZ": IndexedTableLike(
+                    [
+                        {
+                            "time": 1779638400000,
+                            "open": 10.1,
+                            "high": 10.5,
+                            "low": 10.0,
+                            "close": 10.3,
+                            "volume": 1200000,
+                            "amount": 12345678.9,
+                        }
+                    ],
+                    index=[20260525],
+                )
+            }
+        )
+
+        self.assertEqual(bars[0]["date"], "2026-05-25")
 
     def test_intraday_normalizer_converts_table_like_records(self) -> None:
         bars = normalize_intraday_bars(
