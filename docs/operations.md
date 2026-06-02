@@ -301,7 +301,8 @@ GET /v1/market/data/jobs/{job_id}
 ```
 
 成功 job result 会包含 `symbol_results`，用于定位每个 symbol 的 downloaded/cached 状态、
-row count、file count、coverage 和 gaps。
+row count、file count、coverage 和 gaps。coverage gaps 会带 `reason`，常见值包括
+`no_matching_coverage` 和 `segment_gap`。
 
 查询覆盖范围：
 
@@ -390,6 +391,9 @@ GET /v1/metrics
 其中 `data.runtime_health` 汇总 quote、trader 和订阅状态；如果 `status=degraded`，优先查看
 `reasons`，常见值包括 `quote_disconnected`、`subscription_degraded` 和
 `subscription_callback_stale`。
+同一响应里的 `data_lake` 汇总本地数据湖健康和 download job 诊断：`health` 记录 missing、
+orphan、metadata mismatch 等计数，`jobs` 记录 failed jobs 和 stale running jobs。该诊断只读取
+本地 DuckDB/Parquet metadata，不连接 trader，也不触发 MiniQMT 下载。
 `/v1/metrics` 包含 job status 计数，便于观察 queued、running、succeeded、failed 和 cancelled
 分布。
 

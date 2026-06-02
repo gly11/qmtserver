@@ -59,7 +59,14 @@ def _symbol_gaps(
         return (
             []
             if _row_covers_request_for_symbol(symbol, segments, request)
-            else [{"symbol": symbol, "gap_start": str(start or ""), "gap_end": str(end or "")}]
+            else [
+                {
+                    "symbol": symbol,
+                    "gap_start": str(start or ""),
+                    "gap_end": str(end or ""),
+                    "reason": "no_matching_coverage",
+                }
+            ]
         )
     ranges = [
         (str(row["coverage_start"]), str(row["coverage_end"]))
@@ -70,7 +77,14 @@ def _symbol_gaps(
         and not (str(row["coverage_end"]) < start or str(row["coverage_start"]) > end)
     ]
     if not ranges:
-        return [{"symbol": symbol, "gap_start": start, "gap_end": end}]
+        return [
+            {
+                "symbol": symbol,
+                "gap_start": start,
+                "gap_end": end,
+                "reason": "no_matching_coverage",
+            }
+        ]
     ranges.sort()
     gaps: list[dict[str, str]] = []
     cursor = start
@@ -81,6 +95,7 @@ def _symbol_gaps(
                     "symbol": symbol,
                     "gap_start": cursor,
                     "gap_end": _previous_value(coverage_start, request),
+                    "reason": "segment_gap",
                 }
             )
         if coverage_end >= cursor:
@@ -88,7 +103,14 @@ def _symbol_gaps(
         if cursor > end:
             break
     if cursor <= end:
-        gaps.append({"symbol": symbol, "gap_start": cursor, "gap_end": end})
+        gaps.append(
+            {
+                "symbol": symbol,
+                "gap_start": cursor,
+                "gap_end": end,
+                "reason": "segment_gap",
+            }
+        )
     return [gap for gap in gaps if gap["gap_start"] <= gap["gap_end"]]
 
 

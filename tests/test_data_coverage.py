@@ -118,6 +118,32 @@ class CoveragePlannerTests(unittest.TestCase):
                     "symbol": "000001.SZ",
                     "gap_start": "2026-01-11",
                     "gap_end": "2026-01-11",
+                    "reason": "segment_gap",
+                }
+            ],
+        )
+
+    def test_gap_explains_when_symbol_has_no_matching_segments(self) -> None:
+        planner = CoveragePlanner(FakeCoverageRepository([]))
+
+        result = planner.coverage(
+            {
+                "kind": "daily_bars",
+                "symbols": ["000001.SZ"],
+                "start": "2026-01-01",
+                "end": "2026-01-31",
+                "adjust": "none",
+            }
+        )
+
+        self.assertEqual(
+            result["gaps"],
+            [
+                {
+                    "symbol": "000001.SZ",
+                    "gap_start": "2026-01-01",
+                    "gap_end": "2026-01-31",
+                    "reason": "no_matching_coverage",
                 }
             ],
         )

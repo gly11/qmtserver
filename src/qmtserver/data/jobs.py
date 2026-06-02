@@ -7,22 +7,15 @@ from qmtserver.data.backend import DuckDbDataBackend
 from qmtserver.data.coverage import CoveragePlanner
 from qmtserver.data.exports import DataExportService
 from qmtserver.data.files import ParquetBarWriter
-from qmtserver.data.models import DataJobRecord, DataJobStatus
+from qmtserver.data.job_diagnostics import build_data_job_diagnostics
+from qmtserver.data.models import DataJobRecord, DataJobStatus  # noqa: F401
 from qmtserver.data.query import DuckDbParquetBarReader, LocalBarQuery
 from qmtserver.data.readers import XtDataBarReader
 from qmtserver.data.repository import DataJobRepository
 from qmtserver.data_quality.service import quality_response
+from qmtserver.errors import QmtDataDownloadFailedError, QmtDataExportUnavailableError
 from qmtserver.market.adapter import XtDataMarketAdapter
 from qmtserver.market.models import MarketRequest
-
-__all__ = [
-    "DataDownloadJobService",
-    "DataJobRecord",
-    "DataJobRepository",
-    "DataJobStatus",
-    "XtDataHistoryDownloader",
-    "create_data_job_service",
-]
 
 
 class DataJobRepositoryProtocol(Protocol):
@@ -129,6 +122,20 @@ class DataDownloadJobService:
             job.as_dict() for job in self.repository.list_jobs(status=status, limit=bounded_limit)
         ]
 
+    def diagnostics(
+        self,
+        *,
+        now: str | None = None,
+        stale_after_seconds: int = 300,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return build_data_job_diagnostics(
+            self.repository,
+            now=now,
+            stale_after_seconds=stale_after_seconds,
+            limit=limit,
+        )
+
     def coverage(self, request: dict[str, Any]) -> dict[str, Any]:
         if self.coverage_planner is None:
             return {
@@ -169,7 +176,7 @@ class DataDownloadJobService:
                 "ok": False,
                 "data": None,
                 "error": {
-                    "code": "DATA_EXPORT_UNAVAILABLE",
+                    "code": QmtDataExportUnavailableError.code,
                     "message": "data export is unavailable",
                 },
                 "meta": {},
@@ -205,7 +212,10 @@ class DataDownloadJobService:
         except Exception as exc:
             self.repository.mark_failed(
                 job_id,
-                {"code": "DATA_DOWNLOAD_FAILED", "message": f"{type(exc).__name__}: {exc}"},
+                {
+                    "code": QmtDataDownloadFailedError.code,
+                    "message": f"{type(exc).__name__}: {exc}",
+                },
             )
 
     def _write_files(self, job_id: str, request: dict[str, Any]) -> list[dict[str, Any]]:

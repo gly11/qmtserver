@@ -185,6 +185,35 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         self.assertEqual(len(jobs), 1)
         self.assertEqual(jobs[0]["status"], "succeeded")
 
+    def test_service_diagnostics_reports_stale_and_failed_jobs(self) -> None:
+        repository = FakeDataJobRepository()
+        running = repository.create("market_data_download", {"kind": "daily_bars"})
+        failed = repository.create("market_data_download", {"kind": "daily_bars"})
+        repository.jobs[running.job_id].status = DataJobStatus.RUNNING
+        repository.jobs[running.job_id].started_at = "2026-06-03T00:00:00+00:00"
+        repository.jobs[failed.job_id].status = DataJobStatus.FAILED
+        repository.jobs[failed.job_id].error = {
+            "code": "DATA_DOWNLOAD_FAILED",
+            "message": "boom",
+        }
+        service = DataDownloadJobService(
+            repository,
+            downloader=FakeHistoryDownloader(),
+            run_async=False,
+        )
+
+        diagnostics = service.diagnostics(
+            now="2026-06-03T00:10:00+00:00",
+            stale_after_seconds=300,
+        )
+
+        self.assertEqual(diagnostics["schema"], "market.data.jobs.diagnostics.v1")
+        self.assertEqual(diagnostics["total"], 2)
+        self.assertEqual(diagnostics["failed"], 1)
+        self.assertEqual(diagnostics["stale_running"], 1)
+        self.assertEqual(diagnostics["stale_running_jobs"][0]["job_id"], running.job_id)
+        self.assertEqual(diagnostics["failed_jobs"][0]["error_code"], "DATA_DOWNLOAD_FAILED")
+
     def test_duckdb_repository_records_file_and_lists_coverage(self) -> None:
         backend = FakeDuckDbBackend()
         repository = DataJobRepository(backend)

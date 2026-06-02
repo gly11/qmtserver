@@ -7,6 +7,11 @@ from fastapi import APIRouter, Request
 
 from qmtserver import __version__
 from qmtserver.api.dependencies import get_qmt_service
+from qmtserver.data.backend import create_data_backend
+from qmtserver.data.jobs import create_data_job_service
+from qmtserver.data.maintenance import DataMaintenanceService
+from qmtserver.data.repository import DataJobRepository
+from qmtserver.errors import QmtServerError
 from qmtserver.miniqmt import check_xtquant_import
 from qmtserver.runtime_health import build_runtime_health
 
@@ -27,6 +32,7 @@ def diagnostics(request: Request) -> dict[str, object]:
                 qmt_status,
                 subscription_service=subscription_service,
             ),
+            "data_lake": _data_lake_diagnostics(request),
             "clock": {
                 "server_time": datetime.now(UTC).isoformat(),
                 "timezone": "UTC",
@@ -40,6 +46,51 @@ def diagnostics(request: Request) -> dict[str, object]:
         "error": None,
         "meta": {},
     }
+
+
+def _data_lake_diagnostics(request: Request) -> dict[str, Any]:
+    try:
+        data_job_service = _get_data_job_service(request)
+        maintenance = _get_data_maintenance_service(request)
+        return {
+            "schema": "market.data.diagnostics.v1",
+            "health": maintenance.health_summary(),
+            "jobs": data_job_service.diagnostics(),
+            "error": None,
+        }
+    except QmtServerError as exc:
+        return {
+            "schema": "market.data.diagnostics.v1",
+            "health": {
+                "schema": "market.data.health.v1",
+                "status": "unavailable",
+                "reason": exc.code,
+            },
+            "jobs": None,
+            "error": {"code": exc.code, "message": str(exc)},
+        }
+
+
+def _get_data_job_service(request: Request) -> Any:
+    if hasattr(request.app.state, "data_job_service"):
+        return request.app.state.data_job_service
+    backend = create_data_backend(request.app.state.settings)
+    service = create_data_job_service(backend, request.app.state.qmt_service)
+    request.app.state.data_job_service = service
+    return service
+
+
+def _get_data_maintenance_service(request: Request) -> DataMaintenanceService:
+    if hasattr(request.app.state, "data_maintenance_service"):
+        return request.app.state.data_maintenance_service
+    backend = create_data_backend(request.app.state.settings)
+    backend.initialize()
+    service = DataMaintenanceService(
+        backend.data_dir,
+        repository=DataJobRepository(backend),
+    )
+    request.app.state.data_maintenance_service = service
+    return service
 
 
 def _sample_tick(service: Any, symbol: str) -> dict[str, Any]:

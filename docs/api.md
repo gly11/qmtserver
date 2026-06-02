@@ -398,7 +398,8 @@ GET /v1/market/data/coverage?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&
 响应使用 `market.data.coverage.v1`，包含 `fully_covered`、`coverage`、`covered_segments`、
 `gaps` 和 `missing_symbols`。`coverage` 是按 symbol/period/adjust 合并后的摘要，
 `covered_segments` 来自已登记的本地 data files；缓存命中判断使用 segments 检查中间缺口，
-不会只因为 summary 首尾覆盖请求区间就跳过下载。
+不会只因为 summary 首尾覆盖请求区间就跳过下载。每个 gap 包含 `reason`，例如
+`no_matching_coverage` 或 `segment_gap`，用于区分完全没有匹配文件和已有文件中间缺口。
 
 ### GET /v1/market/data/bars
 
@@ -462,7 +463,8 @@ DELETE /v1/market/data/exports/{export_id}
 查询 data download job 状态。成功结果包含 `file_count`、`row_count` 和写入的 Parquet 文件摘要。
 状态会写入 DuckDB 元数据，设计上用于服务重启后的状态查询。成功结果还包含
 `symbol_results`，按 symbol 汇总 `downloaded`、`cached`、`row_count`、`file_count`、
-coverage 起止和 gaps。
+coverage 起止和 gaps。失败 job 的 `error.code` 会使用 data lake 专用错误码，例如
+`DATA_DOWNLOAD_FAILED`。
 
 ### GET /v1/market/data/jobs
 
@@ -522,7 +524,13 @@ manifest 仍保留在 snapshot 目录中。
 ### GET /v1/diagnostics
 
 返回 MiniQMT/qmtserver 状态、server clock、qmtserver/xtquant 版本和 sample symbol smoke 信息，
-用于排查连接和行情源状态。
+用于排查连接和行情源状态。响应还包含 `data_lake`：
+
+- `data_lake.health`：本地 data lake 目录健康摘要，包括 registered/orphan/missing/mismatch 等计数。
+- `data_lake.jobs`：持久化 data download job 诊断摘要，包括 failed jobs 和 stale running jobs。
+- `data_lake.error`：如果未安装或未启用 data extra，会返回 `DATA_BACKEND_UNAVAILABLE` 等稳定错误码。
+
+该诊断只读取本地 DuckDB/Parquet metadata，不连接 trader，不触发 MiniQMT 下载，也不执行交易命令。
 
 `data.runtime_health` 提供长期运行摘要：
 

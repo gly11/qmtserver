@@ -93,6 +93,18 @@ class QmtDataBackendUnavailableError(QmtServerError):
     code = "DATA_BACKEND_UNAVAILABLE"
 
 
+class QmtDataDownloadFailedError(QmtServerError):
+    code = "DATA_DOWNLOAD_FAILED"
+
+
+class QmtDataExportUnavailableError(QmtServerError):
+    code = "DATA_EXPORT_UNAVAILABLE"
+
+
+class QmtDataMaintenanceError(QmtServerError):
+    code = "DATA_MAINTENANCE_ERROR"
+
+
 class QmtTraderAccountRequiredError(QmtServerError):
     code = "TRADER_ACCOUNT_REQUIRED"
 
@@ -133,7 +145,9 @@ ERROR_CODES: tuple[ErrorCode, ...] = (
     ErrorCode("JOB_NOT_READY", "Requested job result is not ready."),
     ErrorCode("JOB_NOT_CANCELLABLE", "Requested job cannot be cancelled."),
     ErrorCode("DATA_BACKEND_UNAVAILABLE", "Optional data lake dependencies are not installed."),
+    ErrorCode("DATA_DOWNLOAD_FAILED", "Data lake download or local write failed."),
     ErrorCode("DATA_EXPORT_UNAVAILABLE", "Data lake export service is not available."),
+    ErrorCode("DATA_MAINTENANCE_ERROR", "Data lake local maintenance failed."),
     ErrorCode("TRADER_ACCOUNT_REQUIRED", "Readonly trader query requires an account id."),
     ErrorCode("RPC_ERROR", "Client-side wrapper for an RPC error response."),
     ErrorCode("QMT_SERVER_ERROR", "Generic qmtserver error."),

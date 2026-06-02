@@ -210,6 +210,8 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 - data export manifest 记录 `source_file_count`、`deduplicated_row_count` 和 `truncated`。
 - data download result 增加 per-symbol `symbol_results`。
 - 增加 `GET /v1/market/data/jobs`，从 DuckDB 查询持久化 data jobs。
+- `/v1/diagnostics` 增加 `data_lake` 健康和 download job 诊断摘要；coverage gaps 增加
+  `reason`。
 - 增加 `scripts/smoke_market_data_lake.py`，覆盖 download、coverage、bars、quality、export 和
   cached download 闭环。
 

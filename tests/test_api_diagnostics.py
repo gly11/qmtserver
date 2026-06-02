@@ -52,6 +52,21 @@ class ApiDiagnosticsTests(unittest.TestCase):
         self.assertEqual(health["subscriptions"]["active"], 1)
         self.assertEqual(health["subscriptions"]["stale_callbacks"], 1)
 
+    def test_diagnostics_includes_data_lake_health_and_job_summary(self) -> None:
+        app = create_app(load_settings(auto_connect=False), connect_on_startup=False)
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = DiagnosticsDataJobService()
+            app.state.data_maintenance_service = DiagnosticsDataMaintenanceService()
+            response = client.get("/v1/diagnostics")
+
+        data_lake = response.json()["data"]["data_lake"]
+        self.assertEqual(data_lake["schema"], "market.data.diagnostics.v1")
+        self.assertEqual(data_lake["health"]["status"], "warning")
+        self.assertEqual(data_lake["jobs"]["stale_running"], 1)
+        self.assertIsNone(data_lake["error"])
+
 
 class RuntimeHealthSubscriptionService:
     def __init__(self, subscription: MarketSubscription) -> None:
@@ -67,6 +82,28 @@ class RuntimeHealthSubscriptionService:
             "callback_count": 3,
             "is_callback_active": False,
             "seconds_since_last_callback": 120.0,
+        }
+
+
+class DiagnosticsDataJobService:
+    def diagnostics(self) -> dict[str, object]:
+        return {
+            "schema": "market.data.jobs.diagnostics.v1",
+            "total": 2,
+            "failed": 1,
+            "stale_running": 1,
+            "stale_running_jobs": [{"job_id": "job-running"}],
+            "failed_jobs": [{"job_id": "job-failed", "error_code": "DATA_DOWNLOAD_FAILED"}],
+        }
+
+
+class DiagnosticsDataMaintenanceService:
+    def health_summary(self) -> dict[str, object]:
+        return {
+            "schema": "market.data.health.v1",
+            "status": "warning",
+            "registered_file_count": 1,
+            "orphan_parquet_count": 1,
         }
 
 
