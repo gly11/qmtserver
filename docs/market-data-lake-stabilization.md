@@ -238,6 +238,9 @@ feat(data): stabilize local bars query and exports
 
 ## 阶段 4：Download Job Reliability
 
+状态：已完成基础增强。data download result 已包含 per-symbol `symbol_results`；新增
+`GET /v1/market/data/jobs`，可按 status 和 limit 查询 DuckDB 中持久化的 data jobs。
+
 目标：提高 data download job 的可恢复性和可观测性。
 
 开发项：

@@ -62,6 +62,31 @@ class DataJobRepository:
         finally:
             connection.close()
 
+    def list_jobs(self, *, status: str | None = None, limit: int = 50) -> list[DataJobRecord]:
+        filters = []
+        parameters: list[Any] = []
+        if status is not None:
+            filters.append("status = ?")
+            parameters.append(status)
+        where = f"WHERE {' AND '.join(filters)}" if filters else ""
+        parameters.append(max(1, min(limit, 200)))
+        connection = self.backend.connect(str(self.backend.database_path))
+        try:
+            cursor = connection.execute(
+                f"""
+                SELECT job_id, job_type, status, request_json, result_json, error_code,
+                       error_message, created_at, started_at, finished_at
+                FROM data_jobs
+                {where}
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                tuple(parameters),
+            )
+            return [_record_from_row(row) for row in cursor.fetchall()]
+        finally:
+            connection.close()
+
     def mark_running(self, job_id: str) -> None:
         self._execute(
             "UPDATE data_jobs SET status = ?, started_at = ? WHERE job_id = ?",

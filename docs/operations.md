@@ -296,8 +296,12 @@ Invoke-RestMethod -Method Post `
 查询任务：
 
 ```text
+GET /v1/market/data/jobs?status=succeeded&limit=50
 GET /v1/market/data/jobs/{job_id}
 ```
+
+成功 job result 会包含 `symbol_results`，用于定位每个 symbol 的 downloaded/cached 状态、
+row count、file count、coverage 和 gaps。
 
 查询覆盖范围：
 

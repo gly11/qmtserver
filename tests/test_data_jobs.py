@@ -53,6 +53,22 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         self.assertEqual(persisted.result["symbols"], ["000001.SZ"])
         self.assertEqual(persisted.result["file_count"], 1)
         self.assertEqual(persisted.result["row_count"], 1)
+        self.assertEqual(
+            persisted.result["symbol_results"],
+            [
+                {
+                    "symbol": "000001.SZ",
+                    "status": "succeeded",
+                    "downloaded": True,
+                    "cached": False,
+                    "row_count": 1,
+                    "file_count": 1,
+                    "coverage_start": "2026-01-02",
+                    "coverage_end": "2026-01-02",
+                    "gaps": [],
+                }
+            ],
+        )
 
     def test_submit_download_uses_cached_coverage_unless_force_is_set(self) -> None:
         repository = FakeDataJobRepository()
@@ -85,6 +101,7 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         assert persisted.result is not None
         self.assertTrue(persisted.result["cached"])
         self.assertEqual(persisted.result["storage"], "qmtserver_data_lake")
+        self.assertEqual(persisted.result["symbol_results"][0]["cached"], True)
 
     def test_submit_download_force_bypasses_cached_coverage(self) -> None:
         repository = FakeDataJobRepository()
@@ -154,6 +171,20 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         self.assertEqual(fetched.result, {"downloaded": True})
         self.assertIn("INSERT INTO data_jobs", backend.connection.executed[0][0])
 
+    def test_service_lists_persistent_jobs(self) -> None:
+        repository = FakeDataJobRepository()
+        service = DataDownloadJobService(
+            repository,
+            downloader=FakeHistoryDownloader(),
+            run_async=False,
+        )
+        service.submit_download({"kind": "daily_bars", "symbols": ["000001.SZ"]})
+
+        jobs = service.list_jobs(status="succeeded", limit=10)
+
+        self.assertEqual(len(jobs), 1)
+        self.assertEqual(jobs[0]["status"], "succeeded")
+
     def test_duckdb_repository_records_file_and_lists_coverage(self) -> None:
         backend = FakeDuckDbBackend()
         repository = DataJobRepository(backend)
@@ -214,6 +245,12 @@ class FakeDataJobRepository:
 
     def get(self, job_id: str) -> DataJobRecord | None:
         return self.jobs.get(job_id)
+
+    def list_jobs(self, *, status: str | None = None, limit: int = 50) -> list[DataJobRecord]:
+        jobs = list(self.jobs.values())
+        if status is not None:
+            jobs = [job for job in jobs if job.status.value == status]
+        return jobs[:limit]
 
     def mark_running(self, job_id: str) -> None:
         self.jobs[job_id].status = DataJobStatus.RUNNING

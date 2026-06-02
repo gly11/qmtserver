@@ -58,6 +58,24 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertFalse(body["ok"])
         self.assertEqual(body["error"]["code"], "JOB_NOT_FOUND")
 
+    def test_list_data_download_jobs(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+        fake_jobs.submit_download({"kind": "daily_bars", "symbols": ["000001.SZ"]})
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            response = client.get("/v1/market/data/jobs?status=succeeded&limit=10")
+
+        body = response.json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(len(body["data"]["jobs"]), 1)
+        self.assertEqual(fake_jobs.list_job_requests[0], {"status": "succeeded", "limit": 10})
+
     def test_get_data_coverage(self) -> None:
         app = create_app(
             load_settings(_env_file=None, auto_connect=False),
@@ -161,6 +179,7 @@ class FakeDataJobService:
         self.query_requests: list[dict[str, Any]] = []
         self.quality_requests: list[dict[str, Any]] = []
         self.export_requests: list[dict[str, Any]] = []
+        self.list_job_requests: list[dict[str, Any]] = []
         self.exports: dict[str, dict[str, Any]] = {}
 
     def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -179,6 +198,11 @@ class FakeDataJobService:
         if job is None:
             return None
         return job.as_dict()
+
+    def list_jobs(self, *, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+        self.list_job_requests.append({"status": status, "limit": limit})
+        jobs = [job for job in self.jobs.values() if status is None or job.status.value == status]
+        return [job.as_dict() for job in jobs[:limit]]
 
     def coverage(self, request: dict[str, Any]) -> dict[str, Any]:
         self.coverage_requests.append(request)

@@ -201,6 +201,19 @@ def get_data_coverage(
         return _error(exc.code, str(exc))
 
 
+@router.get("/jobs")
+def list_data_jobs(
+    request: Request,
+    status: str | None = None,
+    limit: int = 50,
+) -> dict[str, Any]:
+    try:
+        service = _get_data_job_service(request)
+        return _success({"jobs": service.list_jobs(status=status, limit=limit)})
+    except QmtServerError as exc:
+        return _error(exc.code, str(exc))
+
+
 @router.get("/jobs/{job_id}")
 def get_data_job(job_id: str, request: Request) -> dict[str, Any]:
     try:

@@ -33,6 +33,7 @@ POST /v1/market/data/download
 GET  /v1/market/data/bars
 GET  /v1/market/data/coverage
 GET  /v1/market/data/quality
+GET  /v1/market/data/jobs
 GET  /v1/market/data/jobs/{job_id}
 POST /v1/market/data/exports
 GET  /v1/market/data/exports
@@ -454,7 +455,19 @@ DELETE /v1/market/data/exports/{export_id}
 ### GET /v1/market/data/jobs/{job_id}
 
 查询 data download job 状态。成功结果包含 `file_count`、`row_count` 和写入的 Parquet 文件摘要。
-状态会写入 DuckDB 元数据，设计上用于服务重启后的状态查询。
+状态会写入 DuckDB 元数据，设计上用于服务重启后的状态查询。成功结果还包含
+`symbol_results`，按 symbol 汇总 `downloaded`、`cached`、`row_count`、`file_count`、
+coverage 起止和 gaps。
+
+### GET /v1/market/data/jobs
+
+列出持久化 data download jobs：
+
+```text
+GET /v1/market/data/jobs?status=succeeded&limit=50
+```
+
+`status` 可选；`limit` 最大限制为 200。该接口只读取 DuckDB job 元数据，不触发 MiniQMT 下载。
 
 ## Reference and Quality API
 
