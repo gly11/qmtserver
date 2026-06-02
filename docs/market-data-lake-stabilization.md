@@ -138,6 +138,10 @@ feat(data): add coverage gap detection
 
 ## 阶段 2：Storage Maintenance
 
+状态：已完成基础维护入口。`qmtserver data check` 可检查 missing registered files、
+orphan Parquet 和 orphan exports；`qmtserver data cleanup` 默认 dry-run，显式 `--delete`
+才删除 `QMT_DATA_DIR` 内的孤儿文件；`qmtserver data rebuild-index` 当前输出 dry-run 重建计划。
+
 目标：让本地 Parquet 与 DuckDB 元数据可维护，避免长期运行后文件膨胀、孤儿文件和重复文件失控。
 
 开发项：

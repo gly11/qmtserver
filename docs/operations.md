@@ -267,8 +267,8 @@ QMT_DATA_DB=data/market/db/qmtserver.duckdb
 QMT_DATA_ENABLE_DUCKDB=true
 ```
 
-该目录面向后续标准化 Parquet 行情文件和 DuckDB 元数据。当前阶段只提供配置、可选依赖检测
-和 DuckDB schema 初始化骨架；现有 history-download job 与 snapshot/export 行为保持不变。
+该目录用于标准化 Parquet 行情文件、DuckDB 元数据和 data lake exports。MiniQMT
+`userdata_mini/datadir` 仍由 `xtquant` 管理，qmtserver 不直接修改该目录。
 启用该能力需要安装：
 
 ```powershell
@@ -328,6 +328,20 @@ DELETE /v1/market/data/exports/{export_id}
 `/v1/market/data/bars`、`quality` 和 `exports` 只读取本地 Parquet/DuckDB，不触发新的 MiniQMT
 下载。删除 export 只清理 qmtserver 本地 CSV 和 manifest，不删除 MiniQMT 缓存或 Parquet 原始
 数据。
+
+维护本地 data lake 文件：
+
+```powershell
+uv run qmtserver data check
+uv run qmtserver data cleanup
+uv run qmtserver data rebuild-index
+```
+
+`data check` 会检查 DuckDB 已登记但文件缺失的 Parquet、未登记的 Parquet，以及孤儿 export
+文件。`data cleanup` 默认是 dry-run，只列出删除候选；只有显式传入 `--delete` 才会删除
+`QMT_DATA_DIR` 内的孤儿 Parquet/export 文件。`data rebuild-index` 当前输出 dry-run 重建计划。
+这些维护命令只处理 qmtserver 本地数据目录，不连接 trader，不触发 MiniQMT 下载，也不执行任何
+交易命令。
 
 详细规划见 [Market Data Lake](market-data-lake.md)。
 

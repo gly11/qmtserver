@@ -149,6 +149,18 @@ class CliTests(unittest.TestCase):
         self.assertEqual(trader.account_id, "sim-account")
         self.assertEqual(trader.timeout_ms, 30000)
 
+    def test_data_check_prints_storage_maintenance_summary(self) -> None:
+        service = FakeDataMaintenanceService()
+
+        with patch("qmtserver.cli._build_data_maintenance_service", return_value=service):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(["data", "check"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("market data lake maintenance", output.getvalue())
+        self.assertIn("orphan parquet files: 1", output.getvalue())
+
 
 @contextmanager
 def temporary_working_directory() -> Iterator[Path]:
@@ -160,6 +172,33 @@ def temporary_working_directory() -> Iterator[Path]:
             yield cwd
         finally:
             os.chdir(previous)
+
+
+class FakeDataMaintenanceService:
+    def check(self) -> dict[str, object]:
+        return {
+            "schema": "market.data.maintenance.v1",
+            "registered_file_count": 2,
+            "missing_registered_files": [],
+            "orphan_parquet_files": [{"path": "data/market/raw/bars/orphan.parquet"}],
+            "orphan_export_files": [],
+        }
+
+    def cleanup(self, *, delete: bool) -> dict[str, object]:
+        return {
+            "schema": "market.data.cleanup.v1",
+            "dry_run": not delete,
+            "delete_candidates": [],
+            "deleted_files": [],
+        }
+
+    def rebuild_index_plan(self) -> dict[str, object]:
+        return {
+            "schema": "market.data.rebuild_index.v1",
+            "dry_run": True,
+            "parquet_file_count": 0,
+            "parquet_files": [],
+        }
 
 
 if __name__ == "__main__":

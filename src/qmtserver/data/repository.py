@@ -170,6 +170,22 @@ class DataJobRepository:
             for file_record in self.list_files(request)
         ]
 
+    def list_all_files(self) -> list[dict[str, Any]]:
+        connection = self.backend.connect(str(self.backend.database_path))
+        try:
+            cursor = connection.execute(
+                """
+                SELECT file_id, job_id, kind, symbol, period, adjust, format, path, hash,
+                       row_count, coverage_start, coverage_end, schema_version,
+                       qmtserver_version, xtquant_version, created_at
+                FROM data_files
+                ORDER BY symbol, coverage_start
+                """
+            )
+            return [_file_from_row(row) for row in cursor.fetchall()]
+        finally:
+            connection.close()
+
     def list_files(self, request: dict[str, Any]) -> list[dict[str, Any]]:
         symbols = {str(symbol) for symbol in request.get("symbols", [])}
         connection = self.backend.connect(str(self.backend.database_path))

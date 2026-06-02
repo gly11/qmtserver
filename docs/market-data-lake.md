@@ -39,7 +39,7 @@ data/snapshots/ # 现有 snapshot/export 文件
 
 当前已经初始化配置、可选依赖检测、DuckDB schema、持久化 data download job、按 symbol
 分区的 Parquet 写入、coverage planner、本地 bars 查询 API、CSV export、质量检查和 export
-清理入口。
+清理入口，以及本地 storage maintenance dry-run 检查命令。
 
 ## 安装
 
@@ -122,6 +122,7 @@ MiniQMT 缓存或 Parquet 原始数据。
 ## 后续阶段
 
 1. Storage Maintenance
-   后续可继续增加 Parquet 原始数据清理、压缩、重建索引和更精细的 coverage 修复策略。
+   已提供 `qmtserver data check`、`qmtserver data cleanup` 和 `qmtserver data rebuild-index`
+   的本地维护入口。后续可继续增加 Parquet 压缩和执行式 index rebuild。
 
 详细稳定化计划见 [Market Data Lake Stabilization Plan](market-data-lake-stabilization.md)。
