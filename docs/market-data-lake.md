@@ -135,10 +135,12 @@ MiniQMT 缓存或 Parquet 原始数据。
    已提供 `qmtserver data check`、`qmtserver data cleanup` 和 `qmtserver data rebuild-index`
    的本地维护入口。`data check` 会输出健康摘要和 metadata mismatch；`data cleanup`
    支持显式删除和 export 过期清理；`data rebuild-index --execute` 可从本地 Parquet
-   重建 DuckDB 文件索引和 coverage metadata。后续可继续增加 Parquet 压缩。
+   重建 DuckDB 文件索引和 coverage metadata。`data compact` 可按 kind/symbol/period/adjust
+   规划小文件合并，`data compact --execute` 会写入 compact Parquet、删除源文件，并联动
+   rebuild-index 重建 metadata。
 2. Bulk Download Orchestration
    已完成 universe resolution、canonical request metadata、chunk planner 和 persisted chunk
    table、chunk-level execution、progress/failure summary，以及基于 coverage gaps 的 ensure
-   模式。下一步需要新增显式 resume/retry 入口和更细的 maintenance/compaction 联动。
+   模式。下一步需要新增显式 resume/retry 入口和更细的 storage profile 白名单。
 
 详细稳定化计划见 [Market Data Lake Stabilization Plan](market-data-lake-stabilization.md)。

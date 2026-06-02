@@ -8,6 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from .config import PROFILE_NAMES, load_settings, profile_env_file
+from .data.cli import (
+    build_data_maintenance_service,
+    configure_data_parser,
+    run_data,
+)
 from .miniqmt import (
     QuoteCheckConfig,
     TraderCheckConfig,
@@ -58,27 +63,7 @@ def _build_parser() -> argparse.ArgumentParser:
     check.add_argument("--skip-quote", action="store_true", help="skip quote connection check")
     check.add_argument("--json", action="store_true", help="print machine-readable JSON")
 
-    data = subparsers.add_parser("data", help="maintain local market data lake files")
-    data_subparsers = data.add_subparsers(dest="data_action")
-    data_check = data_subparsers.add_parser("check", help="check local data lake file index")
-    _add_profile_args(data_check)
-    data_check.add_argument("--json", action="store_true", help="print machine-readable JSON")
-    data_cleanup = data_subparsers.add_parser("cleanup", help="clean orphan local data lake files")
-    _add_profile_args(data_cleanup)
-    data_cleanup.add_argument("--delete", action="store_true", help="delete orphan files")
-    data_cleanup.add_argument(
-        "--expired-days",
-        type=int,
-        help="include exports generated at least this many days ago",
-    )
-    data_cleanup.add_argument("--json", action="store_true", help="print machine-readable JSON")
-    data_rebuild = data_subparsers.add_parser(
-        "rebuild-index",
-        help="rebuild the DuckDB file index from local Parquet files",
-    )
-    _add_profile_args(data_rebuild)
-    data_rebuild.add_argument("--execute", action="store_true", help="execute the rebuild")
-    data_rebuild.add_argument("--json", action="store_true", help="print machine-readable JSON")
+    configure_data_parser(subparsers, _add_profile_args)
 
     diagnose = subparsers.add_parser("diagnose", help="diagnose qmtserver runtime targets")
     diagnose_subparsers = diagnose.add_subparsers(dest="diagnose_target")
@@ -188,55 +173,11 @@ def _run_check(args: argparse.Namespace) -> int:
 
 
 def _run_data(args: argparse.Namespace) -> int:
-    if args.data_action not in {"check", "cleanup", "rebuild-index"}:
-        return 2
-    service = _build_data_maintenance_service(args)
-    if args.data_action == "check":
-        report = service.check()
-    elif args.data_action == "cleanup":
-        report = service.cleanup(delete=args.delete, expired_days=args.expired_days)
-    else:
-        report = service.rebuild_index(execute=args.execute)
-    if args.json:
-        print(json.dumps(report, ensure_ascii=False, indent=2))
-    else:
-        _print_data_maintenance(report)
-    return 0
+    return run_data(args, service_builder=_build_data_maintenance_service)
 
 
 def _build_data_maintenance_service(args: argparse.Namespace) -> Any:
-    from qmtserver.data.backend import create_data_backend
-    from qmtserver.data.maintenance import DataMaintenanceService
-    from qmtserver.data.repository import DataJobRepository
-
-    settings = load_settings(profile=args.profile)
-    backend = create_data_backend(settings)
-    backend.initialize()
-    return DataMaintenanceService(backend.data_dir, repository=DataJobRepository(backend))
-
-
-def _print_data_maintenance(report: dict[str, Any]) -> None:
-    print("qmtserver market data lake maintenance")
-    if report["schema"] == "market.data.cleanup.v1":
-        print(f"- dry run: {report['dry_run']}")
-        print(f"- delete candidates: {len(report['delete_candidates'])}")
-        print(f"- expired export files: {len(report['expired_export_files'])}")
-        print(f"- deleted files: {len(report['deleted_files'])}")
-        return
-    if report["schema"] == "market.data.rebuild_index.v1":
-        print(f"- dry run: {report['dry_run']}")
-        print(f"- parquet files: {report['parquet_file_count']}")
-        print(f"- metadata errors: {report['metadata_error_count']}")
-        print(f"- rebuilt files: {report['rebuilt_file_count']}")
-        return
-    health = report["health"]
-    print(f"- health: {health['status']}")
-    print(f"- registered files: {report['registered_file_count']}")
-    print(f"- missing registered files: {len(report['missing_registered_files'])}")
-    print(f"- orphan parquet files: {len(report['orphan_parquet_files'])}")
-    print(f"- orphan export files: {len(report['orphan_export_files'])}")
-    print(f"- metadata mismatches: {len(report['metadata_mismatches'])}")
-    print(f"- data dir bytes: {health['data_dir_bytes']}")
+    return build_data_maintenance_service(args)
 
 
 def _run_diagnose(args: argparse.Namespace) -> int:

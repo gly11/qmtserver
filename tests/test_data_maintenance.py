@@ -157,6 +157,53 @@ class DataMaintenanceServiceTests(unittest.TestCase):
 
         self.assertEqual(len(result["expired_export_files"]), 2)
 
+    def test_compaction_plan_groups_small_files_by_market_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp)
+            files = [
+                _file_record(data_dir, "000001.SZ", "a.parquet", "2026-01-01", "2026-01-10"),
+                _file_record(data_dir, "000001.SZ", "b.parquet", "2026-01-11", "2026-01-20"),
+                _file_record(data_dir, "600000.SH", "c.parquet", "2026-01-01", "2026-01-10"),
+            ]
+            service = DataMaintenanceService(data_dir, repository=FakeFileRepository(files))
+
+            result = service.compact(execute=False, min_files=2)
+
+        self.assertTrue(result["dry_run"])
+        self.assertEqual(result["group_count"], 1)
+        self.assertEqual(result["groups"][0]["symbol"], "000001.SZ")
+        self.assertEqual(result["groups"][0]["source_file_count"], 2)
+        self.assertEqual(result["compacted_file_count"], 0)
+
+    def test_compaction_execute_replaces_sources_and_rebuilds_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp)
+            files = [
+                _file_record(data_dir, "000001.SZ", "a.parquet", "2026-01-01", "2026-01-10"),
+                _file_record(data_dir, "000001.SZ", "b.parquet", "2026-01-11", "2026-01-20"),
+            ]
+            for file_record in files:
+                path = Path(str(file_record["path"]))
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"parquet")
+            repository = FakeFileRepository(files)
+            service = DataMaintenanceService(
+                data_dir,
+                repository=repository,
+                metadata_reader=FakeAnyMetadataReader(),
+                compaction_engine=FakeCompactionEngine(),
+            )
+
+            result = service.compact(execute=True, min_files=2)
+
+        self.assertFalse(result["dry_run"])
+        self.assertEqual(result["compacted_file_count"], 1)
+        self.assertEqual(result["deleted_source_count"], 2)
+        self.assertFalse(Path(str(files[0]["path"])).exists())
+        self.assertTrue(repository.cleared)
+        self.assertEqual(len(repository.recorded_files), 1)
+        self.assertEqual(result["rebuild_index"]["rebuilt_file_count"], 1)
+
 
 class FakeFileRepository:
     def __init__(self, files: list[dict[str, Any]]) -> None:
@@ -180,6 +227,74 @@ class FakeMetadataReader:
 
     def read(self, path: Path) -> dict[str, Any]:
         return self.records[path]
+
+
+class FakeAnyMetadataReader:
+    def read(self, path: Path) -> dict[str, Any]:
+        return {
+            "file_id": "rebuilt-file",
+            "path": str(path),
+            "hash": "sha256:rebuilt",
+            "row_count": 20,
+            "coverage_start": "2026-01-01",
+            "coverage_end": "2026-01-20",
+            "kind": "daily_bars",
+            "symbol": "000001.SZ",
+            "period": "1d",
+            "adjust": "none",
+            "format": "parquet",
+        }
+
+
+class FakeCompactionEngine:
+    def compact(self, group: dict[str, Any], output_path: Path) -> dict[str, Any]:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"compact")
+        return {
+            "file_id": "compact-file",
+            "path": str(output_path),
+            "hash": "sha256:compact",
+            "row_count": group["row_count"],
+            "coverage_start": group["coverage_start"],
+            "coverage_end": group["coverage_end"],
+            "kind": group["kind"],
+            "symbol": group["symbol"],
+            "period": group["period"],
+            "adjust": group["adjust"],
+            "format": "parquet",
+        }
+
+
+def _file_record(
+    data_dir: Path,
+    symbol: str,
+    filename: str,
+    start: str,
+    end: str,
+) -> dict[str, Any]:
+    path = (
+        data_dir
+        / "raw"
+        / "bars"
+        / "kind=daily_bars"
+        / "period=1d"
+        / "adjust=none"
+        / f"symbol={symbol}"
+        / filename
+    )
+    return {
+        "file_id": filename,
+        "path": str(path),
+        "hash": f"sha256:{filename}",
+        "row_count": 10,
+        "coverage_start": start,
+        "coverage_end": end,
+        "kind": "daily_bars",
+        "symbol": symbol,
+        "period": "1d",
+        "adjust": "none",
+        "format": "parquet",
+    }
 
 
 if __name__ == "__main__":

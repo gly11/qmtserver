@@ -376,6 +376,8 @@ uv run qmtserver data cleanup
 uv run qmtserver data cleanup --expired-days 30
 uv run qmtserver data rebuild-index
 uv run qmtserver data rebuild-index --execute
+uv run qmtserver data compact
+uv run qmtserver data compact --execute
 ```
 
 `data check` 现在会输出本地健康摘要，并检查已登记文件缺失、未登记 Parquet、
@@ -384,6 +386,9 @@ Parquet metadata 与 DuckDB 登记信息不一致、孤儿 export 文件等问�
 `--expired-days N` 可把生成时间至少 N 天前的 export CSV/manifest 纳入清理候选。
 `data rebuild-index` 默认仍是 dry-run；传入 `--execute` 会从本地 Parquet 重建 DuckDB
 中的 `data_files` 和 `data_coverage` metadata。
+`data compact` 默认只输出按 kind/symbol/period/adjust 分组的小文件合并计划；传入
+`--execute` 后会写入 compact Parquet、删除参与合并的源文件，并自动调用 rebuild-index
+重建 DuckDB metadata。可用 `--min-files N` 调整至少多少个文件才纳入合并。
 
 `data check` 会检查 DuckDB 已登记但文件缺失的 Parquet、未登记的 Parquet，以及孤儿 export
 文件。`data cleanup` 默认是 dry-run，只列出删除候选；只有显式传入 `--delete` 才会删除

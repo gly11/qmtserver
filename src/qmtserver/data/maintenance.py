@@ -8,6 +8,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Protocol
 
+from qmtserver.data.compaction import (
+    CompactionEngine,
+    ParquetCompactionEngine,
+    plan_compaction_groups,
+)
+
 
 class DataFileIndex(Protocol):
     def list_all_files(self) -> list[dict[str, Any]]: ...
@@ -28,10 +34,12 @@ class DataMaintenanceService:
         *,
         repository: DataFileIndex,
         metadata_reader: ParquetMetadataReaderProtocol | None = None,
+        compaction_engine: CompactionEngine | None = None,
     ) -> None:
         self.data_dir = data_dir
         self.repository = repository
         self.metadata_reader = metadata_reader or ParquetMetadataReader()
+        self.compaction_engine = compaction_engine or ParquetCompactionEngine()
 
     def check(self) -> dict[str, Any]:
         registered = self.repository.list_all_files()
@@ -112,6 +120,37 @@ class DataMaintenanceService:
             "metadata_error_count": len(errors),
             "metadata_errors": errors,
             "rebuilt_file_count": len(metadata) if execute else 0,
+        }
+
+    def compact(self, *, execute: bool = False, min_files: int = 2) -> dict[str, Any]:
+        groups = plan_compaction_groups(
+            self.repository.list_all_files(),
+            data_dir=self.data_dir,
+            min_files=min_files,
+        )
+        compacted = []
+        deleted = []
+        rebuild = None
+        if execute:
+            for group in groups:
+                file_record = self.compaction_engine.compact(group, Path(str(group["output_path"])))
+                compacted.append(file_record)
+                for source in group["source_files"]:
+                    source_path = Path(str(source["path"]))
+                    if self._can_delete(source_path) and source_path.exists():
+                        source_path.unlink()
+                        deleted.append({"path": str(source_path)})
+            rebuild = self.rebuild_index(execute=True)
+        return {
+            "schema": "market.data.compaction.v1",
+            "dry_run": not execute,
+            "group_count": len(groups),
+            "groups": groups,
+            "compacted_file_count": len(compacted),
+            "compacted_files": compacted,
+            "deleted_source_count": len(deleted),
+            "deleted_source_files": deleted,
+            "rebuild_index": rebuild,
         }
 
     def health_summary(
