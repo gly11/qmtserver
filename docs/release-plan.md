@@ -1,7 +1,7 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前待发布版本为 `0.7.0`，主题是网关可靠性诊断
-和 Market Data Lake 基线。
+本文档记录 qmtserver 的版本节奏和发布门禁。当前开发主线是 Market Data Lake 稳定化：让
+server 端行情数据湖具备更可靠的 coverage、维护、查询、导出、job 追踪和只读 smoke 流程。
 
 ## 版本节奏
 
@@ -12,7 +12,8 @@
 0.4.0  已发布    稳定只读交易查询 API
 0.5.0  已发布    实时行情订阅和兼容矩阵基线
 0.6.0  已发布    只读实盘 smoke、历史下载可靠性和实时稳定性基线
-0.7.0  待发布    网关可靠性诊断和 Market Data Lake 基线
+0.7.0  已发布    网关可靠性诊断和 Market Data Lake 基线
+下一版 待规划    Market Data Lake 稳定化
 1.0.0  远期    稳定版本
 ```
 
@@ -151,7 +152,7 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 
 ## 0.7.0
 
-状态：待发布。
+状态：已发布。
 
 `0.7.0` 聚焦两条只读能力：网关运行可靠性诊断，以及 server 端 Market Data Lake 基线。
 当 MiniQMT 或订阅状态异常时，服务端应能给出更清晰的诊断、健康摘要和手动恢复入口；当外部
@@ -193,6 +194,30 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 - Market Data Lake 的普通测试使用 fakes 和本地临时目录，不依赖真实 MiniQMT；真实数据下载仍应
   使用只读行情路径，不连接 trader，也不执行任何交易命令。
 
+## Market Data Lake Stabilization
+
+状态：开发中。
+
+该主线在 `0.7.0` 数据湖基线之上增强稳定性和可维护性：
+
+- coverage response 增加 file-level `covered_segments` 和 `gaps`，cached download 使用 segments
+  判断中间缺口。
+- 增加 `qmtserver data check`、`cleanup` 和 `rebuild-index` 本地维护入口；cleanup 默认 dry-run。
+- `/v1/market/data/bars` 支持稳定排序、symbol/period/time 去重、`limit`/`offset` 分页和
+  query metadata。
+- data export manifest 记录 `source_file_count`、`deduplicated_row_count` 和 `truncated`。
+- data download result 增加 per-symbol `symbol_results`。
+- 增加 `GET /v1/market/data/jobs`，从 DuckDB 查询持久化 data jobs。
+- 增加 `scripts/smoke_market_data_lake.py`，覆盖 download、coverage、bars、quality、export 和
+  cached download 闭环。
+
+发布限制：
+
+- 普通测试使用 fakes 和本地临时目录，不依赖真实 MiniQMT。
+- 真实 MiniQMT smoke 只做 readonly 行情数据湖验证，不连接 trader，不执行下单、撤单、转账或
+  其他交易命令。
+- 如果真实 smoke 未执行或失败，发布说明必须明确标注未验证项。
+
 ## 发布门禁
 
 发布前至少运行：
@@ -223,7 +248,7 @@ uv run qmtserver serve --userdata $userdata --account-id $account
 - token 鉴权开启。
 - 远程电脑可访问 `/v1/health`。
 - 远程客户端可调用 `status()` 和至少一个只读行情方法。
-- `0.7.0` 发布前可运行只读 smoke：
+- Market Data Lake 稳定化发布前可运行只读 smoke：
 
 ```powershell
 uv run python scripts\smoke_market_history.py --symbol 000001.SZ --require-rows

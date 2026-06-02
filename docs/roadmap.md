@@ -81,9 +81,9 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 - 后续从本地 Parquet/DuckDB 查询和导出，减少重复访问 MiniQMT。
 - client 只提交任务、查询状态和下载结果，不直接 import `xtquant`。
 
-该方向已完成配置、依赖和 schema 骨架、持久化 job、Parquet writer、coverage planner、本地
-查询 API、CSV export、质量检查和 export 维护入口。后续可以继续推进 Parquet 原始数据清理、
-压缩和索引重建。
+该方向已完成配置、依赖和 schema 骨架、持久化 job、Parquet writer、coverage gap detection、
+本地查询 API、CSV export、质量检查、storage maintenance、job listing 和 readonly data lake
+smoke。后续可以继续推进 Parquet 压缩、执行式 index rebuild 和更大规模数据集的性能优化。
 
 ### Subscriptions And Events
 

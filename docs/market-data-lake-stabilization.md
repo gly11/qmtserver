@@ -349,6 +349,10 @@ test(data): add market data lake smoke script
 
 ## 阶段 6：Documentation And Release Gate
 
+状态：已完成文档收口。`docs/release-plan.md` 已记录 Market Data Lake 稳定化主线和发布门禁；
+`docs/operations.md`、`docs/api.md`、`docs/compatibility.md` 和 `docs/market-data-lake.md` 已同步
+本阶段新增能力。当前未新增错误码，`docs/errors.md` 暂无变更。
+
 目标：让用户知道如何安全、正确地使用和维护数据湖。
 
 开发项：
