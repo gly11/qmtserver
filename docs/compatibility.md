@@ -47,6 +47,7 @@ Do not record account IDs, tokens, private paths, or other local secrets.
 | `scripts/smoke_market_subscription.py --symbols` | qmtserver smoke helper | Creates one multi-symbol readonly subscription and checks events, latest cache, and diagnostics | `tests/test_smoke_market_subscription_script.py` | Active-market readonly batch smoke passed with three symbols | development verified |
 | `scripts/smoke_market_subscription.py --duration-seconds` | qmtserver smoke helper | Collects callback counts and per-symbol callback report over a bounded window | `tests/test_smoke_market_subscription_script.py` | Active-market readonly 20-second batch smoke passed | development verified |
 | `scripts/smoke_market_subscription.py --omit-events` | qmtserver smoke helper | Suppresses full event arrays in printed long-window smoke output while preserving event counts | `tests/test_smoke_market_subscription_script.py` | Used after 180-second active-market smoke to keep future output concise | development verified |
+| `scripts/smoke_market_data_lake.py` | qmtserver smoke helper | Checks `/v1/health` and `/v1/market/data/*` download, coverage, bars, quality, export, and cached download paths with `connect_trader=False` | `tests/test_smoke_market_data_lake_script.py` | Pending real MiniQMT readonly smoke | development |
 
 ## Realtime Subscription Observations
 

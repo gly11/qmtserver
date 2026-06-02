@@ -350,6 +350,16 @@ uv run qmtserver data rebuild-index
 这些维护命令只处理 qmtserver 本地数据目录，不连接 trader，不触发 MiniQMT 下载，也不执行任何
 交易命令。
 
+发布前可运行只读 data lake smoke，验证 download、coverage、bars、quality、export 和 cached
+download 闭环：
+
+```powershell
+uv run python scripts\smoke_market_data_lake.py --symbol 000001.SZ --require-rows
+```
+
+该脚本显式使用 `connect_trader=False`，只访问 `/v1/market/data/*` 和 `/v1/health`，不调用
+`/v1/trader/*`、下单、撤单、转账或其他交易命令。
+
 详细规划见 [Market Data Lake](market-data-lake.md)。
 
 ## Jobs 与诊断

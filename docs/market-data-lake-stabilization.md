@@ -291,6 +291,10 @@ feat(data): add persistent data job listing
 
 ## 阶段 5：Readonly Smoke And Compatibility Records
 
+状态：已完成基础脚本。新增 `scripts/smoke_market_data_lake.py`，覆盖 health、data download、
+job polling、coverage、bars、quality、export 和 cached second download。脚本只访问
+`/v1/market/data/*` 和 `/v1/health`，显式不连接 trader，不执行交易命令。
+
 目标：建立发布前可重复执行的真实 MiniQMT readonly 验证流程。
 
 开发项：

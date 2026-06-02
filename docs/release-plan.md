@@ -227,6 +227,7 @@ uv run qmtserver serve --userdata $userdata --account-id $account
 
 ```powershell
 uv run python scripts\smoke_market_history.py --symbol 000001.SZ --require-rows
+uv run python scripts\smoke_market_data_lake.py --symbol 000001.SZ --require-rows
 uv run python scripts\smoke_reference.py --symbols 000001.SZ,600000.SH
 uv run python scripts\smoke_market_subscription.py --symbols 000001.SZ,600000.SH,510300.SH --duration-seconds 180 --min-callbacks 30 --require-all-symbols --report-intervals --omit-events
 uv run python scripts\smoke_trader_readonly.py
