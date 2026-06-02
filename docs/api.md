@@ -94,7 +94,7 @@ envelope:
   "error": null,
   "meta": {
     "schema": "trader.readonly.v1",
-    "qmtserver_version": "0.7.0",
+    "qmtserver_version": "0.8.0",
     "xtquant_version": null,
     "account_id": "***",
     "account_type": "STOCK"
@@ -154,7 +154,7 @@ GET /v1/market/bars/daily?symbols=000001.SZ,600000.SH&start=2026-01-01&end=2026-
     },
     "row_count": 1,
     "generated_at": "2026-05-26T00:00:00+00:00",
-    "qmtserver_version": "0.7.0",
+    "qmtserver_version": "0.8.0",
     "xtquant_version": null
   }
 }

@@ -1,7 +1,8 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前开发主线是 Market Data Lake 稳定化：让
-server 端行情数据湖具备更可靠的 coverage、维护、查询、导出、job 追踪和只读 smoke 流程。
+本文档记录 qmtserver 的版本节奏和发布门禁。当前待发布版本为 `0.8.0`，主题是 Market Data
+Lake 稳定化：让 server 端行情数据湖具备更可靠的 coverage、维护、查询、导出、job 追踪和
+只读 smoke 流程。
 
 ## 版本节奏
 
@@ -13,7 +14,7 @@ server 端行情数据湖具备更可靠的 coverage、维护、查询、导出�
 0.5.0  已发布    实时行情订阅和兼容矩阵基线
 0.6.0  已发布    只读实盘 smoke、历史下载可靠性和实时稳定性基线
 0.7.0  已发布    网关可靠性诊断和 Market Data Lake 基线
-下一版 待规划    Market Data Lake 稳定化
+0.8.0  待发布    Market Data Lake 稳定化
 1.0.0  远期    稳定版本
 ```
 
@@ -194,11 +195,11 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 - Market Data Lake 的普通测试使用 fakes 和本地临时目录，不依赖真实 MiniQMT；真实数据下载仍应
   使用只读行情路径，不连接 trader，也不执行任何交易命令。
 
-## Market Data Lake Stabilization
+## 0.8.0
 
-状态：开发中。
+状态：待发布。
 
-该主线在 `0.7.0` 数据湖基线之上增强稳定性和可维护性：
+`0.8.0` 在 `0.7.0` 数据湖基线之上增强稳定性和可维护性：
 
 - coverage response 增加 file-level `covered_segments` 和 `gaps`，cached download 使用 segments
   判断中间缺口。
@@ -211,11 +212,15 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 - 增加 `scripts/smoke_market_data_lake.py`，覆盖 download、coverage、bars、quality、export 和
   cached download 闭环。
 
-发布限制：
+发布记录：
 
+- 已完成普通单元测试、lint、format、type、code health、diff check、build 和 twine check。
 - 普通测试使用 fakes 和本地临时目录，不依赖真实 MiniQMT。
 - 真实 MiniQMT smoke 只做 readonly 行情数据湖验证，不连接 trader，不执行下单、撤单、转账或
   其他交易命令。
+
+发布限制：
+
 - 如果真实 smoke 未执行或失败，发布说明必须明确标注未验证项。
 
 ## 发布门禁
