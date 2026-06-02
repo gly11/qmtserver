@@ -121,3 +121,5 @@ MiniQMT 下载。删除 export 只清理本地 CSV 和 manifest，不删除 Mini
 
 1. Storage Maintenance
    后续可继续增加 Parquet 原始数据清理、压缩、重建索引和更精细的 coverage 修复策略。
+
+详细稳定化计划见 [Market Data Lake Stabilization Plan](market-data-lake-stabilization.md)。
