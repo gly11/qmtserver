@@ -419,7 +419,12 @@ class FakeDataFileRepository:
 
 
 class FakeCoveragePlanner:
-    def __init__(self, *, fully_covered: bool) -> None:
+    def __init__(
+        self,
+        *,
+        fully_covered: bool,
+        gaps: list[dict[str, str]] | None = None,
+    ) -> None:
         self.result = {
             "schema": "market.data.coverage.v1",
             "fully_covered": fully_covered,
@@ -432,6 +437,7 @@ class FakeCoveragePlanner:
                     "file_count": 1,
                 }
             ],
+            "gaps": gaps or [],
             "missing_symbols": [] if fully_covered else ["000001.SZ"],
         }
         self.requests: list[dict[str, Any]] = []

@@ -4,7 +4,12 @@ from threading import Thread
 from typing import Any, Protocol
 
 from qmtserver.data.backend import DuckDbDataBackend
-from qmtserver.data.chunks import plan_download_chunks, progress_from_chunks, request_for_chunk
+from qmtserver.data.chunks import (
+    plan_download_chunks,
+    plan_gap_download_chunks,
+    progress_from_chunks,
+    request_for_chunk,
+)
 from qmtserver.data.coverage import CoveragePlanner
 from qmtserver.data.exports import DataExportService
 from qmtserver.data.files import ParquetBarWriter
@@ -109,13 +114,13 @@ class DataDownloadJobService:
         self.run_async = run_async
 
     def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
+        coverage = self._coverage_for_download(request)
         job = self.repository.create("market_data_download", request)
-        self.repository.create_chunks(job.job_id, plan_download_chunks(request))
+        self.repository.create_chunks(job.job_id, self._plan_chunks(request, coverage))
         initial = job.as_dict()
-        if self._is_cached(request):
-            coverage = self.coverage_planner.coverage(request) if self.coverage_planner else {}
+        if self._is_cached(request, coverage):
             self._mark_chunks_finished_from_cache(job.job_id)
-            self.repository.mark_succeeded(job.job_id, cached_result(request, coverage))
+            self.repository.mark_succeeded(job.job_id, cached_result(request, coverage or {}))
             return initial
         if self.run_async:
             worker = Thread(target=self._run_download, args=(job.job_id, request), daemon=True)
@@ -285,10 +290,27 @@ class DataDownloadJobService:
                 file_count=0,
             )
 
-    def _is_cached(self, request: dict[str, Any]) -> bool:
+    def _coverage_for_download(self, request: dict[str, Any]) -> dict[str, Any] | None:
         if request.get("force") or self.coverage_planner is None:
+            return None
+        coverage = self.coverage_planner.coverage(request)
+        if _uses_incremental_mode(request) or coverage.get("fully_covered"):
+            return coverage
+        return None
+
+    def _plan_chunks(
+        self,
+        request: dict[str, Any],
+        coverage: dict[str, Any] | None,
+    ) -> list[dict[str, Any]]:
+        if _uses_incremental_mode(request) and coverage is not None:
+            return plan_gap_download_chunks(request, coverage)
+        return plan_download_chunks(request)
+
+    def _is_cached(self, request: dict[str, Any], coverage: dict[str, Any] | None) -> bool:
+        if request.get("force") or coverage is None:
             return False
-        return bool(self.coverage_planner.coverage(request).get("fully_covered"))
+        return bool(coverage.get("fully_covered"))
 
     def _job_with_chunks(self, job: DataJobRecord) -> dict[str, Any]:
         payload = job.as_dict()
@@ -341,3 +363,7 @@ def create_data_job_service(
         export_service=DataExportService(query, root=backend.data_dir / "exports"),
         run_async=run_async,
     )
+
+
+def _uses_incremental_mode(request: dict[str, Any]) -> bool:
+    return request.get("mode") == "ensure" or bool(request.get("incremental"))

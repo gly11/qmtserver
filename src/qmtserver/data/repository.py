@@ -103,10 +103,10 @@ class DataJobRepository:
                 """
                 INSERT INTO data_job_chunks (
                     chunk_id, job_id, status, symbol, kind, period, adjust, chunk_start, chunk_end,
-                    attempts, row_count, file_count, error_code, error_message, created_at,
-                    updated_at
+                    attempts, row_count, file_count, error_code, error_message, gap_reason,
+                    created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     f"{job_id}:{index:06d}",
@@ -123,6 +123,7 @@ class DataJobRepository:
                     int(chunk.get("file_count", 0)),
                     chunk.get("error_code"),
                     chunk.get("error_message"),
+                    chunk.get("gap_reason"),
                     now_iso(),
                     now_iso(),
                 ),
@@ -135,7 +136,7 @@ class DataJobRepository:
                 """
                 SELECT chunk_id, job_id, status, symbol, kind, period, adjust, chunk_start,
                        chunk_end, attempts, row_count, file_count, error_code, error_message,
-                       created_at, updated_at
+                       gap_reason, created_at, updated_at
                 FROM data_job_chunks
                 WHERE job_id = ?
                 ORDER BY chunk_id

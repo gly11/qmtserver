@@ -148,6 +148,52 @@ class DataJobChunkServiceTests(unittest.TestCase):
         self.assertEqual(fetched["progress"]["queued_chunks"], 0)
         self.assertEqual(fetched["progress"]["finished_chunks"], 2)
 
+    def test_ensure_download_only_runs_coverage_gaps(self) -> None:
+        repository = FakeDataJobRepository()
+        downloader = FakeHistoryDownloader()
+        service = DataDownloadJobService(
+            repository,
+            downloader=downloader,
+            bar_reader=FakeBarReader(),
+            file_writer=FakeBarWriter(),
+            file_repository=FakeDataFileRepository(),
+            coverage_planner=FakeCoveragePlanner(
+                fully_covered=False,
+                gaps=[
+                    {
+                        "symbol": "000001.SZ",
+                        "gap_start": "2026-01-11",
+                        "gap_end": "2026-01-12",
+                        "reason": "segment_gap",
+                    }
+                ],
+            ),
+            run_async=False,
+        )
+
+        job = service.submit_download(
+            {
+                "kind": "daily_bars",
+                "symbols": ["000001.SZ"],
+                "start": "2026-01-01",
+                "end": "2026-01-31",
+                "adjust": "none",
+                "mode": "ensure",
+                "chunk_days": 31,
+            }
+        )
+
+        self.assertEqual(
+            [
+                (request["symbols"], request["start"], request["end"])
+                for request in downloader.requests
+            ],
+            [(["000001.SZ"], "2026-01-11", "2026-01-12")],
+        )
+        chunks = repository.list_chunks(str(job["job_id"]))
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(chunks[0]["gap_reason"], "segment_gap")
+
     def test_duckdb_repository_updates_chunk_status(self) -> None:
         backend = FakeDuckDbBackend()
         repository = DataJobRepository(backend)

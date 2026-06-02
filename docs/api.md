@@ -377,6 +377,7 @@ MiniQMT 下载。
   "start": "2026-01-01",
   "end": "2026-01-31",
   "chunk_days": 31,
+  "mode": "ensure",
   "adjust": "none",
   "format": "parquet"
 }
@@ -402,6 +403,9 @@ MiniQMT 下载。
 `universe`、`exchange`、`symbol_count` 和 `universe_hash`，方便追溯全市场任务的输入来源。
 `chunk_days` 用于把大区间下载规划成 symbol/date chunks；默认值为 31，最大值为 366。
 server 会将规划结果写入 `data_job_chunks` 元数据表，为后续 chunk 级进度、重试和恢复执行提供依据。
+当 `mode="ensure"` 或 `incremental=true` 且未设置 `force=true` 时，server 会先查询本地
+coverage，只为 `gaps` 规划下载 chunks；如果已完整覆盖，则返回 cached job，不会触发新的
+MiniQMT 下载。
 
 如果未安装 `qmtserver[data]`，返回 `DATA_BACKEND_UNAVAILABLE`。该接口不连接 trader，
 也不执行任何交易命令。

@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS data_job_chunks (
     file_count BIGINT NOT NULL,
     error_code VARCHAR,
     error_message VARCHAR,
+    gap_reason VARCHAR,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );

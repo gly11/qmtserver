@@ -303,6 +303,7 @@ $body = @{
   start = "2026-01-01"
   end = "2026-01-31"
   chunk_days = 31
+  mode = "ensure"
   adjust = "none"
   format = "parquet"
 } | ConvertTo-Json
@@ -314,6 +315,8 @@ server 会把 universe 解析为 canonical symbols，并在 job request/result �
 `chunk_days` 会把每个 symbol 的日期区间拆成较小 chunk，并将规划结果持久化到 DuckDB
 `data_job_chunks` 表。worker 会逐个执行这些 chunk，并记录 attempts、row/file count 和失败
 错误，便于后续按 chunk 汇总进度、失败明细和恢复执行。
+`mode="ensure"` 或 `incremental=true` 会先查询 coverage，只为缺口生成 chunk；本地已经完整
+覆盖时会返回 cached job，不会重复下载整段历史数据。
 
 查询任务：
 

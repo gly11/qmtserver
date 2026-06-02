@@ -23,6 +23,8 @@ class DataDownloadRequest(BaseModel):
     start: str | None = None
     end: str | None = None
     chunk_days: int = Field(default=31, ge=1, le=366)
+    mode: str | None = None
+    incremental: bool = False
     adjust: str = "none"
     period: str | None = None
     format: str = "parquet"

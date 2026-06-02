@@ -75,8 +75,9 @@ def chunk_from_row(row: tuple[Any, ...]) -> dict[str, Any]:
         "file_count": int(row[11]),
         "error_code": str(row[12]) if row[12] else None,
         "error_message": str(row[13]) if row[13] else None,
-        "created_at": str(row[14]),
-        "updated_at": str(row[15]),
+        "gap_reason": str(row[14]) if row[14] else None,
+        "created_at": str(row[15]),
+        "updated_at": str(row[16]),
     }
 
 

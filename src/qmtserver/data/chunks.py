@@ -20,6 +20,25 @@ def plan_download_chunks(request: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def plan_gap_download_chunks(
+    request: dict[str, Any],
+    coverage: dict[str, Any],
+) -> list[dict[str, Any]]:
+    chunks = []
+    for gap in coverage.get("gaps", []):
+        if not isinstance(gap, dict) or not gap.get("symbol"):
+            continue
+        gap_request = {
+            **request,
+            "symbols": [str(gap["symbol"])],
+            "start": gap.get("gap_start"),
+            "end": gap.get("gap_end"),
+            "gap_reason": gap.get("reason"),
+        }
+        chunks.extend(plan_download_chunks(gap_request))
+    return chunks
+
+
 def request_for_chunk(request: dict[str, Any], chunk: dict[str, Any]) -> dict[str, Any]:
     chunk_request = dict(request)
     chunk_request["symbols"] = [str(chunk["symbol"])]
@@ -105,6 +124,7 @@ def _chunk(
         "file_count": 0,
         "error_code": None,
         "error_message": None,
+        "gap_reason": request.get("gap_reason"),
     }
 
 
