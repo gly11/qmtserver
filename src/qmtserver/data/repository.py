@@ -157,6 +157,19 @@ class DataJobRepository:
         finally:
             connection.close()
 
+    def list_coverage_segments(self, request: dict[str, Any]) -> list[dict[str, Any]]:
+        return [
+            {
+                "symbol": file_record["symbol"],
+                "coverage_start": file_record["coverage_start"],
+                "coverage_end": file_record["coverage_end"],
+                "row_count": file_record["row_count"],
+                "file_count": 1,
+                "file_id": file_record["file_id"],
+            }
+            for file_record in self.list_files(request)
+        ]
+
     def list_files(self, request: dict[str, Any]) -> list[dict[str, Any]]:
         symbols = {str(symbol) for symbol in request.get("symbols", [])}
         connection = self.backend.connect(str(self.backend.database_path))

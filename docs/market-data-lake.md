@@ -114,8 +114,10 @@ DELETE /v1/market/data/exports/{export_id}
 该 worker 当前会先检查 DuckDB 中的 coverage。命中完整覆盖且未设置 `force=true` 时，job
 直接返回 cached result；未命中时触发 `xtdata.download_history_data` 补齐 MiniQMT 行情缓存，
 然后读取标准 bars，按 symbol 写入 Parquet，并把 job 状态、data file 元数据和 coverage 写入
-DuckDB。`/v1/market/data/bars`、quality 和 export API 只读取本地 Parquet/DuckDB，不触发新的
-MiniQMT 下载。删除 export 只清理本地 CSV 和 manifest，不删除 MiniQMT 缓存或 Parquet 原始数据。
+DuckDB。coverage 会同时返回合并摘要、file-level segments 和缺口列表；缓存命中判断使用
+segments，避免把中间缺口误判为完整覆盖。`/v1/market/data/bars`、quality 和 export API 只读取
+本地 Parquet/DuckDB，不触发新的 MiniQMT 下载。删除 export 只清理本地 CSV 和 manifest，不删除
+MiniQMT 缓存或 Parquet 原始数据。
 
 ## 后续阶段
 

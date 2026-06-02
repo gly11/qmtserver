@@ -394,7 +394,10 @@ MiniQMT 下载。
 GET /v1/market/data/coverage?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31&adjust=none
 ```
 
-响应使用 `market.data.coverage.v1`，包含 `fully_covered`、`coverage` 和 `missing_symbols`。
+响应使用 `market.data.coverage.v1`，包含 `fully_covered`、`coverage`、`covered_segments`、
+`gaps` 和 `missing_symbols`。`coverage` 是按 symbol/period/adjust 合并后的摘要，
+`covered_segments` 来自已登记的本地 data files；缓存命中判断使用 segments 检查中间缺口，
+不会只因为 summary 首尾覆盖请求区间就跳过下载。
 
 ### GET /v1/market/data/bars
 

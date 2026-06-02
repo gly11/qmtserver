@@ -88,6 +88,9 @@ server 端行情数据层。
 
 ## 阶段 1：Metadata And Coverage Correctness
 
+状态：已完成。coverage response 已包含合并摘要、file-level `covered_segments` 和 `gaps`；
+cached download 会使用 segments 判断中间缺口。
+
 目标：让 coverage 从“粗略整体区间”变成“能判断完整覆盖、部分覆盖和缺口”的可靠元数据。
 
 开发项：
