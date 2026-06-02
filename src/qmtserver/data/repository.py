@@ -6,6 +6,7 @@ from typing import Any, Protocol
 from qmtserver import __version__
 from qmtserver.data.models import DataJobRecord, DataJobStatus, now_iso
 from qmtserver.data.records import (
+    chunk_from_row,
     coverage_from_row,
     coverage_id,
     file_from_row,
@@ -93,6 +94,55 @@ class DataJobRepository:
                 tuple(parameters),
             )
             return [job_record_from_row(row) for row in cursor.fetchall()]
+        finally:
+            connection.close()
+
+    def create_chunks(self, job_id: str, chunks: list[dict[str, Any]]) -> None:
+        for index, chunk in enumerate(chunks):
+            self._execute(
+                """
+                INSERT INTO data_job_chunks (
+                    chunk_id, job_id, status, symbol, kind, period, adjust, chunk_start, chunk_end,
+                    attempts, row_count, file_count, error_code, error_message, created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f"{job_id}:{index:06d}",
+                    job_id,
+                    chunk.get("status", "queued"),
+                    chunk["symbol"],
+                    chunk["kind"],
+                    chunk["period"],
+                    chunk["adjust"],
+                    chunk.get("chunk_start"),
+                    chunk.get("chunk_end"),
+                    int(chunk.get("attempts", 0)),
+                    int(chunk.get("row_count", 0)),
+                    int(chunk.get("file_count", 0)),
+                    chunk.get("error_code"),
+                    chunk.get("error_message"),
+                    now_iso(),
+                    now_iso(),
+                ),
+            )
+
+    def list_chunks(self, job_id: str) -> list[dict[str, Any]]:
+        connection = self.backend.connect(str(self.backend.database_path))
+        try:
+            cursor = connection.execute(
+                """
+                SELECT chunk_id, job_id, status, symbol, kind, period, adjust, chunk_start,
+                       chunk_end, attempts, row_count, file_count, error_code, error_message,
+                       created_at, updated_at
+                FROM data_job_chunks
+                WHERE job_id = ?
+                ORDER BY chunk_id
+                """,
+                (job_id,),
+            )
+            return [chunk_from_row(row) for row in cursor.fetchall()]
         finally:
             connection.close()
 

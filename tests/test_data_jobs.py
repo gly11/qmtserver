@@ -104,6 +104,32 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         self.assertEqual(persisted.result["symbol_count"], 1)
         self.assertEqual(persisted.result["universe_hash"], "sha256:test")
 
+    def test_submit_download_persists_planned_chunks(self) -> None:
+        repository = FakeDataJobRepository()
+        service = DataDownloadJobService(
+            repository,
+            downloader=FakeHistoryDownloader(),
+            coverage_planner=FakeCoveragePlanner(fully_covered=False),
+            run_async=False,
+        )
+
+        job = service.submit_download(
+            {
+                "kind": "daily_bars",
+                "symbols": ["000001.SZ"],
+                "start": "2026-01-01",
+                "end": "2026-02-15",
+                "adjust": "none",
+                "chunk_days": 31,
+            }
+        )
+
+        chunks = repository.list_chunks(str(job["job_id"]))
+        self.assertEqual(len(chunks), 2)
+        self.assertEqual(chunks[0]["symbol"], "000001.SZ")
+        self.assertEqual(chunks[0]["chunk_start"], "2026-01-01")
+        self.assertEqual(chunks[1]["chunk_end"], "2026-02-15")
+
     def test_submit_download_uses_cached_coverage_unless_force_is_set(self) -> None:
         repository = FakeDataJobRepository()
         downloader = FakeHistoryDownloader()
@@ -300,6 +326,7 @@ class DataDownloadJobServiceTests(unittest.TestCase):
 class FakeDataJobRepository:
     def __init__(self) -> None:
         self.jobs: dict[str, DataJobRecord] = {}
+        self.chunks: dict[str, list[dict[str, Any]]] = {}
 
     def create(self, job_type: str, request: dict[str, Any]) -> DataJobRecord:
         job = DataJobRecord(job_type=job_type, request=request)
@@ -326,6 +353,12 @@ class FakeDataJobRepository:
     def mark_failed(self, job_id: str, error: dict[str, str]) -> None:
         self.jobs[job_id].status = DataJobStatus.FAILED
         self.jobs[job_id].error = error
+
+    def create_chunks(self, job_id: str, chunks: list[dict[str, Any]]) -> None:
+        self.chunks[job_id] = chunks
+
+    def list_chunks(self, job_id: str) -> list[dict[str, Any]]:
+        return self.chunks.get(job_id, [])
 
 
 class FakeHistoryDownloader:

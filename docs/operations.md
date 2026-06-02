@@ -302,6 +302,7 @@ $body = @{
   exchange = "SH"
   start = "2026-01-01"
   end = "2026-01-31"
+  chunk_days = 31
   adjust = "none"
   format = "parquet"
 } | ConvertTo-Json
@@ -310,6 +311,8 @@ $body = @{
 server 会把 universe 解析为 canonical symbols，并在 job request/result 中记录
 `resolved_symbols`、`symbol_count` 和 `universe_hash`。这比 client 传入空 `symbols` 或自行展开
 股票池更可追溯。该解析只走行情/reference 路径，不连接 trader。
+`chunk_days` 会把每个 symbol 的日期区间拆成较小 chunk，并将规划结果持久化到 DuckDB
+`data_job_chunks` 表，便于后续版本按 chunk 汇总进度、失败明细和恢复执行。
 
 查询任务：
 

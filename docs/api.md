@@ -376,6 +376,7 @@ MiniQMT 下载。
   "symbols": ["000001.SZ"],
   "start": "2026-01-01",
   "end": "2026-01-31",
+  "chunk_days": 31,
   "adjust": "none",
   "format": "parquet"
 }
@@ -399,6 +400,8 @@ MiniQMT 下载。
 可选值为 `SH`、`SZ` 或 `BJ`，用于按证券代码后缀过滤。提交给 data job 的 canonical request
 会记录 `resolved_symbols`、`symbol_count` 和 `universe_hash`；job result 也会保留
 `universe`、`exchange`、`symbol_count` 和 `universe_hash`，方便追溯全市场任务的输入来源。
+`chunk_days` 用于把大区间下载规划成 symbol/date chunks；默认值为 31，最大值为 366。
+server 会将规划结果写入 `data_job_chunks` 元数据表，为后续 chunk 级进度、重试和恢复执行提供依据。
 
 如果未安装 `qmtserver[data]`，返回 `DATA_BACKEND_UNAVAILABLE`。该接口不连接 trader，
 也不执行任何交易命令。

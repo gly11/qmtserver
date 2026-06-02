@@ -50,6 +50,7 @@ class DataBackendTests(unittest.TestCase):
         self.assertIn("CREATE TABLE IF NOT EXISTS data_jobs", sql)
         self.assertIn("CREATE TABLE IF NOT EXISTS data_files", sql)
         self.assertIn("CREATE TABLE IF NOT EXISTS data_coverage", sql)
+        self.assertIn("CREATE TABLE IF NOT EXISTS data_job_chunks", sql)
 
     def test_duckdb_backend_initializes_schema_and_directories(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

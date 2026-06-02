@@ -31,6 +31,7 @@ class ApiMarketDataTests(unittest.TestCase):
                     "symbols": ["000001.SZ"],
                     "start": "2026-01-01",
                     "end": "2026-01-31",
+                    "chunk_days": 31,
                     "adjust": "none",
                     "format": "parquet",
                 },
@@ -72,6 +73,7 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertEqual(request["symbols"], ["600000.SH"])
         self.assertEqual(request["universe"], "all_a")
         self.assertEqual(request["exchange"], "SH")
+        self.assertEqual(request["chunk_days"], 31)
         self.assertEqual(request["resolved_symbols"], ["600000.SH"])
         self.assertEqual(request["symbol_count"], 1)
         self.assertTrue(str(request["universe_hash"]).startswith("sha256:"))

@@ -45,6 +45,9 @@ data/snapshots/ # 现有 snapshot/export 文件
 Bulk download entry points can now resolve `universe="all_a"` with an optional exchange filter before
 submitting a data job. The canonical request records resolved symbols, symbol count, and a universe
 hash so large jobs remain traceable.
+Download jobs also plan persistent symbol/date chunks using `chunk_days` and store them in
+`data_job_chunks`. This metadata is the basis for the next resumable execution phase; the current
+worker still executes the submitted request as one job-level unit.
 
 ## 安装
 
@@ -132,7 +135,8 @@ MiniQMT 缓存或 Parquet 原始数据。
    支持显式删除和 export 过期清理；`data rebuild-index --execute` 可从本地 Parquet
    重建 DuckDB 文件索引和 coverage metadata。后续可继续增加 Parquet 压缩。
 2. Bulk Download Orchestration
-   已完成 universe resolution 和 canonical request metadata。下一步需要新增 chunk planner、
-   persisted chunk table、chunk-level progress/retry，以及基于 coverage gaps 的 ensure 模式。
+   已完成 universe resolution、canonical request metadata、chunk planner 和 persisted chunk
+   table。下一步需要新增 chunk-level execution、progress/retry，以及基于 coverage gaps 的
+   ensure 模式。
 
 详细稳定化计划见 [Market Data Lake Stabilization Plan](market-data-lake-stabilization.md)。

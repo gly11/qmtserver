@@ -59,6 +59,27 @@ def file_from_row(row: tuple[Any, ...]) -> dict[str, Any]:
     }
 
 
+def chunk_from_row(row: tuple[Any, ...]) -> dict[str, Any]:
+    return {
+        "chunk_id": str(row[0]),
+        "job_id": str(row[1]),
+        "status": str(row[2]),
+        "symbol": str(row[3]),
+        "kind": str(row[4]),
+        "period": str(row[5]),
+        "adjust": str(row[6]),
+        "chunk_start": str(row[7]) if row[7] else None,
+        "chunk_end": str(row[8]) if row[8] else None,
+        "attempts": int(row[9]),
+        "row_count": int(row[10]),
+        "file_count": int(row[11]),
+        "error_code": str(row[12]) if row[12] else None,
+        "error_message": str(row[13]) if row[13] else None,
+        "created_at": str(row[14]),
+        "updated_at": str(row[15]),
+    }
+
+
 def file_matches_request(
     file_record: dict[str, Any],
     request: dict[str, Any],

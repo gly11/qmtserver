@@ -22,6 +22,7 @@ class DataDownloadRequest(BaseModel):
     exchange: str | None = None
     start: str | None = None
     end: str | None = None
+    chunk_days: int = Field(default=31, ge=1, le=366)
     adjust: str = "none"
     period: str | None = None
     format: str = "parquet"
