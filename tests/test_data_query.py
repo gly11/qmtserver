@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from typing import Any
 
-from qmtserver.data.query import LocalBarQuery
+from qmtserver.data.query import DuckDbParquetBarReader, LocalBarQuery
 
 
 class LocalBarQueryTests(unittest.TestCase):
@@ -89,10 +89,51 @@ class LocalBarQueryTests(unittest.TestCase):
         self.assertEqual(response["deduplicated_row_count"], 1)
         self.assertTrue(response["truncated"])
         self.assertEqual(response["next_offset"], 2)
+        self.assertEqual(response["query_profile"]["engine"], "python")
+        self.assertIn("next_offset", response["recommendations"][0])
         self.assertEqual(
             response["bars"],
             [{"symbol": "000001.SZ", "date": "2026-01-03", "close": 10.4}],
         )
+
+    def test_duckdb_reader_queries_multiple_parquet_files_directly(self) -> None:
+        connection = FakeDuckDbConnection()
+        reader = DuckDbParquetBarReader(FakeDuckDbBackend(connection))
+
+        response = reader.query_bars(
+            [
+                {"path": "data/market/raw/bars/file-1.parquet"},
+                {"path": "data/market/raw/bars/file-2.parquet"},
+            ],
+            {
+                "kind": "daily_bars",
+                "symbols": ["000001.SZ"],
+                "start": "2026-01-01",
+                "end": "2026-01-31",
+                "adjust": "none",
+            },
+            limit=1,
+            offset=1,
+        )
+
+        count_sql, count_parameters = connection.executed[0]
+        page_sql, page_parameters = connection.executed[1]
+        self.assertIn("read_parquet([?, ?], union_by_name = true)", count_sql)
+        self.assertIn("read_parquet([?, ?], union_by_name = true)", page_sql)
+        self.assertEqual(
+            count_parameters[:2],
+            (
+                "data/market/raw/bars/file-1.parquet",
+                "data/market/raw/bars/file-2.parquet",
+            ),
+        )
+        self.assertEqual(page_parameters[-2:], (1, 1))
+        self.assertEqual(response["row_count"], 1)
+        self.assertEqual(response["total_row_count"], 3)
+        self.assertEqual(response["deduplicated_row_count"], 1)
+        self.assertEqual(response["next_offset"], 2)
+        self.assertEqual(response["query_profile"]["engine"], "duckdb")
+        self.assertEqual(response["query_profile"]["mode"], "multi_file")
 
 
 class FakeFileRepository:
@@ -117,6 +158,44 @@ class FakeParquetReader:
     ) -> list[dict[str, Any]]:
         del request
         self.files = files
+        return self.rows
+
+
+class FakeDuckDbBackend:
+    database_path = "data/market/db/qmtserver.duckdb"
+
+    def __init__(self, connection: FakeDuckDbConnection) -> None:
+        self.connection = connection
+
+    def connect(self, path: str) -> FakeDuckDbConnection:
+        del path
+        return self.connection
+
+
+class FakeDuckDbConnection:
+    def __init__(self) -> None:
+        self.executed: list[tuple[str, tuple[Any, ...]]] = []
+
+    def execute(self, sql: str, parameters: tuple[Any, ...] | None = None) -> FakeCursor:
+        params = parameters or ()
+        self.executed.append((sql, params))
+        if "raw_row_count" in sql:
+            return FakeCursor(["raw_row_count", "total_row_count"], [(4, 3)])
+        return FakeCursor(["symbol", "date", "close"], [("000001.SZ", "2026-01-02", 10.3)])
+
+    def close(self) -> None:
+        return None
+
+
+class FakeCursor:
+    def __init__(self, columns: list[str], rows: list[tuple[Any, ...]]) -> None:
+        self.description = [(column,) for column in columns]
+        self.rows = rows
+
+    def fetchone(self) -> tuple[Any, ...] | None:
+        return self.rows[0] if self.rows else None
+
+    def fetchall(self) -> list[tuple[Any, ...]]:
         return self.rows
 
 

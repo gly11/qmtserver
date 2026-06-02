@@ -317,7 +317,10 @@ GET /v1/market/data/quality?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&e
 ```
 
 本地 bars 查询按 symbol 和 bar time 稳定排序，并按 symbol/period/time 去重。大结果使用
-`limit` 和 `offset` 分页；如果响应 `truncated=true`，下一页使用 `next_offset`。
+`limit` 和 `offset` 分页；如果响应 `truncated=true`，下一页使用 `next_offset`。响应里的
+`query_profile` 会说明查询引擎、source file 数、原始行数、去重后行数和返回行数；
+`recommendations` 会提示下一页或 export 建议。大结果集优先使用
+`POST /v1/market/data/exports`，避免在 HTTP bars 接口连续拉取大量分页。
 
 创建本地 CSV export：
 

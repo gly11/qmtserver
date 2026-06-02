@@ -40,6 +40,8 @@ data/snapshots/ # 现有 snapshot/export 文件
 当前已经初始化配置、可选依赖检测、DuckDB schema、持久化 data download job、按 symbol
 分区的 Parquet 写入、coverage planner、本地 bars 查询 API、CSV export、质量检查和 export
 清理入口，以及本地 storage maintenance 检查、清理和 metadata rebuild 命令。
+本地 bars 查询会通过 DuckDB 直接聚合多个 Parquet 文件，并在 SQL 层完成过滤、排序、去重、
+计数和分页；响应包含 query profile 和分页/export 建议。
 
 ## 安装
 

@@ -205,8 +205,8 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
   判断中间缺口。
 - 增加 `qmtserver data check`、`cleanup` 和 `rebuild-index` 本地维护入口；cleanup 默认
   dry-run，支持 export 过期清理；`rebuild-index --execute` 可从本地 Parquet 重建 metadata。
-- `/v1/market/data/bars` 支持稳定排序、symbol/period/time 去重、`limit`/`offset` 分页和
-  query metadata。
+- `/v1/market/data/bars` 支持稳定排序、symbol/period/time 去重、`limit`/`offset` 分页、
+  DuckDB 多 Parquet 聚合查询、`query_profile` 和分页/export 建议。
 - data export manifest 记录 `source_file_count`、`deduplicated_row_count` 和 `truncated`。
 - data download result 增加 per-symbol `symbol_results`。
 - 增加 `GET /v1/market/data/jobs`，从 DuckDB 查询持久化 data jobs。

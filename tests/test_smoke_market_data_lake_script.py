@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 import unittest
+from datetime import date as date_cls
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 
 def load_smoke_module() -> Any:
@@ -71,6 +73,23 @@ class MarketDataLakeSmokeScriptTests(unittest.TestCase):
         self.assertTrue(module.smoke_ok(result, require_rows=True))
         result["cached_download_job"]["cached"] = False
         self.assertFalse(module.smoke_ok(result, require_rows=True))
+
+    def test_default_window_ends_on_previous_day(self) -> None:
+        module = load_smoke_module()
+
+        class FakeDateTime:
+            @classmethod
+            def now(cls) -> Any:
+                return FakeNow()
+
+        class FakeNow:
+            def date(self) -> date_cls:
+                return date_cls(2026, 6, 3)
+
+        with patch.object(module, "datetime", FakeDateTime):
+            window = module._default_window()
+
+        self.assertEqual(window, {"start": "2026-05-26", "end": "2026-06-02"})
 
 
 if __name__ == "__main__":

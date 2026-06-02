@@ -275,8 +275,9 @@ def smoke_ok(result: dict[str, Any], *, require_rows: bool = False) -> bool:
 
 def _default_window() -> dict[str, str]:
     today = datetime.now().date()
-    start = today - timedelta(days=7)
-    return {"start": start.strftime("%Y-%m-%d"), "end": today.strftime("%Y-%m-%d")}
+    end = today - timedelta(days=1)
+    start = end - timedelta(days=7)
+    return {"start": start.strftime("%Y-%m-%d"), "end": end.strftime("%Y-%m-%d")}
 
 
 if __name__ == "__main__":

@@ -194,6 +194,9 @@ feat(data): add storage maintenance checks
 状态：已完成。`/v1/market/data/bars` 本地查询已支持稳定排序、symbol/period/time 去重、
 `limit`/`offset` 分页、`next_offset` 和 query metadata；data export manifest 已记录
 `source_file_count`、`deduplicated_row_count` 和 `truncated`。
+当前 DuckDB reader 会直接聚合多个 Parquet 文件，在 SQL 层完成过滤、排序、去重、计数和分页；
+bars response 已包含 `query_profile` 和 `recommendations`，用于解释查询规模并提示下一页或
+export 用法。
 
 目标：让本地查询和导出在大数据量、多文件、重叠文件场景下行为稳定。
 
