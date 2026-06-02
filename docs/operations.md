@@ -341,8 +341,17 @@ DELETE /v1/market/data/exports/{export_id}
 ```powershell
 uv run qmtserver data check
 uv run qmtserver data cleanup
+uv run qmtserver data cleanup --expired-days 30
 uv run qmtserver data rebuild-index
+uv run qmtserver data rebuild-index --execute
 ```
+
+`data check` 现在会输出本地健康摘要，并检查已登记文件缺失、未登记 Parquet、
+Parquet metadata 与 DuckDB 登记信息不一致、孤儿 export 文件等问题。`data cleanup`
+默认仍是 dry-run；传入 `--delete` 才会删除 `QMT_DATA_DIR` 内的候选文件，传入
+`--expired-days N` 可把生成时间至少 N 天前的 export CSV/manifest 纳入清理候选。
+`data rebuild-index` 默认仍是 dry-run；传入 `--execute` 会从本地 Parquet 重建 DuckDB
+中的 `data_files` 和 `data_coverage` metadata。
 
 `data check` 会检查 DuckDB 已登记但文件缺失的 Parquet、未登记的 Parquet，以及孤儿 export
 文件。`data cleanup` 默认是 dry-run，只列出删除候选；只有显式传入 `--delete` 才会删除

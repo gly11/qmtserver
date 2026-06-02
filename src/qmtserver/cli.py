@@ -66,12 +66,18 @@ def _build_parser() -> argparse.ArgumentParser:
     data_cleanup = data_subparsers.add_parser("cleanup", help="clean orphan local data lake files")
     _add_profile_args(data_cleanup)
     data_cleanup.add_argument("--delete", action="store_true", help="delete orphan files")
+    data_cleanup.add_argument(
+        "--expired-days",
+        type=int,
+        help="include exports generated at least this many days ago",
+    )
     data_cleanup.add_argument("--json", action="store_true", help="print machine-readable JSON")
     data_rebuild = data_subparsers.add_parser(
         "rebuild-index",
-        help="print a dry-run rebuild index plan",
+        help="rebuild the DuckDB file index from local Parquet files",
     )
     _add_profile_args(data_rebuild)
+    data_rebuild.add_argument("--execute", action="store_true", help="execute the rebuild")
     data_rebuild.add_argument("--json", action="store_true", help="print machine-readable JSON")
 
     diagnose = subparsers.add_parser("diagnose", help="diagnose qmtserver runtime targets")
@@ -188,9 +194,9 @@ def _run_data(args: argparse.Namespace) -> int:
     if args.data_action == "check":
         report = service.check()
     elif args.data_action == "cleanup":
-        report = service.cleanup(delete=args.delete)
+        report = service.cleanup(delete=args.delete, expired_days=args.expired_days)
     else:
-        report = service.rebuild_index_plan()
+        report = service.rebuild_index(execute=args.execute)
     if args.json:
         print(json.dumps(report, ensure_ascii=False, indent=2))
     else:
@@ -214,16 +220,23 @@ def _print_data_maintenance(report: dict[str, Any]) -> None:
     if report["schema"] == "market.data.cleanup.v1":
         print(f"- dry run: {report['dry_run']}")
         print(f"- delete candidates: {len(report['delete_candidates'])}")
+        print(f"- expired export files: {len(report['expired_export_files'])}")
         print(f"- deleted files: {len(report['deleted_files'])}")
         return
     if report["schema"] == "market.data.rebuild_index.v1":
         print(f"- dry run: {report['dry_run']}")
         print(f"- parquet files: {report['parquet_file_count']}")
+        print(f"- metadata errors: {report['metadata_error_count']}")
+        print(f"- rebuilt files: {report['rebuilt_file_count']}")
         return
+    health = report["health"]
+    print(f"- health: {health['status']}")
     print(f"- registered files: {report['registered_file_count']}")
     print(f"- missing registered files: {len(report['missing_registered_files'])}")
     print(f"- orphan parquet files: {len(report['orphan_parquet_files'])}")
     print(f"- orphan export files: {len(report['orphan_export_files'])}")
+    print(f"- metadata mismatches: {len(report['metadata_mismatches'])}")
+    print(f"- data dir bytes: {health['data_dir_bytes']}")
 
 
 def _run_diagnose(args: argparse.Namespace) -> int:

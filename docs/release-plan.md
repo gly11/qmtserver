@@ -203,7 +203,8 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 
 - coverage response 增加 file-level `covered_segments` 和 `gaps`，cached download 使用 segments
   判断中间缺口。
-- 增加 `qmtserver data check`、`cleanup` 和 `rebuild-index` 本地维护入口；cleanup 默认 dry-run。
+- 增加 `qmtserver data check`、`cleanup` 和 `rebuild-index` 本地维护入口；cleanup 默认
+  dry-run，支持 export 过期清理；`rebuild-index --execute` 可从本地 Parquet 重建 metadata。
 - `/v1/market/data/bars` 支持稳定排序、symbol/period/time 去重、`limit`/`offset` 分页和
   query metadata。
 - data export manifest 记录 `source_file_count`、`deduplicated_row_count` 和 `truncated`。

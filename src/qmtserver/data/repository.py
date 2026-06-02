@@ -166,6 +166,10 @@ class DataJobRepository:
         )
         self._record_coverage(file_record)
 
+    def clear_file_index(self) -> None:
+        self._execute("DELETE FROM data_coverage", ())
+        self._execute("DELETE FROM data_files", ())
+
     def list_coverage(self, request: dict[str, Any]) -> list[dict[str, Any]]:
         symbols = {str(symbol) for symbol in request.get("symbols", [])}
         connection = self.backend.connect(str(self.backend.database_path))

@@ -160,6 +160,29 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIn("market data lake maintenance", output.getvalue())
         self.assertIn("orphan parquet files: 1", output.getvalue())
+        self.assertIn("health: warning", output.getvalue())
+
+    def test_data_cleanup_passes_expired_export_options(self) -> None:
+        service = FakeDataMaintenanceService()
+
+        with patch("qmtserver.cli._build_data_maintenance_service", return_value=service):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(["data", "cleanup", "--delete", "--expired-days", "7"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(service.cleanup_calls, [{"delete": True, "expired_days": 7}])
+
+    def test_data_rebuild_index_execute_rebuilds_metadata(self) -> None:
+        service = FakeDataMaintenanceService()
+
+        with patch("qmtserver.cli._build_data_maintenance_service", return_value=service):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = main(["data", "rebuild-index", "--execute"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(service.rebuild_calls, [{"execute": True}])
 
 
 @contextmanager
@@ -175,6 +198,10 @@ def temporary_working_directory() -> Iterator[Path]:
 
 
 class FakeDataMaintenanceService:
+    def __init__(self) -> None:
+        self.cleanup_calls: list[dict[str, object]] = []
+        self.rebuild_calls: list[dict[str, object]] = []
+
     def check(self) -> dict[str, object]:
         return {
             "schema": "market.data.maintenance.v1",
@@ -182,22 +209,32 @@ class FakeDataMaintenanceService:
             "missing_registered_files": [],
             "orphan_parquet_files": [{"path": "data/market/raw/bars/orphan.parquet"}],
             "orphan_export_files": [],
+            "metadata_mismatches": [],
+            "health": {
+                "status": "warning",
+                "data_dir_bytes": 7,
+            },
         }
 
-    def cleanup(self, *, delete: bool) -> dict[str, object]:
+    def cleanup(self, *, delete: bool, expired_days: int | None) -> dict[str, object]:
+        self.cleanup_calls.append({"delete": delete, "expired_days": expired_days})
         return {
             "schema": "market.data.cleanup.v1",
             "dry_run": not delete,
             "delete_candidates": [],
+            "expired_export_files": [],
             "deleted_files": [],
         }
 
-    def rebuild_index_plan(self) -> dict[str, object]:
+    def rebuild_index(self, *, execute: bool) -> dict[str, object]:
+        self.rebuild_calls.append({"execute": execute})
         return {
             "schema": "market.data.rebuild_index.v1",
-            "dry_run": True,
+            "dry_run": not execute,
             "parquet_file_count": 0,
             "parquet_files": [],
+            "metadata_error_count": 0,
+            "rebuilt_file_count": 0,
         }
 
 
