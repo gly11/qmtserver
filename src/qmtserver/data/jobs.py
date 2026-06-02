@@ -139,8 +139,11 @@ class DataDownloadJobService:
                 "request": request,
                 "bars": [],
                 "row_count": 0,
+                "total_row_count": 0,
                 "source_file_count": 0,
+                "deduplicated_row_count": 0,
                 "truncated": False,
+                "next_offset": None,
             }
         return self.bar_query.query_bars(request)
 

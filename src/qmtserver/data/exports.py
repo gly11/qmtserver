@@ -40,6 +40,7 @@ class DataExportService:
                 request_hash_value=req_hash,
                 data_hash=data_hash,
                 bars=bars,
+                query_response=query_response,
             )
             self.registry.save({"snapshot_id": export_id, **manifest})
             return _success(manifest, cached=False)
@@ -115,6 +116,7 @@ def _manifest(
     request_hash_value: str,
     data_hash: str,
     bars: list[dict[str, Any]],
+    query_response: dict[str, Any],
 ) -> dict[str, Any]:
     xtquant = check_xtquant_import()
     coverage_start, coverage_end = _coverage(request["kind"], bars)
@@ -126,6 +128,9 @@ def _manifest(
         "request": request,
         "hash": data_hash,
         "row_count": len(bars),
+        "source_file_count": int(query_response.get("source_file_count", 0)),
+        "deduplicated_row_count": int(query_response.get("deduplicated_row_count", 0)),
+        "truncated": bool(query_response.get("truncated", False)),
         "symbol_count": len(request["symbols"]),
         "coverage_start": coverage_start,
         "coverage_end": coverage_end,

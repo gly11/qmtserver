@@ -404,11 +404,13 @@ GET /v1/market/data/coverage?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&
 从本地 data lake 查询 bars：
 
 ```text
-GET /v1/market/data/bars?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31&adjust=none&limit=1000
+GET /v1/market/data/bars?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31&adjust=none&limit=1000&offset=0
 ```
 
 该接口只读取已登记的本地 Parquet 文件。若没有匹配文件，返回 `ok=true`、`bars=[]`、
-`row_count=0`。大结果默认通过 `limit` 截断，后续批量导出应使用 export API。
+`row_count=0`。结果按 symbol 和 bar time 稳定排序，并按 symbol/period/time 去重。
+大结果通过 `limit` 和 `offset` 分页；响应包含 `total_row_count`、`source_file_count`、
+`deduplicated_row_count`、`truncated` 和 `next_offset`。
 
 ### GET /v1/market/data/quality
 
@@ -437,7 +439,8 @@ GET /v1/market/data/quality?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&e
 ```
 
 该接口只读取本地 Parquet/DuckDB，不触发新的 MiniQMT 下载。响应 manifest 使用
-`market.data.export.v1`。
+`market.data.export.v1`，并记录 `source_file_count`、`deduplicated_row_count` 和 `truncated`，
+方便判断 export 是否来自多个本地文件或是否受请求 limit 截断。
 
 ```text
 GET /v1/market/data/exports

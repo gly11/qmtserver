@@ -36,6 +36,7 @@ class DataCoverageRequest(BaseModel):
 
 class DataBarsRequest(DataCoverageRequest):
     limit: int = Field(default=1000, ge=1, le=10000)
+    offset: int = Field(default=0, ge=0)
 
 
 class DataExportRequest(DataCoverageRequest):
@@ -123,6 +124,7 @@ def get_data_bars(
     adjust: str = "none",
     period: str | None = None,
     limit: int = 1000,
+    offset: int = 0,
 ) -> dict[str, Any]:
     try:
         service = _get_data_job_service(request)
@@ -136,6 +138,7 @@ def get_data_bars(
                     adjust=adjust,
                     period=period,
                     limit=limit,
+                    offset=offset,
                 ).model_dump()
             )
         )

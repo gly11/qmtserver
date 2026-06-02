@@ -25,16 +25,22 @@ class LocalBarQuery:
     def query_bars(self, request: dict[str, Any]) -> dict[str, Any]:
         files = self.repository.list_files(request)
         limit = _limit(request)
+        offset = _offset(request)
         rows = self.reader.read_bars(files, request) if files else []
-        truncated = len(rows) > limit
-        bars = rows[:limit]
+        sorted_rows = sorted(rows, key=_sort_key)
+        unique_rows = _deduplicate_rows(sorted_rows)
+        page = unique_rows[offset : offset + limit]
+        truncated = offset + len(page) < len(unique_rows)
         return {
             "schema": "market.data.bars.v1",
             "request": _request_meta(request),
-            "bars": bars,
-            "row_count": len(bars),
+            "bars": page,
+            "row_count": len(page),
+            "total_row_count": len(unique_rows),
             "source_file_count": len(files),
+            "deduplicated_row_count": len(rows) - len(unique_rows),
             "truncated": truncated,
+            "next_offset": offset + len(page) if truncated else None,
         }
 
 
@@ -89,6 +95,13 @@ def _limit(request: dict[str, Any]) -> int:
     return max(1, min(value, 10000))
 
 
+def _offset(request: dict[str, Any]) -> int:
+    value = request.get("offset", 0)
+    if not isinstance(value, int):
+        return 0
+    return max(0, value)
+
+
 def _request_meta(request: dict[str, Any]) -> dict[str, Any]:
     return {
         "kind": request.get("kind"),
@@ -98,6 +111,7 @@ def _request_meta(request: dict[str, Any]) -> dict[str, Any]:
         "end": request.get("end"),
         "adjust": request.get("adjust", "none"),
         "limit": _limit(request),
+        "offset": _offset(request),
     }
 
 
@@ -112,3 +126,19 @@ def _sort_key(row: dict[str, Any]) -> tuple[str, str]:
         str(row.get("symbol", "")),
         str(row.get("date") or row.get("timestamp") or ""),
     )
+
+
+def _deduplicate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[tuple[str, str, str]] = set()
+    unique = []
+    for row in rows:
+        key = (
+            str(row.get("symbol", "")),
+            str(row.get("period", "")),
+            str(row.get("date") or row.get("timestamp") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(row)
+    return unique

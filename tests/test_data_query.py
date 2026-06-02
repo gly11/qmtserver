@@ -57,6 +57,43 @@ class LocalBarQueryTests(unittest.TestCase):
         self.assertEqual(response["bars"], [])
         self.assertFalse(response["truncated"])
 
+    def test_query_bars_sorts_deduplicates_and_offsets_rows(self) -> None:
+        repository = FakeFileRepository(
+            [
+                {"path": "data/market/raw/bars/file-1.parquet"},
+                {"path": "data/market/raw/bars/file-2.parquet"},
+            ]
+        )
+        reader = FakeParquetReader(
+            [
+                {"symbol": "600000.SH", "date": "2026-01-03", "close": 9.2},
+                {"symbol": "000001.SZ", "date": "2026-01-02", "close": 10.3},
+                {"symbol": "000001.SZ", "date": "2026-01-02", "close": 10.3},
+                {"symbol": "000001.SZ", "date": "2026-01-03", "close": 10.4},
+            ]
+        )
+        query = LocalBarQuery(repository, reader=reader)
+
+        response = query.query_bars(
+            {
+                "kind": "daily_bars",
+                "symbols": ["000001.SZ", "600000.SH"],
+                "adjust": "none",
+                "limit": 1,
+                "offset": 1,
+            }
+        )
+
+        self.assertEqual(response["row_count"], 1)
+        self.assertEqual(response["total_row_count"], 3)
+        self.assertEqual(response["deduplicated_row_count"], 1)
+        self.assertTrue(response["truncated"])
+        self.assertEqual(response["next_offset"], 2)
+        self.assertEqual(
+            response["bars"],
+            [{"symbol": "000001.SZ", "date": "2026-01-03", "close": 10.4}],
+        )
+
 
 class FakeFileRepository:
     def __init__(self, files: list[dict[str, Any]]) -> None:

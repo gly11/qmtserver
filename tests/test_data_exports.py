@@ -50,6 +50,9 @@ class DataExportServiceTests(unittest.TestCase):
         self.assertEqual(download_path.suffix, ".csv")
         self.assertTrue(deleted)
         self.assertEqual(query.requests[0]["symbols"], ["000001.SZ"])
+        self.assertEqual(manifest["source_file_count"], 2)
+        self.assertEqual(manifest["deduplicated_row_count"], 1)
+        self.assertFalse(manifest["truncated"])
 
 
 class FakeBarQuery:
@@ -64,6 +67,8 @@ class FakeBarQuery:
             "request": request,
             "bars": self.bars,
             "row_count": len(self.bars),
+            "source_file_count": 2,
+            "deduplicated_row_count": 1,
             "truncated": False,
         }
 

@@ -308,9 +308,12 @@ GET /v1/market/data/coverage?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&
 查询本地 bars：
 
 ```text
-GET /v1/market/data/bars?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31&limit=1000
+GET /v1/market/data/bars?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31&limit=1000&offset=0
 GET /v1/market/data/quality?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&end=2026-01-31
 ```
+
+本地 bars 查询按 symbol 和 bar time 稳定排序，并按 symbol/period/time 去重。大结果使用
+`limit` 和 `offset` 分页；如果响应 `truncated=true`，下一页使用 `next_offset`。
 
 创建本地 CSV export：
 
