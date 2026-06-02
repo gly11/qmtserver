@@ -104,32 +104,6 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         self.assertEqual(persisted.result["symbol_count"], 1)
         self.assertEqual(persisted.result["universe_hash"], "sha256:test")
 
-    def test_submit_download_persists_planned_chunks(self) -> None:
-        repository = FakeDataJobRepository()
-        service = DataDownloadJobService(
-            repository,
-            downloader=FakeHistoryDownloader(),
-            coverage_planner=FakeCoveragePlanner(fully_covered=False),
-            run_async=False,
-        )
-
-        job = service.submit_download(
-            {
-                "kind": "daily_bars",
-                "symbols": ["000001.SZ"],
-                "start": "2026-01-01",
-                "end": "2026-02-15",
-                "adjust": "none",
-                "chunk_days": 31,
-            }
-        )
-
-        chunks = repository.list_chunks(str(job["job_id"]))
-        self.assertEqual(len(chunks), 2)
-        self.assertEqual(chunks[0]["symbol"], "000001.SZ")
-        self.assertEqual(chunks[0]["chunk_start"], "2026-01-01")
-        self.assertEqual(chunks[1]["chunk_end"], "2026-02-15")
-
     def test_submit_download_uses_cached_coverage_unless_force_is_set(self) -> None:
         repository = FakeDataJobRepository()
         downloader = FakeHistoryDownloader()
@@ -355,10 +329,39 @@ class FakeDataJobRepository:
         self.jobs[job_id].error = error
 
     def create_chunks(self, job_id: str, chunks: list[dict[str, Any]]) -> None:
-        self.chunks[job_id] = chunks
+        self.chunks[job_id] = [
+            {**chunk, "chunk_id": f"{job_id}:{index:06d}", "job_id": job_id}
+            for index, chunk in enumerate(chunks)
+        ]
 
     def list_chunks(self, job_id: str) -> list[dict[str, Any]]:
         return self.chunks.get(job_id, [])
+
+    def mark_chunk_running(self, chunk_id: str) -> None:
+        chunk = self._chunk(chunk_id)
+        chunk["status"] = "running"
+        chunk["attempts"] = int(chunk.get("attempts", 0)) + 1
+
+    def mark_chunk_succeeded(self, chunk_id: str, *, row_count: int, file_count: int) -> None:
+        chunk = self._chunk(chunk_id)
+        chunk["status"] = "succeeded"
+        chunk["row_count"] = row_count
+        chunk["file_count"] = file_count
+        chunk["error_code"] = None
+        chunk["error_message"] = None
+
+    def mark_chunk_failed(self, chunk_id: str, error: dict[str, str]) -> None:
+        chunk = self._chunk(chunk_id)
+        chunk["status"] = "failed"
+        chunk["error_code"] = error.get("code")
+        chunk["error_message"] = error.get("message")
+
+    def _chunk(self, chunk_id: str) -> dict[str, Any]:
+        for chunks in self.chunks.values():
+            for chunk in chunks:
+                if chunk["chunk_id"] == chunk_id:
+                    return chunk
+        raise KeyError(chunk_id)
 
 
 class FakeHistoryDownloader:

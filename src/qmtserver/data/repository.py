@@ -146,6 +146,43 @@ class DataJobRepository:
         finally:
             connection.close()
 
+    def mark_chunk_running(self, chunk_id: str) -> None:
+        self._execute(
+            """
+            UPDATE data_job_chunks
+            SET status = ?, attempts = attempts + 1, updated_at = ?
+            WHERE chunk_id = ?
+            """,
+            ("running", now_iso(), chunk_id),
+        )
+
+    def mark_chunk_succeeded(self, chunk_id: str, *, row_count: int, file_count: int) -> None:
+        self._execute(
+            """
+            UPDATE data_job_chunks
+            SET status = ?, row_count = ?, file_count = ?, error_code = NULL,
+                error_message = NULL, updated_at = ?
+            WHERE chunk_id = ?
+            """,
+            ("succeeded", row_count, file_count, now_iso(), chunk_id),
+        )
+
+    def mark_chunk_failed(self, chunk_id: str, error: dict[str, str]) -> None:
+        self._execute(
+            """
+            UPDATE data_job_chunks
+            SET status = ?, error_code = ?, error_message = ?, updated_at = ?
+            WHERE chunk_id = ?
+            """,
+            (
+                "failed",
+                error.get("code", "DATA_DOWNLOAD_FAILED"),
+                error.get("message", "data download failed"),
+                now_iso(),
+                chunk_id,
+            ),
+        )
+
     def mark_running(self, job_id: str) -> None:
         self._execute(
             "UPDATE data_jobs SET status = ?, started_at = ? WHERE job_id = ?",

@@ -20,6 +20,50 @@ def plan_download_chunks(request: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def request_for_chunk(request: dict[str, Any], chunk: dict[str, Any]) -> dict[str, Any]:
+    chunk_request = dict(request)
+    chunk_request["symbols"] = [str(chunk["symbol"])]
+    if chunk.get("chunk_start") is not None:
+        chunk_request["start"] = chunk["chunk_start"]
+    if chunk.get("chunk_end") is not None:
+        chunk_request["end"] = chunk["chunk_end"]
+    return chunk_request
+
+
+def progress_from_chunks(chunks: list[dict[str, Any]]) -> dict[str, Any]:
+    symbols = {str(chunk["symbol"]) for chunk in chunks}
+    finished_symbols = {
+        symbol
+        for symbol in symbols
+        if all(
+            str(chunk.get("status")) == "succeeded"
+            for chunk in chunks
+            if str(chunk["symbol"]) == symbol
+        )
+    }
+    failed_symbols = {
+        str(chunk["symbol"]) for chunk in chunks if str(chunk.get("status")) == "failed"
+    }
+    current = next(
+        (chunk for chunk in chunks if str(chunk.get("status")) == "running"),
+        next((chunk for chunk in chunks if str(chunk.get("status")) == "queued"), None),
+    )
+    return {
+        "schema": "market.data.job_progress.v1",
+        "total_symbols": len(symbols),
+        "finished_symbols": len(finished_symbols),
+        "failed_symbols": len(failed_symbols),
+        "current_symbol": str(current["symbol"]) if current else None,
+        "total_chunks": len(chunks),
+        "finished_chunks": sum(1 for chunk in chunks if str(chunk.get("status")) == "succeeded"),
+        "failed_chunks": sum(1 for chunk in chunks if str(chunk.get("status")) == "failed"),
+        "running_chunks": sum(1 for chunk in chunks if str(chunk.get("status")) == "running"),
+        "queued_chunks": sum(1 for chunk in chunks if str(chunk.get("status")) == "queued"),
+        "row_count": sum(int(chunk.get("row_count", 0)) for chunk in chunks),
+        "file_count": sum(int(chunk.get("file_count", 0)) for chunk in chunks),
+    }
+
+
 def _date_ranges(
     *,
     start: object,

@@ -4,7 +4,7 @@ from threading import Thread
 from typing import Any, Protocol
 
 from qmtserver.data.backend import DuckDbDataBackend
-from qmtserver.data.chunks import plan_download_chunks
+from qmtserver.data.chunks import plan_download_chunks, progress_from_chunks, request_for_chunk
 from qmtserver.data.coverage import CoveragePlanner
 from qmtserver.data.exports import DataExportService
 from qmtserver.data.files import ParquetBarWriter
@@ -36,6 +36,12 @@ class DataJobRepositoryProtocol(Protocol):
     def create_chunks(self, job_id: str, chunks: list[dict[str, Any]]) -> None: ...
 
     def list_chunks(self, job_id: str) -> list[dict[str, Any]]: ...
+
+    def mark_chunk_running(self, chunk_id: str) -> None: ...
+
+    def mark_chunk_succeeded(self, chunk_id: str, *, row_count: int, file_count: int) -> None: ...
+
+    def mark_chunk_failed(self, chunk_id: str, error: dict[str, str]) -> None: ...
 
 
 class DataFileRepositoryProtocol(Protocol):
@@ -108,6 +114,7 @@ class DataDownloadJobService:
         initial = job.as_dict()
         if self._is_cached(request):
             coverage = self.coverage_planner.coverage(request) if self.coverage_planner else {}
+            self._mark_chunks_finished_from_cache(job.job_id)
             self.repository.mark_succeeded(job.job_id, cached_result(request, coverage))
             return initial
         if self.run_async:
@@ -121,7 +128,7 @@ class DataDownloadJobService:
         job = self.repository.get(job_id)
         if job is None:
             return None
-        return job.as_dict()
+        return self._job_with_chunks(job)
 
     def list_jobs(self, *, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         bounded_limit = max(1, min(limit, 200))
@@ -213,8 +220,7 @@ class DataDownloadJobService:
     def _run_download(self, job_id: str, request: dict[str, Any]) -> None:
         self.repository.mark_running(job_id)
         try:
-            self.downloader.download_history(request)
-            files = self._write_files(job_id, request)
+            files = self._run_download_chunks(job_id, request)
             self.repository.mark_succeeded(job_id, download_result(request, files))
         except Exception as exc:
             self.repository.mark_failed(
@@ -224,6 +230,41 @@ class DataDownloadJobService:
                     "message": f"{type(exc).__name__}: {exc}",
                 },
             )
+
+    def _run_download_chunks(self, job_id: str, request: dict[str, Any]) -> list[dict[str, Any]]:
+        chunks = self.repository.list_chunks(job_id)
+        if not chunks:
+            self.downloader.download_history(request)
+            return self._write_files(job_id, request)
+        files: list[dict[str, Any]] = []
+        failures = []
+        for chunk in chunks:
+            chunk_id = str(chunk["chunk_id"])
+            chunk_request = request_for_chunk(request, chunk)
+            self.repository.mark_chunk_running(chunk_id)
+            try:
+                self.downloader.download_history(chunk_request)
+                chunk_files = self._write_files(job_id, chunk_request)
+                files.extend(chunk_files)
+                self.repository.mark_chunk_succeeded(
+                    chunk_id,
+                    row_count=sum(
+                        int(file_record.get("row_count", 0)) for file_record in chunk_files
+                    ),
+                    file_count=len(chunk_files),
+                )
+            except Exception as exc:
+                error = {
+                    "code": QmtDataDownloadFailedError.code,
+                    "message": f"{type(exc).__name__}: {exc}",
+                }
+                self.repository.mark_chunk_failed(chunk_id, error)
+                failures.append(error)
+        if failures:
+            raise RuntimeError(
+                f"{len(failures)} data download chunk(s) failed; first: {failures[0]['message']}"
+            )
+        return files
 
     def _write_files(self, job_id: str, request: dict[str, Any]) -> list[dict[str, Any]]:
         if self.bar_reader is None or self.file_writer is None:
@@ -236,10 +277,25 @@ class DataDownloadJobService:
                 self.file_repository.record_file(file_record)
         return files
 
+    def _mark_chunks_finished_from_cache(self, job_id: str) -> None:
+        for chunk in self.repository.list_chunks(job_id):
+            self.repository.mark_chunk_succeeded(
+                str(chunk["chunk_id"]),
+                row_count=0,
+                file_count=0,
+            )
+
     def _is_cached(self, request: dict[str, Any]) -> bool:
         if request.get("force") or self.coverage_planner is None:
             return False
         return bool(self.coverage_planner.coverage(request).get("fully_covered"))
+
+    def _job_with_chunks(self, job: DataJobRecord) -> dict[str, Any]:
+        payload = job.as_dict()
+        chunks = self.repository.list_chunks(job.job_id)
+        payload["chunks"] = chunks
+        payload["progress"] = progress_from_chunks(chunks)
+        return payload
 
 
 class XtDataHistoryDownloader:

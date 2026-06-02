@@ -312,7 +312,8 @@ server 会把 universe 解析为 canonical symbols，并在 job request/result �
 `resolved_symbols`、`symbol_count` 和 `universe_hash`。这比 client 传入空 `symbols` 或自行展开
 股票池更可追溯。该解析只走行情/reference 路径，不连接 trader。
 `chunk_days` 会把每个 symbol 的日期区间拆成较小 chunk，并将规划结果持久化到 DuckDB
-`data_job_chunks` 表，便于后续版本按 chunk 汇总进度、失败明细和恢复执行。
+`data_job_chunks` 表。worker 会逐个执行这些 chunk，并记录 attempts、row/file count 和失败
+错误，便于后续按 chunk 汇总进度、失败明细和恢复执行。
 
 查询任务：
 
@@ -324,6 +325,9 @@ GET /v1/market/data/jobs/{job_id}
 成功 job result 会包含 `symbol_results`，用于定位每个 symbol 的 downloaded/cached 状态、
 row count、file count、coverage 和 gaps。coverage gaps 会带 `reason`，常见值包括
 `no_matching_coverage` 和 `segment_gap`。
+单个 job 查询还会返回 `progress` 和 `chunks`，用于查看 total/finished/failed symbols、
+chunk 数量、current symbol、row/file count，以及每个失败 chunk 的 `error_code` 和
+`error_message`。
 
 查询覆盖范围：
 

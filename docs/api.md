@@ -487,6 +487,11 @@ DELETE /v1/market/data/exports/{export_id}
 `symbol_results`，按 symbol 汇总 `downloaded`、`cached`、`row_count`、`file_count`、
 coverage 起止和 gaps。失败 job 的 `error.code` 会使用 data lake 专用错误码，例如
 `DATA_DOWNLOAD_FAILED`。
+响应还包含 `progress` 和 `chunks`。`progress` 汇总 `total_symbols`、`finished_symbols`、
+`failed_symbols`、`current_symbol`、`total_chunks`、`finished_chunks`、`failed_chunks`、
+`queued_chunks`、`row_count` 和 `file_count`；`chunks` 保留每个 symbol/date chunk 的
+`status`、`attempts`、`row_count`、`file_count`、`error_code` 和 `error_message`，用于定位
+大任务的失败子区间。
 
 ### GET /v1/market/data/jobs
 

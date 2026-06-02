@@ -46,8 +46,8 @@ Bulk download entry points can now resolve `universe="all_a"` with an optional e
 submitting a data job. The canonical request records resolved symbols, symbol count, and a universe
 hash so large jobs remain traceable.
 Download jobs also plan persistent symbol/date chunks using `chunk_days` and store them in
-`data_job_chunks`. This metadata is the basis for the next resumable execution phase; the current
-worker still executes the submitted request as one job-level unit.
+`data_job_chunks`. The worker executes these chunks one by one, records chunk attempts, row/file
+counts, and failure errors, and exposes job-level progress from the persisted chunk table.
 
 ## 安装
 
@@ -136,7 +136,7 @@ MiniQMT 缓存或 Parquet 原始数据。
    重建 DuckDB 文件索引和 coverage metadata。后续可继续增加 Parquet 压缩。
 2. Bulk Download Orchestration
    已完成 universe resolution、canonical request metadata、chunk planner 和 persisted chunk
-   table。下一步需要新增 chunk-level execution、progress/retry，以及基于 coverage gaps 的
-   ensure 模式。
+   table，以及 chunk-level execution 和 progress/failure summary。下一步需要新增显式
+   resume/retry 入口，以及基于 coverage gaps 的 ensure 模式。
 
 详细稳定化计划见 [Market Data Lake Stabilization Plan](market-data-lake-stabilization.md)。
