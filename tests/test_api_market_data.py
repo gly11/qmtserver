@@ -44,6 +44,38 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertEqual(fetched.json()["data"]["job"]["job_id"], job_id)
         self.assertEqual(fake_jobs.requests[0]["symbols"], ["000001.SZ"])
 
+    def test_create_data_download_resolves_universe_and_exchange(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            created = client.post(
+                "/v1/market/data/download",
+                json={
+                    "kind": "daily_bars",
+                    "universe": "all_a",
+                    "exchange": "SH",
+                    "start": "2026-01-01",
+                    "end": "2026-01-31",
+                    "adjust": "none",
+                    "format": "parquet",
+                },
+            )
+
+        request = fake_jobs.requests[0]
+        self.assertTrue(created.json()["ok"])
+        self.assertEqual(request["symbols"], ["600000.SH"])
+        self.assertEqual(request["universe"], "all_a")
+        self.assertEqual(request["exchange"], "SH")
+        self.assertEqual(request["resolved_symbols"], ["600000.SH"])
+        self.assertEqual(request["symbol_count"], 1)
+        self.assertTrue(str(request["universe_hash"]).startswith("sha256:"))
+
     def test_get_unknown_data_download_job_returns_stable_error(self) -> None:
         app = create_app(
             load_settings(_env_file=None, auto_connect=False),

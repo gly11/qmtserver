@@ -381,6 +381,25 @@ MiniQMT 下载。
 }
 ```
 
+也可以让 server 解析股票池，而不是由 client 展开几千个 symbol：
+
+```json
+{
+  "kind": "daily_bars",
+  "universe": "all_a",
+  "exchange": "SH",
+  "start": "2026-01-01",
+  "end": "2026-01-31",
+  "adjust": "none",
+  "format": "parquet"
+}
+```
+
+`universe="all_a"` 会通过 server 侧 `xtdata.get_stock_list_in_sector` 解析，`exchange`
+可选值为 `SH`、`SZ` 或 `BJ`，用于按证券代码后缀过滤。提交给 data job 的 canonical request
+会记录 `resolved_symbols`、`symbol_count` 和 `universe_hash`；job result 也会保留
+`universe`、`exchange`、`symbol_count` 和 `universe_hash`，方便追溯全市场任务的输入来源。
+
 如果未安装 `qmtserver[data]`，返回 `DATA_BACKEND_UNAVAILABLE`。该接口不连接 trader，
 也不执行任何交易命令。
 

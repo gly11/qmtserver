@@ -296,6 +296,7 @@ def _download_result(request: dict[str, Any], files: list[dict[str, Any]]) -> di
         "files": files,
         "symbol_results": _download_symbol_results(requested_symbols, files),
         "next_step": None if files else "parquet_writer_pending",
+        **_universe_result_metadata(request),
     }
 
 
@@ -317,6 +318,7 @@ def _cached_result(request: dict[str, Any], coverage: dict[str, Any]) -> dict[st
         "files": [],
         "symbol_results": _cached_symbol_results(request, coverage),
         "next_step": None,
+        **_universe_result_metadata(request),
     }
 
 
@@ -324,6 +326,15 @@ def _period(request: dict[str, Any]) -> str:
     if request.get("kind") == "daily_bars":
         return "1d"
     return str(request.get("period") or "unknown")
+
+
+def _universe_result_metadata(request: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "universe": request.get("universe"),
+        "exchange": request.get("exchange"),
+        "symbol_count": int(request.get("symbol_count", len(request.get("symbols", [])))),
+        "universe_hash": request.get("universe_hash"),
+    }
 
 
 def _download_symbol_results(

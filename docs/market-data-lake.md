@@ -42,6 +42,9 @@ data/snapshots/ # 现有 snapshot/export 文件
 清理入口，以及本地 storage maintenance 检查、清理和 metadata rebuild 命令。
 本地 bars 查询会通过 DuckDB 直接聚合多个 Parquet 文件，并在 SQL 层完成过滤、排序、去重、
 计数和分页；响应包含 query profile 和分页/export 建议。
+Bulk download entry points can now resolve `universe="all_a"` with an optional exchange filter before
+submitting a data job. The canonical request records resolved symbols, symbol count, and a universe
+hash so large jobs remain traceable.
 
 ## 安装
 
@@ -128,5 +131,8 @@ MiniQMT 缓存或 Parquet 原始数据。
    的本地维护入口。`data check` 会输出健康摘要和 metadata mismatch；`data cleanup`
    支持显式删除和 export 过期清理；`data rebuild-index --execute` 可从本地 Parquet
    重建 DuckDB 文件索引和 coverage metadata。后续可继续增加 Parquet 压缩。
+2. Bulk Download Orchestration
+   已完成 universe resolution 和 canonical request metadata。下一步需要新增 chunk planner、
+   persisted chunk table、chunk-level progress/retry，以及基于 coverage gaps 的 ensure 模式。
 
 详细稳定化计划见 [Market Data Lake Stabilization Plan](market-data-lake-stabilization.md)。

@@ -70,6 +70,40 @@ class DataDownloadJobServiceTests(unittest.TestCase):
             ],
         )
 
+    def test_download_result_records_universe_resolution_metadata(self) -> None:
+        repository = FakeDataJobRepository()
+        service = DataDownloadJobService(
+            repository,
+            downloader=FakeHistoryDownloader(),
+            bar_reader=FakeBarReader(),
+            file_writer=FakeBarWriter(),
+            file_repository=FakeDataFileRepository(),
+            coverage_planner=FakeCoveragePlanner(fully_covered=False),
+            run_async=False,
+        )
+
+        job = service.submit_download(
+            {
+                "kind": "daily_bars",
+                "symbols": ["600000.SH"],
+                "resolved_symbols": ["600000.SH"],
+                "symbol_count": 1,
+                "universe": "all_a",
+                "exchange": "SH",
+                "universe_hash": "sha256:test",
+            }
+        )
+
+        persisted = repository.get(str(job["job_id"]))
+        self.assertIsNotNone(persisted)
+        assert persisted is not None
+        self.assertIsNotNone(persisted.result)
+        assert persisted.result is not None
+        self.assertEqual(persisted.result["universe"], "all_a")
+        self.assertEqual(persisted.result["exchange"], "SH")
+        self.assertEqual(persisted.result["symbol_count"], 1)
+        self.assertEqual(persisted.result["universe_hash"], "sha256:test")
+
     def test_submit_download_uses_cached_coverage_unless_force_is_set(self) -> None:
         repository = FakeDataJobRepository()
         downloader = FakeHistoryDownloader()

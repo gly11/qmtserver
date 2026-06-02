@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from qmtserver.api.dependencies import get_qmt_service
 from qmtserver.data.backend import create_data_backend
 from qmtserver.data.jobs import create_data_job_service
+from qmtserver.data.universe import canonicalize_download_request
 from qmtserver.errors import QmtJobNotFoundError, QmtServerError, QmtSnapshotNotFoundError
 
 router = APIRouter(prefix="/market/data", tags=["market-data"])
@@ -17,6 +18,8 @@ router = APIRouter(prefix="/market/data", tags=["market-data"])
 class DataDownloadRequest(BaseModel):
     kind: str
     symbols: list[str] = Field(default_factory=list)
+    universe: str | None = None
+    exchange: str | None = None
     start: str | None = None
     end: str | None = None
     adjust: str = "none"
@@ -51,7 +54,11 @@ def create_data_download(
 ) -> dict[str, Any]:
     try:
         service = _get_data_job_service(request)
-        job = service.submit_download(payload.model_dump())
+        canonical = canonicalize_download_request(
+            payload.model_dump(),
+            request.app.state.qmt_service,
+        )
+        job = service.submit_download(canonical)
         return _success({"job": job})
     except QmtServerError as exc:
         return _error(exc.code, str(exc))

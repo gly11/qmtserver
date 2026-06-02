@@ -293,6 +293,24 @@ Invoke-RestMethod -Method Post `
   -ContentType "application/json"
 ```
 
+全市场或交易所子集任务可让 server 解析 universe：
+
+```powershell
+$body = @{
+  kind = "daily_bars"
+  universe = "all_a"
+  exchange = "SH"
+  start = "2026-01-01"
+  end = "2026-01-31"
+  adjust = "none"
+  format = "parquet"
+} | ConvertTo-Json
+```
+
+server 会把 universe 解析为 canonical symbols，并在 job request/result 中记录
+`resolved_symbols`、`symbol_count` 和 `universe_hash`。这比 client 传入空 `symbols` 或自行展开
+股票池更可追溯。该解析只走行情/reference 路径，不连接 trader。
+
 查询任务：
 
 ```text
