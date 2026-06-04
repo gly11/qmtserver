@@ -327,9 +327,11 @@ GET /v1/market/data/jobs?status=succeeded&limit=50
 GET /v1/market/data/jobs/{job_id}
 ```
 
-成功 job result 会包含 `symbol_results`，用于定位每个 symbol 的 downloaded/cached 状态、
-row count、file count、coverage 和 gaps。coverage gaps 会带 `reason`，常见值包括
-`no_matching_coverage` 和 `segment_gap`。
+成功或失败 job result 都会尽量包含 `symbol_results`，用于定位每个 symbol 的
+downloaded/cached/failed 状态、row count、file count、coverage、gaps 和 error。失败 job
+会保留 `result.partial=true`，因此 qmtclient 可以展示已完成 symbol 和失败 symbol 的差异。
+coverage gaps 会带 `reason`，常见值包括 `no_matching_coverage` 和 `segment_gap`；下载失败
+chunk 会使用 `download_failed`。
 单个 job 查询还会返回 `progress` 和 `chunks`，用于查看 total/finished/failed symbols、
 chunk 数量、current symbol、row/file count，以及每个失败 chunk 的 `error_code` 和
 `error_message`。

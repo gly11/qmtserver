@@ -494,9 +494,10 @@ envelope，避免下载客户端把 200 JSON error 保存成 CSV 文件。
 
 查询 data download job 状态。成功结果包含 `file_count`、`row_count` 和写入的 Parquet 文件摘要。
 状态会写入 DuckDB 元数据，设计上用于服务重启后的状态查询。成功结果还包含
-`symbol_results`，按 symbol 汇总 `downloaded`、`cached`、`row_count`、`file_count`、
-coverage 起止和 gaps。失败 job 的 `error.code` 会使用 data lake 专用错误码，例如
-`DATA_DOWNLOAD_FAILED`。
+`symbol_results`，按 symbol 汇总 `downloaded`、`cached`、`failed`、`row_count`、`file_count`、
+coverage 起止、gaps 和 error。失败 job 的 `error.code` 会使用 data lake 专用错误码，例如
+`DATA_DOWNLOAD_FAILED`，并保留 `result.partial=true` 的 partial result，方便 client 展示已经完成
+和失败的 symbol。
 响应还包含 `progress` 和 `chunks`。`progress` 汇总 `total_symbols`、`finished_symbols`、
 `failed_symbols`、`current_symbol`、`total_chunks`、`finished_chunks`、`failed_chunks`、
 `queued_chunks`、`row_count` 和 `file_count`；`chunks` 保留每个 symbol/date chunk 的

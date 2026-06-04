@@ -1,6 +1,6 @@
 # RFC: Market Data Lake Large Historical Downloads
 
-状态：Draft；Phase 1 已开始落地。
+状态：Draft；Phase 1-2 已开始落地。
 
 本文规划 qmtserver 为“大规模全市场历史数据下载”提供的 server 端增强。典型目标是：
 在已登录 MiniQMT 的 Windows 网关机上，把全市场 `2015-01-01` 至今的日 K 数据下载到
@@ -60,6 +60,8 @@ maintenance CLI。后续增强应让这些能力在“全市场多年历史数�
   `resolved_symbols`、`symbol_count`、`universe_hash`。
 - `jobs.py` 已能规划 chunks、按 chunk 执行、记录 chunk 状态，并在 job detail 返回 `progress`
   和 `chunks`。
+- Phase 2 已要求 download result 在成功、缓存和失败路径中统一提供 `symbol_results`，失败 job
+  保留 `partial=true` 的 result，便于 client 展示 per-symbol 进度和错误。
 - `coverage.py` 已能返回 `covered_segments`、`gaps` 和 `missing_symbols`。
 - `repository.py` 已持久化 `data_jobs`、`data_job_chunks`、`data_files` 和 `data_coverage`。
 - `files.py` 负责按 symbol/period/adjust 写 Parquet part 文件。
@@ -531,6 +533,7 @@ server 负责解析和校验，不接受 client 传入 `output_path`、`data_dir
 - job detail 增加 `progress` 摘要字段。
 - result 增加 `symbol_results`。
 - 每个 symbol 汇总 downloaded/cached/failed、row/file count、coverage、gaps、error。
+- 失败 job 保留 `result.partial=true`，不因 job-level failed 隐藏其他 symbol 的成功进度。
 
 验收标准：
 

@@ -206,15 +206,22 @@ class DataJobRepository:
             ),
         )
 
-    def mark_failed(self, job_id: str, error: dict[str, str]) -> None:
+    def mark_failed(
+        self,
+        job_id: str,
+        error: dict[str, str],
+        *,
+        result: dict[str, Any] | None = None,
+    ) -> None:
         self._execute(
             """
             UPDATE data_jobs
-            SET status = ?, error_code = ?, error_message = ?, finished_at = ?
+            SET status = ?, result_json = ?, error_code = ?, error_message = ?, finished_at = ?
             WHERE job_id = ?
             """,
             (
                 DataJobStatus.FAILED.value,
+                json.dumps(result, ensure_ascii=False, sort_keys=True) if result else None,
                 error.get("code", "DATA_DOWNLOAD_FAILED"),
                 error.get("message", "data download failed"),
                 now_iso(),

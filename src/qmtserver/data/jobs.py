@@ -14,7 +14,7 @@ from qmtserver.data.coverage import CoveragePlanner
 from qmtserver.data.exports import DataExportService
 from qmtserver.data.files import ParquetBarWriter
 from qmtserver.data.job_diagnostics import build_data_job_diagnostics
-from qmtserver.data.job_results import cached_result, download_result
+from qmtserver.data.job_results import cached_result, download_result, failed_result
 from qmtserver.data.models import DataJobRecord, DataJobStatus  # noqa: F401
 from qmtserver.data.query import DuckDbParquetBarReader, LocalBarQuery
 from qmtserver.data.readers import XtDataBarReader
@@ -36,7 +36,13 @@ class DataJobRepositoryProtocol(Protocol):
 
     def mark_succeeded(self, job_id: str, result: dict[str, Any]) -> None: ...
 
-    def mark_failed(self, job_id: str, error: dict[str, str]) -> None: ...
+    def mark_failed(
+        self,
+        job_id: str,
+        error: dict[str, str],
+        *,
+        result: dict[str, Any] | None = None,
+    ) -> None: ...
 
     def create_chunks(self, job_id: str, chunks: list[dict[str, Any]]) -> None: ...
 
@@ -228,12 +234,14 @@ class DataDownloadJobService:
             files = self._run_download_chunks(job_id, request)
             self.repository.mark_succeeded(job_id, download_result(request, files))
         except Exception as exc:
+            error = {
+                "code": QmtDataDownloadFailedError.code,
+                "message": f"{type(exc).__name__}: {exc}",
+            }
             self.repository.mark_failed(
                 job_id,
-                {
-                    "code": QmtDataDownloadFailedError.code,
-                    "message": f"{type(exc).__name__}: {exc}",
-                },
+                error,
+                result=failed_result(request, self.repository.list_chunks(job_id), error),
             )
 
     def _run_download_chunks(self, job_id: str, request: dict[str, Any]) -> list[dict[str, Any]]:

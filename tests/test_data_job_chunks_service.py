@@ -122,6 +122,50 @@ class DataJobChunkServiceTests(unittest.TestCase):
         failed_chunks = [chunk for chunk in fetched["chunks"] if chunk["status"] == "failed"]
         self.assertEqual(failed_chunks[0]["symbol"], "600000.SH")
         self.assertEqual(failed_chunks[0]["error_code"], "DATA_DOWNLOAD_FAILED")
+        result = fetched["result"]
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertTrue(result["partial"])
+        self.assertEqual(
+            result["symbol_results"],
+            [
+                {
+                    "symbol": "000001.SZ",
+                    "status": "succeeded",
+                    "downloaded": True,
+                    "cached": False,
+                    "failed": False,
+                    "row_count": 1,
+                    "file_count": 1,
+                    "coverage_start": "2026-01-01",
+                    "coverage_end": "2026-01-31",
+                    "gaps": [],
+                    "error": None,
+                },
+                {
+                    "symbol": "600000.SH",
+                    "status": "failed",
+                    "downloaded": False,
+                    "cached": False,
+                    "failed": True,
+                    "row_count": 0,
+                    "file_count": 0,
+                    "coverage_start": None,
+                    "coverage_end": None,
+                    "gaps": [
+                        {
+                            "gap_start": "2026-01-01",
+                            "gap_end": "2026-01-31",
+                            "reason": "download_failed",
+                        }
+                    ],
+                    "error": {
+                        "code": "DATA_DOWNLOAD_FAILED",
+                        "message": "RuntimeError: symbol failed",
+                    },
+                },
+            ],
+        )
 
     def test_cached_download_marks_planned_chunks_finished(self) -> None:
         repository = FakeDataJobRepository()

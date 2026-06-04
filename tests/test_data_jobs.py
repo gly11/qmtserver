@@ -61,11 +61,13 @@ class DataDownloadJobServiceTests(unittest.TestCase):
                     "status": "succeeded",
                     "downloaded": True,
                     "cached": False,
+                    "failed": False,
                     "row_count": 1,
                     "file_count": 1,
                     "coverage_start": "2026-01-02",
                     "coverage_end": "2026-01-02",
                     "gaps": [],
+                    "error": None,
                 }
             ],
         )
@@ -324,9 +326,16 @@ class FakeDataJobRepository:
         self.jobs[job_id].result = result
         self.jobs[job_id].error = None
 
-    def mark_failed(self, job_id: str, error: dict[str, str]) -> None:
+    def mark_failed(
+        self,
+        job_id: str,
+        error: dict[str, str],
+        *,
+        result: dict[str, Any] | None = None,
+    ) -> None:
         self.jobs[job_id].status = DataJobStatus.FAILED
         self.jobs[job_id].error = error
+        self.jobs[job_id].result = result
 
     def create_chunks(self, job_id: str, chunks: list[dict[str, Any]]) -> None:
         self.chunks[job_id] = [
