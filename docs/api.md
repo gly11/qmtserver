@@ -405,6 +405,8 @@ MiniQMT 下载。
 `universe`、`exchange`、`symbol_count` 和 `universe_hash`，方便追溯全市场任务的输入来源。
 请求必须包含至少一个显式 symbol，或包含可解析到至少一个 symbol 的 `universe`；不要用
 `symbols=[]` 表达全市场。非法 `exchange` 会返回 `INVALID_MARKET_REQUEST`。
+可选 `storage_profile` 必须是 server 配置的白名单 id，不能是本机绝对路径；未知 profile 会返回
+`INVALID_MARKET_REQUEST`。
 `chunk_days` 用于把大区间下载规划成 symbol/date chunks；默认值为 31，最大值为 366。
 server 会将规划结果写入 `data_job_chunks` 元数据表，worker 会逐个执行 chunk，并在 job detail
 中返回 chunk 级进度和失败明细。
@@ -477,8 +479,9 @@ GET /v1/market/data/quality?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&e
 
 该接口只读取本地 Parquet/DuckDB，不触发新的 MiniQMT 下载。响应 manifest 使用
 `market.data.export.v1`，并记录 `source_file_count`、`deduplicated_row_count` 和 `truncated`，
-方便判断 export 是否来自多个本地文件或是否受请求 limit 截断。大批量结果建议使用 export，
-而不是连续拉取很多页 HTTP bars 响应。
+方便判断 export 是否来自多个本地文件或是否受请求 limit 截断。manifest 的 `download` 字段
+包含 `filename`、`format`、`content_length`、`hash` 和 `etag`，供 qmtclient 下载后校验。
+大批量结果建议使用 export，而不是连续拉取很多页 HTTP bars 响应。
 
 ```text
 GET /v1/market/data/exports

@@ -265,10 +265,14 @@ QMT_DATA_DIR=data/market
 QMT_DATA_FORMAT=parquet
 QMT_DATA_DB=data/market/db/qmtserver.duckdb
 QMT_DATA_ENABLE_DUCKDB=true
+QMT_DATA_STORAGE_PROFILES=qmt_main=data/qmt_main,archive=D:\qmt_archive
 ```
 
 该目录用于标准化 Parquet 行情文件、DuckDB 元数据和 data lake exports。MiniQMT
 `userdata_mini/datadir` 仍由 `xtquant` 管理，qmtserver 不直接修改该目录。
+如果需要多套 server 可见数据湖目录，使用 `QMT_DATA_STORAGE_PROFILES` 配置白名单 profile。
+client request 只能传 `storage_profile` id，例如 `qmt_main`，不能传 `D:\...` 这类 server
+端绝对路径。
 启用该能力需要安装：
 
 ```powershell
@@ -370,6 +374,8 @@ DELETE /v1/market/data/exports/{export_id}
 
 export/snapshot 下载 endpoint 找不到文件时返回 HTTP 404，body 仍是 qmtserver JSON error
 envelope。下载脚本应先检查 status code，再把响应写入本地文件。
+export/snapshot manifest 的 `download` 字段包含 filename、format、content_length、hash 和
+etag，client 下载后应校验长度和 hash。
 
 当前阶段该 worker 会先检查本地 coverage。命中时直接返回 cached job；未命中或
 `force=true` 时触发 MiniQMT 行情缓存下载，随后读取标准 bars 并按 symbol 写入

@@ -79,6 +79,19 @@ class SettingsTests(unittest.TestCase):
 
         self.assertEqual(settings.transparent_rpc_allowed_targets(), {"xtdata", "trader"})
 
+    def test_data_storage_profiles_parse_whitelisted_roots(self) -> None:
+        settings = load_settings(
+            _env_file=None,
+            data_dir=Path("data/market"),
+            data_storage_profiles="qmt_main=data/qmt_main, archive=D:/qmt_archive",
+        )
+
+        profiles = settings.data_storage_profile_roots()
+
+        self.assertEqual(profiles["default"], Path("data/market"))
+        self.assertEqual(profiles["qmt_main"], Path("data/qmt_main"))
+        self.assertEqual(profiles["archive"], Path("D:/qmt_archive"))
+
     def test_profile_env_file_uses_named_local_profile(self) -> None:
         self.assertEqual(profile_env_file("sim"), Path(".env.sim"))
         self.assertEqual(profile_env_file("live"), Path(".env.live"))

@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     data_format: str = "parquet"
     data_db: Path = Path("data/market/db/qmtserver.duckdb")
     data_enable_duckdb: bool = True
+    data_storage_profiles: str | None = None
     api_token: str | None = None
     require_token: bool = False
     audit_log: bool = True
@@ -83,6 +84,20 @@ class Settings(BaseSettings):
 
     def transparent_rpc_allowed_targets(self) -> set[str]:
         return _split_csv(self.transparent_rpc_targets)
+
+    def data_storage_profile_roots(self) -> dict[str, Path]:
+        profiles = {"default": self.data_dir}
+        if not self.data_storage_profiles:
+            return profiles
+        for item in self.data_storage_profiles.split(","):
+            name, separator, root = item.partition("=")
+            if not separator:
+                continue
+            profile = name.strip()
+            path = root.strip()
+            if profile and path:
+                profiles[profile] = Path(path)
+        return profiles
 
 
 def load_settings(**overrides: Any) -> Settings:

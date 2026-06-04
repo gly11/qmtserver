@@ -135,6 +135,61 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertEqual(body["error"]["code"], "INVALID_MARKET_REQUEST")
         self.assertEqual(fake_jobs.requests, [])
 
+    def test_create_data_download_rejects_unknown_storage_profile(self) -> None:
+        app = create_app(
+            load_settings(
+                _env_file=None,
+                auto_connect=False,
+                data_storage_profiles="qmt_main=data/qmt_main",
+            ),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            created = client.post(
+                "/v1/market/data/download",
+                json={
+                    "kind": "daily_bars",
+                    "symbols": ["000001.SZ"],
+                    "storage_profile": "D:/unsafe",
+                },
+            )
+
+        body = created.json()
+        self.assertEqual(created.status_code, 200)
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["error"]["code"], "INVALID_MARKET_REQUEST")
+        self.assertEqual(fake_jobs.requests, [])
+
+    def test_create_data_download_records_known_storage_profile(self) -> None:
+        app = create_app(
+            load_settings(
+                _env_file=None,
+                auto_connect=False,
+                data_storage_profiles="qmt_main=data/qmt_main",
+            ),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            created = client.post(
+                "/v1/market/data/download",
+                json={
+                    "kind": "daily_bars",
+                    "symbols": ["000001.SZ"],
+                    "storage_profile": "qmt_main",
+                },
+            )
+
+        self.assertTrue(created.json()["ok"])
+        self.assertEqual(fake_jobs.requests[0]["storage_profile"], "qmt_main")
+
     def test_get_unknown_data_download_job_returns_stable_error(self) -> None:
         app = create_app(
             load_settings(_env_file=None, auto_connect=False),

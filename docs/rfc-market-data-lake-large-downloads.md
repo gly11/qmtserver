@@ -1,6 +1,6 @@
 # RFC: Market Data Lake Large Historical Downloads
 
-状态：Draft；Phase 1-3 已开始落地。
+状态：Draft；Phase 1-4 已开始落地。
 
 本文规划 qmtserver 为“大规模全市场历史数据下载”提供的 server 端增强。典型目标是：
 在已登录 MiniQMT 的 Windows 网关机上，把全市场 `2015-01-01` 至今的日 K 数据下载到
@@ -64,6 +64,8 @@ maintenance CLI。后续增强应让这些能力在“全市场多年历史数�
   保留 `partial=true` 的 result，便于 client 展示 per-symbol 进度和错误。
 - Phase 3 已采用 `POST /v1/market/data/jobs/{job_id}/retry-failed` 作为首个显式恢复入口，
   只重跑 failed chunks，不重复执行已成功 chunks。
+- Phase 4 已增加 `storage_profile` 白名单校验，以及 export/snapshot manifest 的 download
+  metadata。
 - `coverage.py` 已能返回 `covered_segments`、`gaps` 和 `missing_symbols`。
 - `repository.py` 已持久化 `data_jobs`、`data_job_chunks`、`data_files` 和 `data_coverage`。
 - `files.py` 负责按 symbol/period/adjust 写 Parquet part 文件。
@@ -488,11 +490,9 @@ Content-Type: application/json
 `.env` 示例：
 
 ```env
-QMT_DATA_STORAGE_PROFILES=qmt_main
-QMT_DATA_STORAGE_PROFILE_QMT_MAIN_ROOT=D:\qmtserver-data\market
-QMT_DATA_STORAGE_PROFILE_QMT_MAIN_DB=D:\qmtserver-data\market\db\qmtserver.duckdb
-QMT_DATA_STORAGE_PROFILE_QMT_MAIN_FORMAT=parquet
-QMT_DATA_STORAGE_PROFILE_QMT_MAIN_EXPORT_ROOT=D:\qmtserver-data\market\exports
+QMT_DATA_DIR=data\market
+QMT_DATA_DB=data\market\db\qmtserver.duckdb
+QMT_DATA_STORAGE_PROFILES=qmt_main=D:\qmtserver-data\market,archive=E:\qmtserver-archive\market
 ```
 
 请求只传：
@@ -653,7 +653,6 @@ server 负责解析和校验，不接受 client 传入 `output_path`、`data_dir
 ## Open Questions
 
 - 是否还需要额外的 `POST /v1/market/data/jobs/{job_id}/resume`，用于处理 stale running chunks？
-- `storage_profile` 是否只支持一个 active data lake，还是允许同一 server 同时维护多个 profile？
 - 大 export 优先支持单个 Parquet、目录 manifest，还是 zip bundle？
 - 是否需要为全市场任务引入最大并发、速率限制和 MiniQMT 下载冷却时间？
 - job/chunk 历史保留多久，是否需要自动归档或清理？

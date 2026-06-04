@@ -41,6 +41,7 @@ class DataExportServiceTests(unittest.TestCase):
             manifest = response["data"]["manifest"]
             listed = service.list_exports()
             download_path = service.download_path(str(manifest["export_id"]))
+            content_length = download_path.stat().st_size
             deleted = service.delete(str(manifest["export_id"]))
 
         self.assertTrue(response["ok"])
@@ -53,6 +54,16 @@ class DataExportServiceTests(unittest.TestCase):
         self.assertEqual(manifest["source_file_count"], 2)
         self.assertEqual(manifest["deduplicated_row_count"], 1)
         self.assertFalse(manifest["truncated"])
+        self.assertEqual(
+            manifest["download"],
+            {
+                "filename": f"{manifest['export_id']}.csv",
+                "format": "csv",
+                "content_length": content_length,
+                "hash": manifest["hash"],
+                "etag": f'"{manifest["hash"]}"',
+            },
+        )
 
 
 class FakeBarQuery:

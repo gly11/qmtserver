@@ -39,6 +39,7 @@ class DataExportService:
                 request=canonical,
                 request_hash_value=req_hash,
                 data_hash=data_hash,
+                data_path=data_path,
                 bars=bars,
                 query_response=query_response,
             )
@@ -115,6 +116,7 @@ def _manifest(
     request: dict[str, Any],
     request_hash_value: str,
     data_hash: str,
+    data_path: Path,
     bars: list[dict[str, Any]],
     query_response: dict[str, Any],
 ) -> dict[str, Any]:
@@ -127,6 +129,12 @@ def _manifest(
         "format": request["format"],
         "request": request,
         "hash": data_hash,
+        "download": _download_metadata(
+            filename=data_path.name,
+            format_name=request["format"],
+            data_hash=data_hash,
+            data_path=data_path,
+        ),
         "row_count": len(bars),
         "source_file_count": int(query_response.get("source_file_count", 0)),
         "deduplicated_row_count": int(query_response.get("deduplicated_row_count", 0)),
@@ -137,6 +145,22 @@ def _manifest(
         "generated_at": datetime.now(UTC).isoformat(),
         "qmtserver_version": __version__,
         "xtquant_version": xtquant.get("version") if xtquant["ok"] else None,
+    }
+
+
+def _download_metadata(
+    *,
+    filename: str,
+    format_name: str,
+    data_hash: str,
+    data_path: Path,
+) -> dict[str, Any]:
+    return {
+        "filename": filename,
+        "format": format_name,
+        "content_length": data_path.stat().st_size,
+        "hash": data_hash,
+        "etag": f'"{data_hash}"',
     }
 
 

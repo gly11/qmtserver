@@ -56,6 +56,7 @@ class SnapshotService:
                 request=canonical,
                 request_hash_value=req_hash,
                 data_hash=data_hash,
+                data_path=data_path,
                 bars=bars,
             )
             self.registry.save(manifest)
@@ -118,6 +119,7 @@ class SnapshotService:
         request: dict[str, Any],
         request_hash_value: str,
         data_hash: str,
+        data_path: Path,
         bars: list[dict[str, Any]],
     ) -> dict[str, Any]:
         xtquant = check_xtquant_import()
@@ -129,6 +131,13 @@ class SnapshotService:
             "format": request["format"],
             "request": request,
             "hash": data_hash,
+            "download": {
+                "filename": data_path.name,
+                "format": request["format"],
+                "content_length": data_path.stat().st_size,
+                "hash": data_hash,
+                "etag": f'"{data_hash}"',
+            },
             "row_count": len(bars),
             "symbol_count": len(request["symbols"]),
             "coverage_start": coverage[0],

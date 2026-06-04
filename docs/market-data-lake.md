@@ -78,11 +78,13 @@ QMT_DATA_DIR=data/market
 QMT_DATA_FORMAT=parquet
 QMT_DATA_DB=data/market/db/qmtserver.duckdb
 QMT_DATA_ENABLE_DUCKDB=true
+QMT_DATA_STORAGE_PROFILES=qmt_main=data/qmt_main,archive=D:\qmt_archive
 QMT_SNAPSHOT_DIR=data/snapshots
 ```
 
 `QMT_DATA_DIR` 用于后续标准化行情文件和元数据库。`QMT_SNAPSHOT_DIR` 继续用于一次性
-snapshot/export 文件。
+snapshot/export 文件。`QMT_DATA_STORAGE_PROFILES` 可配置额外白名单数据湖目录；client 只传
+`storage_profile` id，不传 server 端绝对路径。
 
 ## API
 

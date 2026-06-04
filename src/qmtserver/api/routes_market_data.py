@@ -10,7 +10,12 @@ from qmtserver.api.dependencies import get_qmt_service
 from qmtserver.data.backend import create_data_backend
 from qmtserver.data.jobs import create_data_job_service
 from qmtserver.data.universe import canonicalize_download_request
-from qmtserver.errors import QmtJobNotFoundError, QmtServerError, QmtSnapshotNotFoundError
+from qmtserver.errors import (
+    QmtInvalidMarketRequestError,
+    QmtJobNotFoundError,
+    QmtServerError,
+    QmtSnapshotNotFoundError,
+)
 
 router = APIRouter(prefix="/market/data", tags=["market-data"])
 
@@ -29,6 +34,7 @@ class DataDownloadRequest(BaseModel):
     period: str | None = None
     format: str = "parquet"
     force: bool = False
+    storage_profile: str | None = None
 
 
 class DataCoverageRequest(BaseModel):
@@ -38,6 +44,7 @@ class DataCoverageRequest(BaseModel):
     end: str | None = None
     adjust: str = "none"
     period: str | None = None
+    storage_profile: str | None = None
 
 
 class DataBarsRequest(DataCoverageRequest):
@@ -56,11 +63,12 @@ def create_data_download(
     request: Request,
 ) -> dict[str, Any]:
     try:
-        service = _get_data_job_service(request)
         canonical = canonicalize_download_request(
             payload.model_dump(),
             request.app.state.qmt_service,
         )
+        canonical = _canonicalize_storage_profile(canonical, request)
+        service = _get_data_job_service(request, canonical.get("storage_profile"))
         job = service.submit_download(canonical)
         return _success({"job": job})
     except QmtServerError as exc:
@@ -73,7 +81,7 @@ def create_data_export(
     request: Request,
 ) -> dict[str, Any]:
     try:
-        service = _get_data_job_service(request)
+        service = _get_data_job_service(request, payload.storage_profile)
         return service.create_export(payload.model_dump())
     except QmtServerError as exc:
         return _error(exc.code, str(exc))
@@ -141,11 +149,12 @@ def get_data_bars(
     end: str | None = None,
     adjust: str = "none",
     period: str | None = None,
+    storage_profile: str | None = None,
     limit: int = 1000,
     offset: int = 0,
 ) -> dict[str, Any]:
     try:
-        service = _get_data_job_service(request)
+        service = _get_data_job_service(request, storage_profile)
         return _success(
             service.query_bars(
                 DataBarsRequest(
@@ -155,6 +164,7 @@ def get_data_bars(
                     end=end,
                     adjust=adjust,
                     period=period,
+                    storage_profile=storage_profile,
                     limit=limit,
                     offset=offset,
                 ).model_dump()
@@ -173,10 +183,11 @@ def get_data_quality(
     end: str | None = None,
     adjust: str = "none",
     period: str | None = None,
+    storage_profile: str | None = None,
     limit: int = 10000,
 ) -> dict[str, Any]:
     try:
-        service = _get_data_job_service(request)
+        service = _get_data_job_service(request, storage_profile)
         return service.quality(
             DataBarsRequest(
                 kind=kind,
@@ -185,6 +196,7 @@ def get_data_quality(
                 end=end,
                 adjust=adjust,
                 period=period,
+                storage_profile=storage_profile,
                 limit=limit,
             ).model_dump()
         )
@@ -201,9 +213,10 @@ def get_data_coverage(
     end: str | None = None,
     adjust: str = "none",
     period: str | None = None,
+    storage_profile: str | None = None,
 ) -> dict[str, Any]:
     try:
-        service = _get_data_job_service(request)
+        service = _get_data_job_service(request, storage_profile)
         coverage = service.coverage(
             DataCoverageRequest(
                 kind=kind,
@@ -212,6 +225,7 @@ def get_data_coverage(
                 end=end,
                 adjust=adjust,
                 period=period,
+                storage_profile=storage_profile,
             ).model_dump()
         )
         return _success({"coverage": coverage})
@@ -256,14 +270,49 @@ def retry_failed_data_job(job_id: str, request: Request) -> dict[str, Any]:
         return _error(exc.code, str(exc))
 
 
-def _get_data_job_service(request: Request) -> Any:
+def _get_data_job_service(request: Request, storage_profile: object = None) -> Any:
     get_qmt_service(request)
-    if hasattr(request.app.state, "data_job_service"):
+    existing_services = getattr(request.app.state, "data_job_services", None)
+    if existing_services is None and hasattr(request.app.state, "data_job_service"):
         return request.app.state.data_job_service
-    backend = create_data_backend(request.app.state.settings)
+    profile = _resolve_storage_profile(storage_profile, request)
+    services = existing_services
+    if services is None:
+        services = {}
+        request.app.state.data_job_services = services
+    if profile in services:
+        return services[profile]
+    settings = request.app.state.settings
+    profile_root = settings.data_storage_profile_roots()[profile]
+    profile_settings = settings
+    if profile != "default":
+        profile_settings = settings.model_copy(
+            update={"data_dir": profile_root, "data_db": profile_root / "db" / "qmtserver.duckdb"}
+        )
+    backend = create_data_backend(profile_settings)
     service = create_data_job_service(backend, request.app.state.qmt_service)
-    request.app.state.data_job_service = service
+    services[profile] = service
+    if profile == "default":
+        request.app.state.data_job_service = service
     return service
+
+
+def _canonicalize_storage_profile(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+    profile = _resolve_storage_profile(payload.get("storage_profile"), request)
+    canonical = dict(payload)
+    if payload.get("storage_profile") is not None:
+        canonical["storage_profile"] = profile
+    return canonical
+
+
+def _resolve_storage_profile(storage_profile: object, request: Request) -> str:
+    profile = str(storage_profile).strip() if isinstance(storage_profile, str) else ""
+    if not profile:
+        return "default"
+    profiles = request.app.state.settings.data_storage_profile_roots()
+    if profile not in profiles:
+        raise QmtInvalidMarketRequestError(f"unknown storage_profile: {profile}")
+    return profile
 
 
 def _success(data: Any) -> dict[str, Any]:

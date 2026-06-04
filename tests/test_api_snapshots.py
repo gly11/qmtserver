@@ -43,6 +43,11 @@ class ApiSnapshotTests(unittest.TestCase):
         self.assertEqual(body["data"]["manifest"]["row_count"], 1)
         self.assertEqual(body["data"]["manifest"]["symbol_count"], 1)
         self.assertTrue(body["data"]["manifest"]["hash"].startswith("sha256:"))
+        self.assertEqual(body["data"]["manifest"]["download"]["format"], "csv")
+        self.assertEqual(
+            body["data"]["manifest"]["download"]["hash"],
+            body["data"]["manifest"]["hash"],
+        )
         self.assertEqual(len(listed.json()["data"]["snapshots"]), 1)
         self.assertEqual(manifest.json()["data"]["manifest"]["snapshot_id"], snapshot_id)
         self.assertEqual(download.status_code, 200)
