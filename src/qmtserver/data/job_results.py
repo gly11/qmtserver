@@ -76,6 +76,29 @@ def failed_result(
     }
 
 
+def chunked_result(request: dict[str, Any], chunks: list[dict[str, Any]]) -> dict[str, Any]:
+    row_count = sum(int(chunk.get("row_count", 0)) for chunk in chunks)
+    file_count = sum(int(chunk.get("file_count", 0)) for chunk in chunks)
+    return {
+        "schema": "market.data.download.v1",
+        "downloaded": bool(chunks),
+        "cached": False,
+        "partial": False,
+        "symbols": [str(symbol) for symbol in request.get("symbols", [])],
+        "kind": request.get("kind"),
+        "period": _period(request),
+        "storage": "qmtserver_data_lake" if file_count else "miniqmt_cache",
+        "file_count": file_count,
+        "row_count": row_count,
+        "files": [],
+        "symbol_results": _chunk_symbol_results(request, chunks, {}),
+        "progress": progress_from_chunks(chunks),
+        "error": None,
+        "next_step": None,
+        **_universe_result_metadata(request),
+    }
+
+
 def _period(request: dict[str, Any]) -> str:
     if request.get("kind") == "daily_bars":
         return "1d"

@@ -1,6 +1,6 @@
 # RFC: Market Data Lake Large Historical Downloads
 
-状态：Draft；Phase 1-2 已开始落地。
+状态：Draft；Phase 1-3 已开始落地。
 
 本文规划 qmtserver 为“大规模全市场历史数据下载”提供的 server 端增强。典型目标是：
 在已登录 MiniQMT 的 Windows 网关机上，把全市场 `2015-01-01` 至今的日 K 数据下载到
@@ -62,6 +62,8 @@ maintenance CLI。后续增强应让这些能力在“全市场多年历史数�
   和 `chunks`。
 - Phase 2 已要求 download result 在成功、缓存和失败路径中统一提供 `symbol_results`，失败 job
   保留 `partial=true` 的 result，便于 client 展示 per-symbol 进度和错误。
+- Phase 3 已采用 `POST /v1/market/data/jobs/{job_id}/retry-failed` 作为首个显式恢复入口，
+  只重跑 failed chunks，不重复执行已成功 chunks。
 - `coverage.py` 已能返回 `covered_segments`、`gaps` 和 `missing_symbols`。
 - `repository.py` 已持久化 `data_jobs`、`data_job_chunks`、`data_files` 和 `data_coverage`。
 - `files.py` 负责按 symbol/period/adjust 写 Parquet part 文件。
@@ -555,12 +557,14 @@ server 负责解析和校验，不接受 client 传入 `output_path`、`data_dir
 - worker 按 chunk 执行。
 - `mode="ensure"` / `incremental=true` 基于 coverage gaps 规划 chunks。
 - 重启后跳过已完成 chunk，或至少通过再次提交 ensure request 跳过已覆盖数据。
+- 提供 `POST /v1/market/data/jobs/{job_id}/retry-failed`，用于只重跑 failed chunks。
 - 增加 stale running chunk 诊断。
 
 验收标准：
 
 - 全市场请求会拆分为多个 chunk，而不是单个粗粒度 job。
 - chunk 失败后，其他 chunk 可继续执行。
+- retry-failed 只重跑 failed chunks，不重复执行 succeeded chunks。
 - 重新提交同一 ensure request 只为 gaps 生成 chunk。
 - 不重复写完整 `2015-now` 区间。
 
@@ -648,8 +652,7 @@ server 负责解析和校验，不接受 client 传入 `output_path`、`data_dir
 
 ## Open Questions
 
-- 是否需要显式 `POST /v1/market/data/jobs/{job_id}/resume` 和
-  `POST /v1/market/data/jobs/{job_id}/retry-failed`，还是先依赖再次提交 ensure request？
+- 是否还需要额外的 `POST /v1/market/data/jobs/{job_id}/resume`，用于处理 stale running chunks？
 - `storage_profile` 是否只支持一个 active data lake，还是允许同一 server 同时维护多个 profile？
 - 大 export 优先支持单个 Parquet、目录 manifest，还是 zip bundle？
 - 是否需要为全市场任务引入最大并发、速率限制和 MiniQMT 下载冷却时间？

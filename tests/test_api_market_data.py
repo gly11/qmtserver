@@ -150,6 +150,29 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertFalse(body["ok"])
         self.assertEqual(body["error"]["code"], "JOB_NOT_FOUND")
 
+    def test_retry_failed_data_download_job(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            created = client.post(
+                "/v1/market/data/download",
+                json={"kind": "daily_bars", "symbols": ["000001.SZ"]},
+            )
+            job_id = created.json()["data"]["job"]["job_id"]
+            retried = client.post(f"/v1/market/data/jobs/{job_id}/retry-failed")
+
+        body = retried.json()
+        self.assertEqual(retried.status_code, 200)
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["data"]["job"]["job_id"], job_id)
+        self.assertEqual(fake_jobs.retry_requests, [job_id])
+
     def test_list_data_download_jobs(self) -> None:
         app = create_app(
             load_settings(_env_file=None, auto_connect=False),
@@ -319,6 +342,7 @@ class FakeDataJobService:
         self.quality_requests: list[dict[str, Any]] = []
         self.export_requests: list[dict[str, Any]] = []
         self.list_job_requests: list[dict[str, Any]] = []
+        self.retry_requests: list[str] = []
         self.exports: dict[str, dict[str, Any]] = {}
 
     def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -342,6 +366,13 @@ class FakeDataJobService:
         self.list_job_requests.append({"status": status, "limit": limit})
         jobs = [job for job in self.jobs.values() if status is None or job.status.value == status]
         return [job.as_dict() for job in jobs[:limit]]
+
+    def retry_failed_chunks(self, job_id: str) -> dict[str, Any] | None:
+        self.retry_requests.append(job_id)
+        job = self.jobs.get(job_id)
+        if job is None:
+            return None
+        return job.as_dict()
 
     def coverage(self, request: dict[str, Any]) -> dict[str, Any]:
         self.coverage_requests.append(request)

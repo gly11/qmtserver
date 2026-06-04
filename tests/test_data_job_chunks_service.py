@@ -167,6 +167,43 @@ class DataJobChunkServiceTests(unittest.TestCase):
             ],
         )
 
+    def test_retry_failed_chunks_skips_successful_chunks_and_finishes_job(self) -> None:
+        repository = FakeDataJobRepository()
+        downloader = FailingOnceOnSymbolDownloader("600000.SH")
+        service = DataDownloadJobService(
+            repository,
+            downloader=downloader,
+            bar_reader=FakeBarReader(),
+            file_writer=FakeBarWriter(),
+            file_repository=FakeDataFileRepository(),
+            coverage_planner=FakeCoveragePlanner(fully_covered=False),
+            run_async=False,
+        )
+
+        job = service.submit_download(
+            {
+                "kind": "daily_bars",
+                "symbols": ["000001.SZ", "600000.SH"],
+                "start": "2026-01-01",
+                "end": "2026-01-31",
+                "adjust": "none",
+            }
+        )
+        retried = service.retry_failed_chunks(str(job["job_id"]))
+
+        self.assertIsNotNone(retried)
+        assert retried is not None
+        self.assertEqual(
+            [request["symbols"] for request in downloader.requests],
+            [["000001.SZ"], ["600000.SH"], ["600000.SH"]],
+        )
+        self.assertEqual(retried["status"], "succeeded")
+        self.assertEqual(retried["progress"]["finished_symbols"], 2)
+        self.assertEqual(retried["progress"]["failed_symbols"], 0)
+        self.assertFalse(retried["result"]["partial"])
+        self.assertEqual(retried["result"]["row_count"], 2)
+        self.assertEqual(retried["result"]["file_count"], 2)
+
     def test_cached_download_marks_planned_chunks_finished(self) -> None:
         repository = FakeDataJobRepository()
         service = DataDownloadJobService(
@@ -264,6 +301,19 @@ class FailingOnSymbolDownloader:
         self.requests.append(request)
         if request.get("symbols") == [self.symbol]:
             raise RuntimeError("symbol failed")
+
+
+class FailingOnceOnSymbolDownloader:
+    def __init__(self, symbol: str) -> None:
+        self.symbol = symbol
+        self.failed = False
+        self.requests: list[dict[str, Any]] = []
+
+    def download_history(self, request: dict[str, Any]) -> None:
+        self.requests.append(request)
+        if request.get("symbols") == [self.symbol] and not self.failed:
+            self.failed = True
+            raise RuntimeError("symbol failed once")
 
 
 if __name__ == "__main__":

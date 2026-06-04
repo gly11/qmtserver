@@ -35,6 +35,7 @@ GET  /v1/market/data/coverage
 GET  /v1/market/data/quality
 GET  /v1/market/data/jobs
 GET  /v1/market/data/jobs/{job_id}
+POST /v1/market/data/jobs/{job_id}/retry-failed
 POST /v1/market/data/exports
 GET  /v1/market/data/exports
 GET  /v1/market/data/exports/{export_id}
@@ -503,6 +504,13 @@ coverage 起止、gaps 和 error。失败 job 的 `error.code` 会使用 data la
 `queued_chunks`、`row_count` 和 `file_count`；`chunks` 保留每个 symbol/date chunk 的
 `status`、`attempts`、`row_count`、`file_count`、`error_code` 和 `error_message`，用于定位
 大任务的失败子区间。
+
+### POST /v1/market/data/jobs/{job_id}/retry-failed
+
+只重跑指定 data download job 中 `status="failed"` 的 chunks。已成功的 chunks 不会重复执行。
+如果所有 failed chunks 重试成功，job 会重新标记为 `succeeded`，并返回基于 chunk metadata
+汇总的 `result`、`progress` 和 `chunks`。如果仍有 chunk 失败，job 保持 `failed`，并保留
+`result.partial=true`。
 
 ### GET /v1/market/data/jobs
 

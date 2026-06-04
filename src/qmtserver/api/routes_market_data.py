@@ -244,6 +244,18 @@ def get_data_job(job_id: str, request: Request) -> dict[str, Any]:
         return _error(exc.code, str(exc))
 
 
+@router.post("/jobs/{job_id}/retry-failed")
+def retry_failed_data_job(job_id: str, request: Request) -> dict[str, Any]:
+    try:
+        service = _get_data_job_service(request)
+        job = service.retry_failed_chunks(job_id)
+        if job is None:
+            return _error(QmtJobNotFoundError.code, f"job not found: {job_id}")
+        return _success({"job": job})
+    except QmtServerError as exc:
+        return _error(exc.code, str(exc))
+
+
 def _get_data_job_service(request: Request) -> Any:
     get_qmt_service(request)
     if hasattr(request.app.state, "data_job_service"):

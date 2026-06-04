@@ -14,7 +14,7 @@ from qmtserver.data.coverage import CoveragePlanner
 from qmtserver.data.exports import DataExportService
 from qmtserver.data.files import ParquetBarWriter
 from qmtserver.data.job_diagnostics import build_data_job_diagnostics
-from qmtserver.data.job_results import cached_result, download_result, failed_result
+from qmtserver.data.job_results import cached_result, chunked_result, download_result, failed_result
 from qmtserver.data.models import DataJobRecord, DataJobStatus  # noqa: F401
 from qmtserver.data.query import DuckDbParquetBarReader, LocalBarQuery
 from qmtserver.data.readers import XtDataBarReader
@@ -147,6 +147,20 @@ class DataDownloadJobService:
             job.as_dict() for job in self.repository.list_jobs(status=status, limit=bounded_limit)
         ]
 
+    def retry_failed_chunks(self, job_id: str) -> dict[str, Any] | None:
+        job = self.repository.get(job_id)
+        if job is None:
+            return None
+        failed_chunks = [
+            chunk
+            for chunk in self.repository.list_chunks(job_id)
+            if chunk.get("status") == "failed"
+        ]
+        if not failed_chunks:
+            return self._job_with_chunks(job)
+        self._run_retry_failed_chunks(job_id, job.request)
+        return self.get_job(job_id)
+
     def diagnostics(
         self,
         *,
@@ -244,14 +258,40 @@ class DataDownloadJobService:
                 result=failed_result(request, self.repository.list_chunks(job_id), error),
             )
 
-    def _run_download_chunks(self, job_id: str, request: dict[str, Any]) -> list[dict[str, Any]]:
+    def _run_retry_failed_chunks(self, job_id: str, request: dict[str, Any]) -> None:
+        self.repository.mark_running(job_id)
+        try:
+            self._run_download_chunks(job_id, request, statuses={"failed"})
+            chunks = self.repository.list_chunks(job_id)
+            failed_chunks = [chunk for chunk in chunks if chunk.get("status") == "failed"]
+            if failed_chunks:
+                raise RuntimeError(f"{len(failed_chunks)} data download chunk(s) still failed")
+            self.repository.mark_succeeded(job_id, chunked_result(request, chunks))
+        except Exception as exc:
+            error = {
+                "code": QmtDataDownloadFailedError.code,
+                "message": f"{type(exc).__name__}: {exc}",
+            }
+            self.repository.mark_failed(
+                job_id,
+                error,
+                result=failed_result(request, self.repository.list_chunks(job_id), error),
+            )
+
+    def _run_download_chunks(
+        self,
+        job_id: str,
+        request: dict[str, Any],
+        *,
+        statuses: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
         chunks = self.repository.list_chunks(job_id)
         if not chunks:
             self.downloader.download_history(request)
             return self._write_files(job_id, request)
         files: list[dict[str, Any]] = []
         failures = []
-        for chunk in chunks:
+        for chunk in _chunks_for_run(chunks, statuses=statuses):
             chunk_id = str(chunk["chunk_id"])
             chunk_request = request_for_chunk(request, chunk)
             self.repository.mark_chunk_running(chunk_id)
@@ -375,3 +415,13 @@ def create_data_job_service(
 
 def _uses_incremental_mode(request: dict[str, Any]) -> bool:
     return request.get("mode") == "ensure" or bool(request.get("incremental"))
+
+
+def _chunks_for_run(
+    chunks: list[dict[str, Any]],
+    *,
+    statuses: set[str] | None,
+) -> list[dict[str, Any]]:
+    if statuses is None:
+        return chunks
+    return [chunk for chunk in chunks if str(chunk.get("status")) in statuses]

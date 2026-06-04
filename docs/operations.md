@@ -325,6 +325,7 @@ server 会把 universe 解析为 canonical symbols，并在 job request/result �
 ```text
 GET /v1/market/data/jobs?status=succeeded&limit=50
 GET /v1/market/data/jobs/{job_id}
+POST /v1/market/data/jobs/{job_id}/retry-failed
 ```
 
 成功或失败 job result 都会尽量包含 `symbol_results`，用于定位每个 symbol 的
@@ -335,6 +336,8 @@ chunk 会使用 `download_failed`。
 单个 job 查询还会返回 `progress` 和 `chunks`，用于查看 total/finished/failed symbols、
 chunk 数量、current symbol、row/file count，以及每个失败 chunk 的 `error_code` 和
 `error_message`。
+`retry-failed` 只重跑 failed chunks，跳过已经 succeeded 的 chunks；重试成功后 job 会回到
+`succeeded`，重试仍失败时会继续保留 partial result 和 per-symbol error。
 
 查询覆盖范围：
 
