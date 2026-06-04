@@ -4,6 +4,8 @@ import hashlib
 import json
 from typing import Any
 
+from qmtserver.errors import QmtInvalidMarketRequestError
+
 ALL_A_SECTOR = "\u6caa\u6df1A\u80a1"
 SUPPORTED_EXCHANGES = {"SH", "SZ", "BJ"}
 
@@ -12,11 +14,17 @@ def canonicalize_download_request(request: dict[str, Any], qmt_service: Any) -> 
     symbols = _symbols(request.get("symbols"))
     universe = _text(request.get("universe"))
     exchange = _exchange(request.get("exchange"))
+    if _text(request.get("exchange")) and exchange is None:
+        raise QmtInvalidMarketRequestError(
+            f"unsupported exchange: {request.get('exchange')}; expected one of BJ, SH, SZ"
+        )
     if universe:
         resolved = resolve_universe(qmt_service, universe=universe, exchange=exchange)
         symbols = _unique([*symbols, *resolved])
     else:
         resolved = symbols
+    if not symbols:
+        raise QmtInvalidMarketRequestError("symbols or universe must include at least one symbol")
     canonical = dict(request)
     canonical["symbols"] = symbols
     canonical["resolved_symbols"] = resolved

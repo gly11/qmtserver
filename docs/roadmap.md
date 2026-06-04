@@ -72,7 +72,8 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 ### Market Data Lake
 
 下一条主线是把历史行情下载升级为 server 端高性能本地数据层。设计目标见
-[Market Data Lake](market-data-lake.md)。
+[Market Data Lake](market-data-lake.md)。全市场多年历史数据下载的后续增强规划见
+[RFC: Market Data Lake Large Historical Downloads](rfc-market-data-lake-large-downloads.md)。
 
 - 使用 `qmtserver[data]` extra 引入 DuckDB 和 PyArrow。
 - 保持 MiniQMT `userdata_mini/datadir` 为上游缓存，不直接修改。
@@ -83,7 +84,10 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 
 该方向已完成配置、依赖和 schema 骨架、持久化 job、Parquet writer、coverage gap detection、
 本地查询 API、CSV export、质量检查、storage maintenance、job listing 和 readonly data lake
-smoke。后续可以继续推进 Parquet 压缩、执行式 index rebuild 和更大规模数据集的性能优化。
+smoke。大规模全市场调度层已经支持 server 端 universe resolution、symbol/date chunk planner、
+chunk 级执行和进度、`mode="ensure"` / `incremental=true` 缺口补齐，以及 Parquet compaction
+维护入口。后续重点是 storage profile 白名单、显式 resume/retry API、更多真实 MiniQMT smoke
+矩阵和更大数据集的性能压测。
 
 ### Subscriptions And Events
 

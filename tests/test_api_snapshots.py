@@ -110,6 +110,22 @@ class ApiSnapshotTests(unittest.TestCase):
         )
         self.assertIn("2026-01-02T09:31:00+08:00,000001.SZ,1m", download.text)
 
+    def test_download_missing_snapshot_returns_http_404(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = create_app(
+                load_settings(auto_connect=False, snapshot_dir=Path(tmp)),
+                connect_on_startup=False,
+            )
+
+            with TestClient(app) as client:
+                app.state.qmt_service = FakeService(snapshot_dir=Path(tmp))
+                response = client.get("/v1/snapshots/missing/download")
+
+        body = response.json()
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["error"]["code"], "SNAPSHOT_NOT_FOUND")
+
 
 if __name__ == "__main__":
     unittest.main()

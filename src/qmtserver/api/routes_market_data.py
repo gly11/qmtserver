@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from qmtserver.api.dependencies import get_qmt_service
@@ -101,12 +101,20 @@ def get_data_export(export_id: str, request: Request) -> dict[str, Any]:
 
 
 @router.get("/exports/{export_id}/download", response_model=None)
-def download_data_export(export_id: str, request: Request) -> FileResponse | dict[str, Any]:
+def download_data_export(
+    export_id: str, request: Request
+) -> FileResponse | JSONResponse | dict[str, Any]:
     try:
         service = _get_data_job_service(request)
         path = service.export_path(export_id)
         if path is None:
-            return _error(QmtSnapshotNotFoundError.code, f"data export not found: {export_id}")
+            return _http_error(
+                404,
+                QmtSnapshotNotFoundError.code,
+                f"data export not found: {export_id}",
+            )
+    except QmtSnapshotNotFoundError as exc:
+        return _http_error(404, exc.code, str(exc))
     except QmtServerError as exc:
         return _error(exc.code, str(exc))
     return FileResponse(path, media_type="text/csv", filename=path.name)
@@ -252,6 +260,10 @@ def _success(data: Any) -> dict[str, Any]:
 
 def _error(code: str, message: str) -> dict[str, Any]:
     return {"ok": False, "data": None, "error": {"code": code, "message": message}, "meta": {}}
+
+
+def _http_error(status_code: int, code: str, message: str) -> JSONResponse:
+    return JSONResponse(status_code=status_code, content=_error(code, message))
 
 
 def _symbol_list(symbols: str | None) -> list[str]:

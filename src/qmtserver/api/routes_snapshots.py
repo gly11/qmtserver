@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from qmtserver.api.dependencies import get_qmt_service
@@ -45,11 +45,11 @@ def get_manifest(snapshot_id: str, service: QmtServiceDep) -> dict[str, object]:
 
 
 @router.get("/{snapshot_id}/download", response_model=None)
-def download_snapshot(snapshot_id: str, service: QmtServiceDep) -> FileResponse | dict[str, object]:
+def download_snapshot(snapshot_id: str, service: QmtServiceDep) -> FileResponse | JSONResponse:
     try:
         path = _snapshot_service(service).download_path(snapshot_id)
     except QmtSnapshotNotFoundError as exc:
-        return _error(exc.code, str(exc))
+        return _http_error(404, exc.code, str(exc))
     return FileResponse(path, media_type="text/csv", filename=path.name)
 
 
@@ -77,3 +77,7 @@ def _snapshot_service(service: QmtService) -> SnapshotService:
 
 def _error(code: str, message: str) -> dict[str, Any]:
     return {"ok": False, "data": None, "error": {"code": code, "message": message}, "meta": {}}
+
+
+def _http_error(status_code: int, code: str, message: str) -> JSONResponse:
+    return JSONResponse(status_code=status_code, content=_error(code, message))

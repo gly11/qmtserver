@@ -354,7 +354,8 @@ format，以及 intraday 请求的 period。
 
 ### GET /v1/snapshots/{snapshot_id}/download
 
-下载 snapshot 数据文件。当前仅承诺 CSV。
+下载 snapshot 数据文件。当前仅承诺 CSV。找不到 manifest 或数据文件时返回 HTTP 404，body
+仍使用 qmtserver JSON error envelope。
 
 ### GET /v1/snapshots/{snapshot_id}/quality
 
@@ -362,7 +363,7 @@ format，以及 intraday 请求的 period。
 
 ## Market Data Lake API
 
-`/v1/market/data` 是后续高性能行情数据缓存的 server 端入口。当前阶段提供持久化下载 job、
+`/v1/market/data` 是高性能行情数据缓存和 Market Data Lake 的 server 端入口。当前阶段提供持久化下载 job、
 coverage 查询和缓存命中判断：任务写入 DuckDB 元数据，worker 先检查本地覆盖范围；未命中时
 触发只读 `xtdata.download_history_data` 补齐 MiniQMT 行情缓存，再读取标准 bars 并按 symbol
 写入 qmtserver Parquet 文件。`/v1/market/data/bars` 从本地 Parquet/DuckDB 读取数据，不触发
@@ -401,8 +402,11 @@ MiniQMT 下载。
 可选值为 `SH`、`SZ` 或 `BJ`，用于按证券代码后缀过滤。提交给 data job 的 canonical request
 会记录 `resolved_symbols`、`symbol_count` 和 `universe_hash`；job result 也会保留
 `universe`、`exchange`、`symbol_count` 和 `universe_hash`，方便追溯全市场任务的输入来源。
+请求必须包含至少一个显式 symbol，或包含可解析到至少一个 symbol 的 `universe`；不要用
+`symbols=[]` 表达全市场。非法 `exchange` 会返回 `INVALID_MARKET_REQUEST`。
 `chunk_days` 用于把大区间下载规划成 symbol/date chunks；默认值为 31，最大值为 366。
-server 会将规划结果写入 `data_job_chunks` 元数据表，为后续 chunk 级进度、重试和恢复执行提供依据。
+server 会将规划结果写入 `data_job_chunks` 元数据表，worker 会逐个执行 chunk，并在 job detail
+中返回 chunk 级进度和失败明细。
 当 `mode="ensure"` 或 `incremental=true` 且未设置 `force=true` 时，server 会先查询本地
 coverage，只为 `gaps` 规划下载 chunks；如果已完整覆盖，则返回 cached job，不会触发新的
 MiniQMT 下载。
@@ -483,6 +487,8 @@ DELETE /v1/market/data/exports/{export_id}
 ```
 
 `DELETE` 只删除 qmtserver 本地 export CSV 和 manifest，不删除 MiniQMT 缓存或 Parquet 原始数据。
+`GET /download` 找不到 manifest 或数据文件时返回 HTTP 404，body 仍使用 qmtserver JSON error
+envelope，避免下载客户端把 200 JSON error 保存成 CSV 文件。
 
 ### GET /v1/market/data/jobs/{job_id}
 

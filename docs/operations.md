@@ -311,10 +311,12 @@ $body = @{
 
 server 会把 universe 解析为 canonical symbols，并在 job request/result 中记录
 `resolved_symbols`、`symbol_count` 和 `universe_hash`。这比 client 传入空 `symbols` 或自行展开
-股票池更可追溯。该解析只走行情/reference 路径，不连接 trader。
+股票池更可追溯；`symbols=[]` 不会被当作全市场，download request 必须包含至少一个 symbol
+或可解析的 `universe`。非法 `exchange` 会返回 `INVALID_MARKET_REQUEST`。该解析只走
+行情/reference 路径，不连接 trader。
 `chunk_days` 会把每个 symbol 的日期区间拆成较小 chunk，并将规划结果持久化到 DuckDB
 `data_job_chunks` 表。worker 会逐个执行这些 chunk，并记录 attempts、row/file count 和失败
-错误，便于后续按 chunk 汇总进度、失败明细和恢复执行。
+错误；单个 job 查询会按 chunk 汇总进度、失败明细和当前执行位置。
 `mode="ensure"` 或 `incremental=true` 会先查询 coverage，只为缺口生成 chunk；本地已经完整
 覆盖时会返回 cached job，不会重复下载整段历史数据。
 
@@ -361,6 +363,9 @@ GET  /v1/market/data/exports/{export_id}/download
 DELETE /v1/market/data/exports/{export_id}
 ```
 
+export/snapshot 下载 endpoint 找不到文件时返回 HTTP 404，body 仍是 qmtserver JSON error
+envelope。下载脚本应先检查 status code，再把响应写入本地文件。
+
 当前阶段该 worker 会先检查本地 coverage。命中时直接返回 cached job；未命中或
 `force=true` 时触发 MiniQMT 行情缓存下载，随后读取标准 bars 并按 symbol 写入
 `QMT_DATA_DIR/raw/bars/.../*.parquet`，同时持久化 job 状态、data file 元数据和 coverage。
@@ -392,7 +397,8 @@ Parquet metadata 与 DuckDB 登记信息不一致、孤儿 export 文件等问�
 
 `data check` 会检查 DuckDB 已登记但文件缺失的 Parquet、未登记的 Parquet，以及孤儿 export
 文件。`data cleanup` 默认是 dry-run，只列出删除候选；只有显式传入 `--delete` 才会删除
-`QMT_DATA_DIR` 内的孤儿 Parquet/export 文件。`data rebuild-index` 当前输出 dry-run 重建计划。
+`QMT_DATA_DIR` 内的孤儿 Parquet/export 文件。`data rebuild-index` 和 `data compact` 也默认
+只输出计划，必须显式传入 `--execute` 才会修改本地数据目录和 DuckDB metadata。
 这些维护命令只处理 qmtserver 本地数据目录，不连接 trader，不触发 MiniQMT 下载，也不执行任何
 交易命令。
 

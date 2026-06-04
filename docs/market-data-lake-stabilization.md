@@ -16,7 +16,28 @@ server 端行情数据层。
 - query、quality 和 export 行为只读取本地数据，不意外触发 MiniQMT 下载。
 - 发布前可以通过 fake tests 和只读 MiniQMT smoke 验证主要路径。
 
-## 当前基线
+## 当前实现状态
+
+在 `0.7.0` 基线之后，Market Data Lake 稳定化和大规模调度层已经补齐以下能力：
+
+- coverage response 包含 file-level `covered_segments` 和 `gaps`，cached download 使用 segments
+  判断中间缺口。
+- download job 支持 server 端 `universe="all_a"`、`exchange` 过滤、`resolved_symbols`、
+  `symbol_count` 和 `universe_hash`。
+- download job 支持 `chunk_days`，按 symbol/date range 规划并持久化 `data_job_chunks`。
+- worker 按 chunk 执行，记录 attempts、row/file count、失败错误，并在 job detail 返回
+  `progress` 和 `chunks`。
+- `mode="ensure"` / `incremental=true` 根据 coverage gaps 只补缺口，避免重复下载整段历史。
+- `/v1/market/data/bars` 已通过 DuckDB 聚合多个 Parquet，并在 SQL 层完成过滤、排序、去重、
+  计数和分页。
+- `qmtserver data check`、`cleanup`、`rebuild-index` 和 `compact` 已提供本地维护入口；
+  `compact --execute` 会写入 compact Parquet、删除源文件，并联动 rebuild-index。
+- `scripts/smoke_market_data_lake.py` 已用于只读 data lake smoke 路径。
+
+剩余重点是 storage profile 白名单、显式 resume/retry API、更大规模数据集性能压测，以及真实
+MiniQMT smoke 记录的持续补充。
+
+## 0.7.0 基线
 
 `0.7.0` 已经具备：
 
@@ -28,7 +49,7 @@ server 端行情数据层。
 - `data_files` 和 `data_coverage` 元数据。
 - `/v1/market/data/download`、`coverage`、`bars`、`quality`、`exports` 和 `jobs` API。
 
-当前主要不足：
+当时主要不足：
 
 - coverage 只按 symbol/period/adjust 维护合并后的整体区间，不能表达中间缺口。
 - 重复或重叠下载可能产生多个 Parquet 文件，缺少 compaction 和 orphan 检查。
@@ -142,7 +163,8 @@ feat(data): add coverage gap detection
 Parquet、orphan exports、Parquet metadata mismatch，并输出本地数据目录健康摘要；
 `qmtserver data cleanup` 默认 dry-run，显式 `--delete` 才删除 `QMT_DATA_DIR` 内候选文件，
 并支持 `--expired-days` 清理过期 export；`qmtserver data rebuild-index --execute` 可从本地
-Parquet 重建 DuckDB file index 和 coverage metadata。
+Parquet 重建 DuckDB file index 和 coverage metadata；`qmtserver data compact` 默认输出
+compaction plan，`--execute` 会写入 compact Parquet、删除源文件，并联动 rebuild-index。
 
 目标：让本地 Parquet 与 DuckDB 元数据可维护，避免长期运行后文件膨胀、孤儿文件和重复文件失控。
 

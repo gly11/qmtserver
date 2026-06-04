@@ -12,6 +12,8 @@
   event 的设计、验证记录和 smoke 命令。
 - [Compatibility Matrix](compatibility.md)：`xtquant` 版本、签名和真实 MiniQMT smoke 记录。
 - [Market Data Lake](market-data-lake.md)：行情下载、高性能本地缓存和 DuckDB/Parquet 数据层规划。
+- [RFC: Market Data Lake Large Historical Downloads](rfc-market-data-lake-large-downloads.md)：
+  全市场多年历史数据下载的 server 端增强规划。
 - [Market Data Lake Stabilization Plan](market-data-lake-stabilization.md)：数据湖 coverage、
   storage maintenance、query/export 和 readonly smoke 的稳定化计划。
 - [Release Plan](release-plan.md)：版本定位、发布门禁、实时订阅 smoke 和后续节奏。

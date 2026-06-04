@@ -78,6 +78,63 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertEqual(request["symbol_count"], 1)
         self.assertTrue(str(request["universe_hash"]).startswith("sha256:"))
 
+    def test_create_data_download_rejects_empty_symbols_without_universe(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            created = client.post(
+                "/v1/market/data/download",
+                json={
+                    "kind": "daily_bars",
+                    "symbols": [],
+                    "start": "2026-01-01",
+                    "end": "2026-01-31",
+                    "adjust": "none",
+                    "format": "parquet",
+                },
+            )
+
+        body = created.json()
+        self.assertEqual(created.status_code, 200)
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["error"]["code"], "INVALID_MARKET_REQUEST")
+        self.assertEqual(fake_jobs.requests, [])
+
+    def test_create_data_download_rejects_invalid_exchange(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            created = client.post(
+                "/v1/market/data/download",
+                json={
+                    "kind": "daily_bars",
+                    "universe": "all_a",
+                    "exchange": "HK",
+                    "start": "2026-01-01",
+                    "end": "2026-01-31",
+                    "adjust": "none",
+                    "format": "parquet",
+                },
+            )
+
+        body = created.json()
+        self.assertEqual(created.status_code, 200)
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["error"]["code"], "INVALID_MARKET_REQUEST")
+        self.assertEqual(fake_jobs.requests, [])
+
     def test_get_unknown_data_download_job_returns_stable_error(self) -> None:
         app = create_app(
             load_settings(_env_file=None, auto_connect=False),
@@ -184,6 +241,23 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertEqual(download.status_code, 200)
         self.assertEqual(deleted.status_code, 200)
         self.assertEqual(fake_jobs.export_requests[0]["symbols"], ["000001.SZ"])
+
+    def test_download_missing_data_export_returns_http_404(self) -> None:
+        app = create_app(
+            load_settings(_env_file=None, auto_connect=False),
+            connect_on_startup=False,
+        )
+        fake_jobs = FakeDataJobService()
+
+        with TestClient(app) as client:
+            app.state.qmt_service = FakeService()
+            app.state.data_job_service = fake_jobs
+            response = client.get("/v1/market/data/exports/missing/download")
+
+        body = response.json()
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["error"]["code"], "SNAPSHOT_NOT_FOUND")
 
     def test_get_data_quality(self) -> None:
         app = create_app(
@@ -322,7 +396,9 @@ class FakeDataJobService:
             return None
         return manifest
 
-    def export_path(self, export_id: str) -> Path:
+    def export_path(self, export_id: str) -> Path | None:
+        if export_id not in self.exports:
+            return None
         path = Path("data") / f"{export_id}.csv"
         path.parent.mkdir(exist_ok=True)
         path.write_text("date,symbol,close\n2026-01-02,000001.SZ,10.3\n", encoding="utf-8")

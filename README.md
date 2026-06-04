@@ -58,7 +58,7 @@ uv sync --extra xtquant
 ```
 
 `uv sync --extra xtquant` 会安装项目依赖和 PyPI 版 `xtquant`。
-如需启用后续高性能行情数据缓存骨架，可使用：
+如需启用高性能 Market Data Lake、DuckDB 元数据和 Parquet 本地缓存能力，可使用：
 
 ```powershell
 uv sync --extra xtquant --extra data

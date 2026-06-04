@@ -67,7 +67,7 @@ python -m pip install "qmtserver[xtquant]"
 uv sync --extra xtquant
 ```
 
-如果需要启用高性能行情数据缓存、DuckDB 元数据和后续 Parquet 数据湖能力，可以额外安装
+如果需要启用高性能行情数据缓存、DuckDB 元数据和 Parquet 数据湖能力，可以额外安装
 `data` extra：
 
 ```powershell

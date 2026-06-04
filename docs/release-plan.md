@@ -1,8 +1,8 @@
 # Release Plan
 
 本文档记录 qmtserver 的版本节奏和发布门禁。当前待发布版本为 `0.8.0`，主题是 Market Data
-Lake 稳定化：让 server 端行情数据湖具备更可靠的 coverage、维护、查询、导出、job 追踪和
-只读 smoke 流程。
+Lake 稳定化和大规模全市场调度：让 server 端行情数据湖具备更可靠的 coverage、分块下载、
+增量补齐、维护、查询、导出、job 追踪和只读 smoke 流程。
 
 ## 版本节奏
 
@@ -14,7 +14,7 @@ Lake 稳定化：让 server 端行情数据湖具备更可靠的 coverage、维�
 0.5.0  已发布    实时行情订阅和兼容矩阵基线
 0.6.0  已发布    只读实盘 smoke、历史下载可靠性和实时稳定性基线
 0.7.0  已发布    网关可靠性诊断和 Market Data Lake 基线
-0.8.0  待发布    Market Data Lake 稳定化
+0.8.0  待发布    Market Data Lake 稳定化和全市场调度层
 1.0.0  远期    稳定版本
 ```
 
@@ -203,8 +203,16 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 
 - coverage response 增加 file-level `covered_segments` 和 `gaps`，cached download 使用 segments
   判断中间缺口。
+- data download 支持 server 端 `universe="all_a"`、`exchange` 过滤、`resolved_symbols`、
+  `symbol_count` 和 `universe_hash`，便于追溯全市场任务输入。
+- download job 支持 `chunk_days`，按 symbol/date range 规划并持久化 `data_job_chunks`。
+- worker 按 chunk 执行下载，记录 attempts、row/file count、失败错误，并在 job detail 返回
+  `progress` 和 `chunks`。
+- `mode="ensure"` / `incremental=true` 会根据 coverage gaps 只补缺口，避免重复下载整段历史。
 - 增加 `qmtserver data check`、`cleanup` 和 `rebuild-index` 本地维护入口；cleanup 默认
   dry-run，支持 export 过期清理；`rebuild-index --execute` 可从本地 Parquet 重建 metadata。
+- 增加 `qmtserver data compact`，默认输出小文件合并计划；`--execute` 写入 compact Parquet、
+  删除源文件，并联动 rebuild-index。
 - `/v1/market/data/bars` 支持稳定排序、symbol/period/time 去重、`limit`/`offset` 分页、
   DuckDB 多 Parquet 聚合查询、`query_profile` 和分页/export 建议。
 - data export manifest 记录 `source_file_count`、`deduplicated_row_count` 和 `truncated`。
