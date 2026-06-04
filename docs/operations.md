@@ -362,7 +362,7 @@ GET /v1/market/data/quality?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&e
 `recommendations` 会提示下一页或 export 建议。大结果集优先使用
 `POST /v1/market/data/exports`，避免在 HTTP bars 接口连续拉取大量分页。
 
-创建本地 CSV export：
+创建本地 CSV 或 Parquet export：
 
 ```text
 POST /v1/market/data/exports
@@ -375,7 +375,8 @@ DELETE /v1/market/data/exports/{export_id}
 export/snapshot 下载 endpoint 找不到文件时返回 HTTP 404，body 仍是 qmtserver JSON error
 envelope。下载脚本应先检查 status code，再把响应写入本地文件。
 export/snapshot manifest 的 `download` 字段包含 filename、format、content_length、hash 和
-etag，client 下载后应校验长度和 hash。
+etag，client 下载后应校验长度和 hash。download response 支持 `Content-Length`、`ETag`、
+`Accept-Ranges` 和 HTTP Range 请求，可用于大文件分段下载或断点续传。
 
 当前阶段该 worker 会先检查本地 coverage。命中时直接返回 cached job；未命中或
 `force=true` 时触发 MiniQMT 行情缓存下载，随后读取标准 bars 并按 symbol 写入

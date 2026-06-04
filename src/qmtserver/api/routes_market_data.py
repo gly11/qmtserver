@@ -125,7 +125,7 @@ def download_data_export(
         return _http_error(404, exc.code, str(exc))
     except QmtServerError as exc:
         return _error(exc.code, str(exc))
-    return FileResponse(path, media_type="text/csv", filename=path.name)
+    return FileResponse(path, media_type=_download_media_type(path.name), filename=path.name)
 
 
 @router.delete("/exports/{export_id}")
@@ -325,6 +325,12 @@ def _error(code: str, message: str) -> dict[str, Any]:
 
 def _http_error(status_code: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status_code, content=_error(code, message))
+
+
+def _download_media_type(filename: str) -> str:
+    if filename.endswith(".parquet"):
+        return "application/vnd.apache.parquet"
+    return "text/csv"
 
 
 def _symbol_list(symbols: str | None) -> list[str]:

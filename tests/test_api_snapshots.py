@@ -38,6 +38,10 @@ class ApiSnapshotTests(unittest.TestCase):
                 listed = client.get("/v1/snapshots")
                 manifest = client.get(f"/v1/snapshots/{snapshot_id}/manifest")
                 download = client.get(f"/v1/snapshots/{snapshot_id}/download")
+                ranged = client.get(
+                    f"/v1/snapshots/{snapshot_id}/download",
+                    headers={"Range": "bytes=0-3"},
+                )
 
         self.assertTrue(body["ok"])
         self.assertEqual(body["data"]["manifest"]["row_count"], 1)
@@ -51,6 +55,12 @@ class ApiSnapshotTests(unittest.TestCase):
         self.assertEqual(len(listed.json()["data"]["snapshots"]), 1)
         self.assertEqual(manifest.json()["data"]["manifest"]["snapshot_id"], snapshot_id)
         self.assertEqual(download.status_code, 200)
+        self.assertEqual(download.headers["accept-ranges"], "bytes")
+        self.assertIn("content-length", download.headers)
+        self.assertIn("etag", download.headers)
+        self.assertEqual(ranged.status_code, 206)
+        self.assertEqual(ranged.headers["content-range"], f"bytes 0-3/{len(download.content)}")
+        self.assertEqual(ranged.content, download.content[:4])
         self.assertIn("date,symbol,open,high,low,close,volume,amount,meta", download.text)
 
     def test_create_snapshot_reuses_existing_manifest_for_same_request(self) -> None:

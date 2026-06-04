@@ -311,12 +311,22 @@ class ApiMarketDataTests(unittest.TestCase):
             listed = client.get("/v1/market/data/exports")
             manifest = client.get(f"/v1/market/data/exports/{export_id}")
             download = client.get(f"/v1/market/data/exports/{export_id}/download")
+            ranged = client.get(
+                f"/v1/market/data/exports/{export_id}/download",
+                headers={"Range": "bytes=0-3"},
+            )
             deleted = client.delete(f"/v1/market/data/exports/{export_id}")
 
         self.assertEqual(created.status_code, 200)
         self.assertEqual(listed.status_code, 200)
         self.assertEqual(manifest.status_code, 200)
         self.assertEqual(download.status_code, 200)
+        self.assertEqual(download.headers["accept-ranges"], "bytes")
+        self.assertIn("content-length", download.headers)
+        self.assertIn("etag", download.headers)
+        self.assertEqual(ranged.status_code, 206)
+        self.assertEqual(ranged.headers["content-range"], f"bytes 0-3/{len(download.content)}")
+        self.assertEqual(ranged.content, download.content[:4])
         self.assertEqual(deleted.status_code, 200)
         self.assertEqual(fake_jobs.export_requests[0]["symbols"], ["000001.SZ"])
 

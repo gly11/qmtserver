@@ -65,6 +65,43 @@ class DataExportServiceTests(unittest.TestCase):
             },
         )
 
+    def test_create_export_can_write_parquet_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            query = FakeBarQuery(
+                [
+                    {
+                        "date": "2026-01-02",
+                        "symbol": "000001.SZ",
+                        "open": 10.1,
+                        "high": 10.5,
+                        "low": 10.0,
+                        "close": 10.3,
+                        "volume": 1200,
+                        "amount": 12345.0,
+                    }
+                ]
+            )
+            service = DataExportService(query, root=Path(tmp))
+
+            response = service.create(
+                {
+                    "kind": "daily_bars",
+                    "symbols": ["000001.SZ"],
+                    "start": "2026-01-01",
+                    "end": "2026-01-31",
+                    "adjust": "none",
+                    "format": "parquet",
+                }
+            )
+            manifest = response["data"]["manifest"]
+            download_path = service.download_path(str(manifest["export_id"]))
+
+        self.assertTrue(response["ok"])
+        self.assertEqual(manifest["format"], "parquet")
+        self.assertEqual(download_path.suffix, ".parquet")
+        self.assertEqual(manifest["download"]["format"], "parquet")
+        self.assertEqual(manifest["download"]["filename"], f"{manifest['export_id']}.parquet")
+
 
 class FakeBarQuery:
     def __init__(self, bars: list[dict[str, Any]]) -> None:

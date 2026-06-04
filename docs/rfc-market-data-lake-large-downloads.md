@@ -68,11 +68,13 @@ maintenance CLI。后续增强应让这些能力在“全市场多年历史数�
   metadata。
 - Phase 5 已补齐 maintenance/compaction 基线，并在 health summary 中加入 coverage consistency
   issues。
+- P2 下载侧已具备单文件 Parquet export、manifest download metadata，以及 FileResponse 提供的
+  Range / `Content-Length` / `ETag` 支持。
 - `coverage.py` 已能返回 `covered_segments`、`gaps` 和 `missing_symbols`。
 - `repository.py` 已持久化 `data_jobs`、`data_job_chunks`、`data_files` 和 `data_coverage`。
 - `files.py` 负责按 symbol/period/adjust 写 Parquet part 文件。
-- `exports.py` 当前只稳定支持 CSV export，manifest 记录 hash、row_count、source file count、
-  truncation 等摘要。
+- `exports.py` 当前支持 CSV 和单文件 Parquet export，manifest 记录 hash、download metadata、
+  row_count、source file count、truncation 等摘要。
 - `routes_reference.py` 提供 calendar、universe 和 instruments 参考数据入口。
 - Phase 1 已要求 `exports/{id}/download` 和 `snapshots/{id}/download` 在 not found 时返回
   HTTP 404；后续阶段需要继续补充更完整的下载 metadata 和断点续传语义。
@@ -246,8 +248,8 @@ chunk。
 - `format="zip"`
 - manifest + 多文件分片
 
-大 export 不应强迫所有数据进入单个 CSV。manifest 应描述分片、格式、hash、row_count、
-symbol_count 和 coverage。
+大 export 不应强迫所有数据进入单个 CSV。当前已支持单文件 Parquet export；后续如需要 zip 或
+多 Parquet 分片，manifest 应描述分片、格式、hash、row_count、symbol_count 和 coverage。
 
 ### P2.2 下载元数据和断点续传
 
@@ -261,6 +263,10 @@ symbol_count 和 coverage。
 - 断点续传
 
 qmtclient 可据此实现大文件下载恢复和本地校验。
+
+当前 download response 已由 Starlette `FileResponse` 提供 `Content-Length`、`ETag`、
+`Accept-Ranges` 和 HTTP Range 请求支持；manifest 也提供 `download.content_length`、
+`download.hash` 和 `download.etag` 供 client 校验。
 
 ### P2.3 数据湖维护
 

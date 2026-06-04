@@ -9,7 +9,7 @@ from qmtserver.errors import QmtInvalidSnapshotRequestError, QmtSnapshotNotFound
 from qmtserver.miniqmt import check_xtquant_import
 from qmtserver.snapshots.manifest import request_hash
 from qmtserver.snapshots.registry import SnapshotRegistry
-from qmtserver.snapshots.writers import write_csv
+from qmtserver.snapshots.writers import write_csv, write_parquet
 
 
 class BarQuery(Protocol):
@@ -33,7 +33,7 @@ class DataExportService:
             query_response = self.query.query_bars({**canonical, "limit": _export_limit(request)})
             bars = query_response["bars"]
             data_path = self.registry.data_path(export_id, canonical["format"])
-            data_hash = write_csv(data_path, bars, kind=canonical["kind"])
+            data_hash = _write_export(data_path, bars, request=canonical)
             manifest = _manifest(
                 export_id=export_id,
                 request=canonical,
@@ -92,7 +92,7 @@ def _canonical_request(request: dict[str, Any]) -> dict[str, Any]:
     if kind not in {"daily_bars", "intraday_bars"}:
         raise QmtInvalidSnapshotRequestError(f"unsupported data export kind: {kind}")
     format_name = request.get("format", "csv")
-    if format_name != "csv":
+    if format_name not in {"csv", "parquet"}:
         raise QmtInvalidSnapshotRequestError(f"unsupported data export format: {format_name}")
     canonical = {
         "kind": kind,
@@ -108,6 +108,12 @@ def _canonical_request(request: dict[str, Any]) -> dict[str, Any]:
             raise QmtInvalidSnapshotRequestError("intraday data export requires period")
         canonical["period"] = period
     return canonical
+
+
+def _write_export(path: Path, bars: list[dict[str, Any]], *, request: dict[str, Any]) -> str:
+    if request["format"] == "parquet":
+        return write_parquet(path, bars)
+    return write_csv(path, bars, kind=request["kind"])
 
 
 def _manifest(

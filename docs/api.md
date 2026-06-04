@@ -464,7 +464,7 @@ GET /v1/market/data/quality?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&e
 
 ### POST /v1/market/data/exports
 
-从本地 data lake 生成 CSV export：
+从本地 data lake 生成 CSV 或 Parquet export：
 
 ```json
 {
@@ -481,7 +481,8 @@ GET /v1/market/data/quality?kind=daily_bars&symbols=000001.SZ&start=2026-01-01&e
 `market.data.export.v1`，并记录 `source_file_count`、`deduplicated_row_count` 和 `truncated`，
 方便判断 export 是否来自多个本地文件或是否受请求 limit 截断。manifest 的 `download` 字段
 包含 `filename`、`format`、`content_length`、`hash` 和 `etag`，供 qmtclient 下载后校验。
-大批量结果建议使用 export，而不是连续拉取很多页 HTTP bars 响应。
+`format` 当前支持 `csv` 和 `parquet`。大批量结果建议使用 export，而不是连续拉取很多页 HTTP
+bars 响应。
 
 ```text
 GET /v1/market/data/exports
@@ -493,6 +494,8 @@ DELETE /v1/market/data/exports/{export_id}
 `DELETE` 只删除 qmtserver 本地 export CSV 和 manifest，不删除 MiniQMT 缓存或 Parquet 原始数据。
 `GET /download` 找不到 manifest 或数据文件时返回 HTTP 404，body 仍使用 qmtserver JSON error
 envelope，避免下载客户端把 200 JSON error 保存成 CSV 文件。
+download response 由 Starlette `FileResponse` 提供 `Content-Length`、`ETag`、`Accept-Ranges`
+和 HTTP Range 请求支持；client 可结合 manifest 的 `download.hash` 校验文件内容。
 
 ### GET /v1/market/data/jobs/{job_id}
 

@@ -38,6 +38,15 @@ def write_csv(path: Path, rows: list[dict[str, Any]], *, kind: str = "daily_bars
     return content_hash(path.read_bytes())
 
 
+def write_parquet(path: Path, rows: list[dict[str, Any]]) -> str:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pq.write_table(pa.Table.from_pylist(rows), path)
+    return content_hash(path.read_bytes())
+
+
 def _columns_for_kind(kind: str) -> tuple[str, ...]:
     if kind == "intraday_bars":
         return INTRADAY_CSV_COLUMNS
