@@ -18,6 +18,8 @@ from qmtserver.data.compaction import (
 class DataFileIndex(Protocol):
     def list_all_files(self) -> list[dict[str, Any]]: ...
 
+    def list_coverage(self, request: dict[str, Any]) -> list[dict[str, Any]]: ...
+
     def clear_file_index(self) -> None: ...
 
     def record_file(self, file_record: dict[str, Any]) -> None: ...
@@ -55,6 +57,7 @@ class DataMaintenanceService:
             if _normalized_path(path) not in registered_paths
         ]
         metadata_mismatches = self._metadata_mismatches(registered)
+        coverage_consistency_issues = self._coverage_consistency_issues(registered)
         return {
             "schema": "market.data.maintenance.v1",
             "data_dir": str(self.data_dir),
@@ -63,12 +66,14 @@ class DataMaintenanceService:
             "orphan_parquet_files": orphan_parquet,
             "orphan_export_files": self._orphan_export_files(),
             "metadata_mismatches": metadata_mismatches,
+            "coverage_consistency_issues": coverage_consistency_issues,
             "health": self.health_summary(
                 registered=registered,
                 missing_registered=missing_registered,
                 orphan_parquet=orphan_parquet,
                 orphan_exports=self._orphan_export_files(),
                 metadata_mismatches=metadata_mismatches,
+                coverage_consistency_issues=coverage_consistency_issues,
             ),
         }
 
@@ -161,17 +166,22 @@ class DataMaintenanceService:
         orphan_parquet: list[dict[str, Any]] | None = None,
         orphan_exports: list[dict[str, Any]] | None = None,
         metadata_mismatches: list[dict[str, Any]] | None = None,
+        coverage_consistency_issues: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         registered = registered if registered is not None else self.repository.list_all_files()
         missing_registered = missing_registered if missing_registered is not None else []
         orphan_parquet = orphan_parquet if orphan_parquet is not None else []
         orphan_exports = orphan_exports if orphan_exports is not None else []
         metadata_mismatches = metadata_mismatches if metadata_mismatches is not None else []
+        coverage_consistency_issues = (
+            coverage_consistency_issues if coverage_consistency_issues is not None else []
+        )
         warning_count = (
             len(missing_registered)
             + len(orphan_parquet)
             + len(orphan_exports)
             + len(metadata_mismatches)
+            + len(coverage_consistency_issues)
         )
         return {
             "schema": "market.data.health.v1",
@@ -184,6 +194,7 @@ class DataMaintenanceService:
             "orphan_parquet_count": len(orphan_parquet),
             "orphan_export_count": len(orphan_exports),
             "metadata_mismatch_count": len(metadata_mismatches),
+            "coverage_consistency_issue_count": len(coverage_consistency_issues),
             "data_dir_bytes": _directory_size(self.data_dir),
         }
 
@@ -269,6 +280,33 @@ class DataMaintenanceService:
                 )
         return mismatches
 
+    def _coverage_consistency_issues(
+        self, registered: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        expected = _coverage_from_files(registered)
+        actual = {
+            _coverage_key(row): row
+            for row in self.repository.list_coverage({})
+            if _coverage_key(row)
+        }
+        issues = []
+        for key, expected_row in expected.items():
+            actual_row = actual.get(key)
+            if actual_row is None:
+                issues.append(_coverage_issue(expected_row, None, ["coverage"]))
+                continue
+            fields = [
+                field
+                for field in ("coverage_start", "coverage_end", "row_count", "file_count")
+                if expected_row.get(field) != actual_row.get(field)
+            ]
+            if fields:
+                issues.append(_coverage_issue(expected_row, actual_row, fields))
+        for key, actual_row in actual.items():
+            if key not in expected:
+                issues.append(_coverage_issue(None, actual_row, ["coverage"]))
+        return issues
+
     def _can_delete(self, path: Path) -> bool:
         try:
             path.resolve().relative_to(self.data_dir.resolve())
@@ -309,6 +347,70 @@ def _file_summary(file_record: dict[str, Any]) -> dict[str, Any]:
         "file_id": file_record.get("file_id"),
         "symbol": file_record.get("symbol"),
         "path": str(file_record.get("path")),
+    }
+
+
+def _coverage_from_files(
+    files: list[dict[str, Any]],
+) -> dict[tuple[str, str, str, str], dict[str, Any]]:
+    coverage: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+    for file_record in files:
+        key = _coverage_key(file_record)
+        if key is None:
+            continue
+        current = coverage.get(key)
+        starts = [
+            value
+            for value in (
+                current.get("coverage_start") if current else None,
+                file_record.get("coverage_start"),
+            )
+            if value
+        ]
+        ends = [
+            value
+            for value in (
+                current.get("coverage_end") if current else None,
+                file_record.get("coverage_end"),
+            )
+            if value
+        ]
+        coverage[key] = {
+            "kind": key[0],
+            "symbol": key[1],
+            "period": key[2],
+            "adjust": key[3],
+            "coverage_start": min(str(value) for value in starts) if starts else None,
+            "coverage_end": max(str(value) for value in ends) if ends else None,
+            "row_count": (int(current.get("row_count", 0)) if current else 0)
+            + int(file_record.get("row_count", 0)),
+            "file_count": (int(current.get("file_count", 0)) if current else 0) + 1,
+        }
+    return coverage
+
+
+def _coverage_key(row: dict[str, Any]) -> tuple[str, str, str, str] | None:
+    values = [row.get(field) for field in ("kind", "symbol", "period", "adjust")]
+    if not all(values):
+        return None
+    kind, symbol, period, adjust = (str(value) for value in values)
+    return kind, symbol, period, adjust
+
+
+def _coverage_issue(
+    expected: dict[str, Any] | None,
+    actual: dict[str, Any] | None,
+    fields: list[str],
+) -> dict[str, Any]:
+    source = expected or actual or {}
+    return {
+        "kind": source.get("kind"),
+        "symbol": source.get("symbol"),
+        "period": source.get("period"),
+        "adjust": source.get("adjust"),
+        "fields": fields,
+        "expected": expected,
+        "actual": actual,
     }
 
 

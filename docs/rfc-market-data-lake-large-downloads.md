@@ -1,6 +1,6 @@
 # RFC: Market Data Lake Large Historical Downloads
 
-状态：Draft；Phase 1-4 已开始落地。
+状态：Draft；Phase 1-5 已开始落地。
 
 本文规划 qmtserver 为“大规模全市场历史数据下载”提供的 server 端增强。典型目标是：
 在已登录 MiniQMT 的 Windows 网关机上，把全市场 `2015-01-01` 至今的日 K 数据下载到
@@ -66,6 +66,8 @@ maintenance CLI。后续增强应让这些能力在“全市场多年历史数�
   只重跑 failed chunks，不重复执行已成功 chunks。
 - Phase 4 已增加 `storage_profile` 白名单校验，以及 export/snapshot manifest 的 download
   metadata。
+- Phase 5 已补齐 maintenance/compaction 基线，并在 health summary 中加入 coverage consistency
+  issues。
 - `coverage.py` 已能返回 `covered_segments`、`gaps` 和 `missing_symbols`。
 - `repository.py` 已持久化 `data_jobs`、`data_job_chunks`、`data_files` 和 `data_coverage`。
 - `files.py` 负责按 symbol/period/adjust 写 Parquet part 文件。
@@ -614,6 +616,7 @@ server 负责解析和校验，不接受 client 传入 `output_path`、`data_dir
 - 删除或重写必须显式 `--execute` / `--delete`。
 - compaction 后 DuckDB metadata 与 Parquet 文件一致。
 - orphan/missing/mismatch 能给出可读摘要。
+- health summary 记录 coverage consistency issue count。
 
 测试建议：
 

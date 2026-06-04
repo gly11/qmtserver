@@ -397,7 +397,8 @@ uv run qmtserver data compact --execute
 ```
 
 `data check` 现在会输出本地健康摘要，并检查已登记文件缺失、未登记 Parquet、
-Parquet metadata 与 DuckDB 登记信息不一致、孤儿 export 文件等问题。`data cleanup`
+Parquet metadata 与 DuckDB 登记信息不一致、coverage metadata 与 file index 不一致、
+孤儿 export 文件等问题。`data cleanup`
 默认仍是 dry-run；传入 `--delete` 才会删除 `QMT_DATA_DIR` 内的候选文件，传入
 `--expired-days N` 可把生成时间至少 N 天前的 export CSV/manifest 纳入清理候选。
 `data rebuild-index` 默认仍是 dry-run；传入 `--execute` 会从本地 Parquet 重建 DuckDB
@@ -406,8 +407,9 @@ Parquet metadata 与 DuckDB 登记信息不一致、孤儿 export 文件等问�
 `--execute` 后会写入 compact Parquet、删除参与合并的源文件，并自动调用 rebuild-index
 重建 DuckDB metadata。可用 `--min-files N` 调整至少多少个文件才纳入合并。
 
-`data check` 会检查 DuckDB 已登记但文件缺失的 Parquet、未登记的 Parquet，以及孤儿 export
-文件。`data cleanup` 默认是 dry-run，只列出删除候选；只有显式传入 `--delete` 才会删除
+`data check` 会检查 DuckDB 已登记但文件缺失的 Parquet、未登记的 Parquet、coverage
+consistency issues，以及孤儿 export 文件。`data cleanup` 默认是 dry-run，只列出删除候选；
+只有显式传入 `--delete` 才会删除
 `QMT_DATA_DIR` 内的孤儿 Parquet/export 文件。`data rebuild-index` 和 `data compact` 也默认
 只输出计划，必须显式传入 `--execute` 才会修改本地数据目录和 DuckDB metadata。
 这些维护命令只处理 qmtserver 本地数据目录，不连接 trader，不触发 MiniQMT 下载，也不执行任何
@@ -442,7 +444,7 @@ GET /v1/metrics
 `reasons`，常见值包括 `quote_disconnected`、`subscription_degraded` 和
 `subscription_callback_stale`。
 同一响应里的 `data_lake` 汇总本地数据湖健康和 download job 诊断：`health` 记录 missing、
-orphan、metadata mismatch 等计数，`jobs` 记录 failed jobs 和 stale running jobs。该诊断只读取
+orphan、metadata mismatch、coverage consistency 等计数，`jobs` 记录 failed jobs 和 stale running jobs。该诊断只读取
 本地 DuckDB/Parquet metadata，不连接 trader，也不触发 MiniQMT 下载。
 `/v1/metrics` 包含 job status 计数，便于观察 queued、running、succeeded、failed 和 cancelled
 分布。

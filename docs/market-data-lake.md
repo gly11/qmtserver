@@ -135,7 +135,8 @@ MiniQMT 缓存或 Parquet 原始数据。
 
 1. Storage Maintenance
    已提供 `qmtserver data check`、`qmtserver data cleanup` 和 `qmtserver data rebuild-index`
-   的本地维护入口。`data check` 会输出健康摘要和 metadata mismatch；`data cleanup`
+   的本地维护入口。`data check` 会输出健康摘要、metadata mismatch 和 coverage consistency
+   issues；`data cleanup`
    支持显式删除和 export 过期清理；`data rebuild-index --execute` 可从本地 Parquet
    重建 DuckDB 文件索引和 coverage metadata。`data compact` 可按 kind/symbol/period/adjust
    规划小文件合并，`data compact --execute` 会写入 compact Parquet、删除源文件，并联动

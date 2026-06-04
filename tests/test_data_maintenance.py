@@ -93,6 +93,40 @@ class DataMaintenanceServiceTests(unittest.TestCase):
         self.assertEqual(mismatch["fields"], ["hash", "row_count"])
         self.assertEqual(report["health"]["metadata_mismatch_count"], 1)
 
+    def test_check_reports_coverage_consistency_issues(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp)
+            file_record = _file_record(
+                data_dir,
+                "000001.SZ",
+                "a.parquet",
+                "2026-01-01",
+                "2026-01-10",
+            )
+            repository = FakeFileRepository(
+                [file_record],
+                coverage=[
+                    {
+                        "kind": "daily_bars",
+                        "symbol": "000001.SZ",
+                        "period": "1d",
+                        "adjust": "none",
+                        "coverage_start": "2026-01-01",
+                        "coverage_end": "2026-01-09",
+                        "row_count": 9,
+                        "file_count": 1,
+                    }
+                ],
+            )
+            service = DataMaintenanceService(data_dir, repository=repository)
+
+            report = service.check()
+
+        issue = report["coverage_consistency_issues"][0]
+        self.assertEqual(issue["symbol"], "000001.SZ")
+        self.assertEqual(issue["fields"], ["coverage_end", "row_count"])
+        self.assertEqual(report["health"]["coverage_consistency_issue_count"], 1)
+
     def test_rebuild_index_execute_records_parquet_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp)
@@ -206,13 +240,22 @@ class DataMaintenanceServiceTests(unittest.TestCase):
 
 
 class FakeFileRepository:
-    def __init__(self, files: list[dict[str, Any]]) -> None:
+    def __init__(
+        self,
+        files: list[dict[str, Any]],
+        coverage: list[dict[str, Any]] | None = None,
+    ) -> None:
         self.files = files
+        self.coverage = coverage or []
         self.cleared = False
         self.recorded_files: list[dict[str, Any]] = []
 
     def list_all_files(self) -> list[dict[str, Any]]:
         return self.files
+
+    def list_coverage(self, request: dict[str, Any]) -> list[dict[str, Any]]:
+        del request
+        return self.coverage
 
     def clear_file_index(self) -> None:
         self.cleared = True

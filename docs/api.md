@@ -575,7 +575,8 @@ manifest 仍保留在 snapshot 目录中。
 返回 MiniQMT/qmtserver 状态、server clock、qmtserver/xtquant 版本和 sample symbol smoke 信息，
 用于排查连接和行情源状态。响应还包含 `data_lake`：
 
-- `data_lake.health`：本地 data lake 目录健康摘要，包括 registered/orphan/missing/mismatch 等计数。
+- `data_lake.health`：本地 data lake 目录健康摘要，包括 registered/orphan/missing/mismatch 和
+  coverage consistency 等计数。
 - `data_lake.jobs`：持久化 data download job 诊断摘要，包括 failed jobs 和 stale running jobs。
 - `data_lake.error`：如果未安装或未启用 data extra，会返回 `DATA_BACKEND_UNAVAILABLE` 等稳定错误码。
 
