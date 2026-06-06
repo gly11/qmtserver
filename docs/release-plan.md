@@ -264,6 +264,9 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 - 普通测试使用 fakes 和本地临时目录，不依赖真实 MiniQMT。
 - 真实 MiniQMT smoke 只做 readonly 行情数据湖验证，不连接 trader，不执行下单、撤单、转账或
   其他交易命令。
+- 2026-06-06 本地时间已完成 `scripts\smoke_market_data_lake.py --symbol 000001.SZ
+  --require-rows --timeout-seconds 60` 真实 readonly smoke：xtdata 连接成功，download job
+  `succeeded`，`fully_covered=true`，bars/export/cached download 均为 6 行，`trader_connected=false`。
 - qmtclient 需要在后续独立项目中补齐 `universe`、`exchange`、`storage_profile`、`retry_failed`、
   Parquet export download metadata 和 hash 校验能力。
 

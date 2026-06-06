@@ -373,7 +373,8 @@ DELETE /v1/market/data/exports/{export_id}
 ```
 
 export/snapshot 下载 endpoint 找不到文件时返回 HTTP 404，body 仍是 qmtserver JSON error
-envelope。下载脚本应先检查 status code，再把响应写入本地文件。
+envelope。data export 缺失使用 `EXPORT_NOT_FOUND`，snapshot 缺失使用 `SNAPSHOT_NOT_FOUND`。
+下载脚本应先检查 status code，再把响应写入本地文件。
 export/snapshot manifest 的 `download` 字段包含 filename、format、content_length、hash 和
 etag，client 下载后应校验长度和 hash。download response 支持 `Content-Length`、`ETag`、
 `Accept-Ranges` 和 HTTP Range 请求，可用于大文件分段下载或断点续传。
@@ -397,22 +398,16 @@ uv run qmtserver data compact
 uv run qmtserver data compact --execute
 ```
 
-`data check` 现在会输出本地健康摘要，并检查已登记文件缺失、未登记 Parquet、
-Parquet metadata 与 DuckDB 登记信息不一致、coverage metadata 与 file index 不一致、
-孤儿 export 文件等问题。`data cleanup`
-默认仍是 dry-run；传入 `--delete` 才会删除 `QMT_DATA_DIR` 内的候选文件，传入
+`data check` 会输出本地健康摘要，并检查 DuckDB 已登记但文件缺失的 Parquet、未登记的
+Parquet、Parquet metadata 与 DuckDB 登记信息不一致、coverage metadata 与 file index 不一致、
+coverage consistency issues，以及孤儿 export 文件。`data cleanup` 默认是 dry-run，只列出删除
+候选；只有显式传入 `--delete` 才会删除 `QMT_DATA_DIR` 内的孤儿 Parquet/export 文件，传入
 `--expired-days N` 可把生成时间至少 N 天前的 export CSV/manifest 纳入清理候选。
-`data rebuild-index` 默认仍是 dry-run；传入 `--execute` 会从本地 Parquet 重建 DuckDB
-中的 `data_files` 和 `data_coverage` metadata。
-`data compact` 默认只输出按 kind/symbol/period/adjust 分组的小文件合并计划；传入
-`--execute` 后会写入 compact Parquet、删除参与合并的源文件，并自动调用 rebuild-index
-重建 DuckDB metadata。可用 `--min-files N` 调整至少多少个文件才纳入合并。
-
-`data check` 会检查 DuckDB 已登记但文件缺失的 Parquet、未登记的 Parquet、coverage
-consistency issues，以及孤儿 export 文件。`data cleanup` 默认是 dry-run，只列出删除候选；
-只有显式传入 `--delete` 才会删除
-`QMT_DATA_DIR` 内的孤儿 Parquet/export 文件。`data rebuild-index` 和 `data compact` 也默认
-只输出计划，必须显式传入 `--execute` 才会修改本地数据目录和 DuckDB metadata。
+`data rebuild-index` 默认仍是 dry-run；传入 `--execute` 会从本地 Parquet 重建 DuckDB 中的
+`data_files` 和 `data_coverage` metadata。`data compact` 默认只输出按
+kind/symbol/period/adjust 分组的小文件合并计划；传入 `--execute` 后会写入 compact Parquet、
+删除参与合并的源文件，并自动调用 rebuild-index 重建 DuckDB metadata。可用 `--min-files N`
+调整至少多少个文件才纳入合并。
 这些维护命令只处理 qmtserver 本地数据目录，不连接 trader，不触发 MiniQMT 下载，也不执行任何
 交易命令。
 
