@@ -493,7 +493,8 @@ DELETE /v1/market/data/exports/{export_id}
 
 `DELETE` 只删除 qmtserver 本地 export CSV 和 manifest，不删除 MiniQMT 缓存或 Parquet 原始数据。
 `GET /download` 找不到 manifest 或数据文件时返回 HTTP 404，body 仍使用 qmtserver JSON error
-envelope，避免下载客户端把 200 JSON error 保存成 CSV 文件。
+envelope，错误码为 `EXPORT_NOT_FOUND`，避免下载客户端把 200 JSON error 保存成 CSV 或 Parquet
+文件。
 download response 由 Starlette `FileResponse` 提供 `Content-Length`、`ETag`、`Accept-Ranges`
 和 HTTP Range 请求支持；client 可结合 manifest 的 `download.hash` 校验文件内容。
 

@@ -11,10 +11,10 @@ from qmtserver.data.backend import create_data_backend
 from qmtserver.data.jobs import create_data_job_service
 from qmtserver.data.universe import canonicalize_download_request
 from qmtserver.errors import (
+    QmtDataExportNotFoundError,
     QmtInvalidMarketRequestError,
     QmtJobNotFoundError,
     QmtServerError,
-    QmtSnapshotNotFoundError,
 )
 
 router = APIRouter(prefix="/market/data", tags=["market-data"])
@@ -102,7 +102,7 @@ def get_data_export(export_id: str, request: Request) -> dict[str, Any]:
         service = _get_data_job_service(request)
         manifest = service.export_manifest(export_id)
         if manifest is None:
-            return _error(QmtSnapshotNotFoundError.code, f"data export not found: {export_id}")
+            return _error(QmtDataExportNotFoundError.code, f"data export not found: {export_id}")
         return _success({"manifest": manifest})
     except QmtServerError as exc:
         return _error(exc.code, str(exc))
@@ -118,10 +118,10 @@ def download_data_export(
         if path is None:
             return _http_error(
                 404,
-                QmtSnapshotNotFoundError.code,
+                QmtDataExportNotFoundError.code,
                 f"data export not found: {export_id}",
             )
-    except QmtSnapshotNotFoundError as exc:
+    except QmtDataExportNotFoundError as exc:
         return _http_error(404, exc.code, str(exc))
     except QmtServerError as exc:
         return _error(exc.code, str(exc))
@@ -134,7 +134,7 @@ def delete_data_export(export_id: str, request: Request) -> dict[str, Any]:
         service = _get_data_job_service(request)
         deleted = service.delete_export(export_id)
         if not deleted:
-            return _error(QmtSnapshotNotFoundError.code, f"data export not found: {export_id}")
+            return _error(QmtDataExportNotFoundError.code, f"data export not found: {export_id}")
         return _success({"deleted": True, "export_id": export_id})
     except QmtServerError as exc:
         return _error(exc.code, str(exc))

@@ -35,6 +35,7 @@ qmtserver 的错误码集中定义在 `qmtserver.errors.ERROR_CODES`。客户端
 | `DATA_BACKEND_UNAVAILABLE` | Optional data lake dependencies are not installed or enabled. |
 | `DATA_DOWNLOAD_FAILED` | Data lake download or local write failed. |
 | `DATA_EXPORT_UNAVAILABLE` | Data lake export service is not available. |
+| `EXPORT_NOT_FOUND` | Requested data lake export or export file was not found. |
 | `DATA_MAINTENANCE_ERROR` | Data lake local maintenance failed. |
 | `TRADER_ACCOUNT_REQUIRED` | Readonly trader query requires an account id. |
 | `RPC_ERROR` | Client-side wrapper for an RPC error response. |

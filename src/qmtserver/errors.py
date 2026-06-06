@@ -101,6 +101,10 @@ class QmtDataExportUnavailableError(QmtServerError):
     code = "DATA_EXPORT_UNAVAILABLE"
 
 
+class QmtDataExportNotFoundError(QmtServerError):
+    code = "EXPORT_NOT_FOUND"
+
+
 class QmtDataMaintenanceError(QmtServerError):
     code = "DATA_MAINTENANCE_ERROR"
 
@@ -147,6 +151,7 @@ ERROR_CODES: tuple[ErrorCode, ...] = (
     ErrorCode("DATA_BACKEND_UNAVAILABLE", "Optional data lake dependencies are not installed."),
     ErrorCode("DATA_DOWNLOAD_FAILED", "Data lake download or local write failed."),
     ErrorCode("DATA_EXPORT_UNAVAILABLE", "Data lake export service is not available."),
+    ErrorCode("EXPORT_NOT_FOUND", "Requested data lake export or export file was not found."),
     ErrorCode("DATA_MAINTENANCE_ERROR", "Data lake local maintenance failed."),
     ErrorCode("TRADER_ACCOUNT_REQUIRED", "Readonly trader query requires an account id."),
     ErrorCode("RPC_ERROR", "Client-side wrapper for an RPC error response."),

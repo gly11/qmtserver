@@ -345,7 +345,7 @@ class ApiMarketDataTests(unittest.TestCase):
         body = response.json()
         self.assertEqual(response.status_code, 404)
         self.assertFalse(body["ok"])
-        self.assertEqual(body["error"]["code"], "SNAPSHOT_NOT_FOUND")
+        self.assertEqual(body["error"]["code"], "EXPORT_NOT_FOUND")
 
     def test_get_data_quality(self) -> None:
         app = create_app(
