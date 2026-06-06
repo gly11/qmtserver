@@ -408,6 +408,8 @@ coverage consistency issues，以及孤儿 export 文件。`data cleanup` 默认
 kind/symbol/period/adjust 分组的小文件合并计划；传入 `--execute` 后会写入 compact Parquet、
 删除参与合并的源文件，并自动调用 rebuild-index 重建 DuckDB metadata。可用 `--min-files N`
 调整至少多少个文件才纳入合并。
+同一个 `QMT_DATA_DB` 上不要并发执行 `data check`、`cleanup`、`rebuild-index` 或 `compact`；
+DuckDB 会对数据库文件加锁，并发维护进程可能因文件正在使用而失败。按顺序执行即可。
 这些维护命令只处理 qmtserver 本地数据目录，不连接 trader，不触发 MiniQMT 下载，也不执行任何
 交易命令。
 
