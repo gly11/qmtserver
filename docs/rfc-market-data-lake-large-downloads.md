@@ -1,6 +1,7 @@
 # RFC: Market Data Lake Large Historical Downloads
 
-状态：Draft；Phase 1-5 已开始落地。
+状态：Accepted；Phase 1-5 已落地为 `0.9.0` 发布候选能力，后续只保留更大规模压测和
+qmtclient 对齐项。
 
 本文规划 qmtserver 为“大规模全市场历史数据下载”提供的 server 端增强。典型目标是：
 在已登录 MiniQMT 的 Windows 网关机上，把全市场 `2015-01-01` 至今的日 K 数据下载到
@@ -138,14 +139,14 @@ server 解析后应记录：
 不应返回 HTTP 200 + JSON error envelope。原因是 qmtclient 的下载函数通常按文件流处理响应；
 如果 status 是 200，client 可能把 JSON error 保存成 `.csv`、`.zip` 或 `.parquet` 文件。
 
-建议错误响应：
+data export 缺失建议错误响应：
 
 ```json
 {
   "ok": false,
   "data": null,
   "error": {
-    "code": "SNAPSHOT_NOT_FOUND",
+    "code": "EXPORT_NOT_FOUND",
     "message": "data export file not found: export-abc"
   },
   "meta": {
@@ -154,7 +155,7 @@ server 解析后应记录：
 }
 ```
 
-HTTP status 必须是 `404`。
+snapshot 缺失继续使用 `SNAPSHOT_NOT_FOUND`。HTTP status 必须是 `404`。
 
 ### P0.3 大任务进度摘要
 
@@ -484,7 +485,7 @@ Content-Type: application/json
   "ok": false,
   "data": null,
   "error": {
-    "code": "SNAPSHOT_NOT_FOUND",
+    "code": "EXPORT_NOT_FOUND",
     "message": "data export file not found: export-abc"
   },
   "meta": {

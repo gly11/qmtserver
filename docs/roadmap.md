@@ -160,6 +160,9 @@ qmtserver 进入长期稳定阶段前，需要持续强化：
   边界、交易保护、snapshot manifest 和运维诊断。
 - qmtclient 是独立客户端项目；Python 友好的 facade、类型模型、DataFrame 转换、job polling
   helper 和本地 fixture 由 qmtclient 承接。
+- qmtclient 可以提交 data download job、轮询 job、调用 `retry-failed`、创建 export，并显式下载
+  export/snapshot 文件；不能维护 server 端 Parquet/DuckDB 数据湖，不能 import `xtquant`，不能
+  传 server 端绝对路径，只能使用 qmtserver 配置的 `storage_profile` id。
 - Transparent RPC 是探索和调试能力，不等同于稳定 API。
 - 没有明确使用场景、测试策略和安全边界的想法暂不进入路线图。
 

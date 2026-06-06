@@ -95,7 +95,7 @@ envelope:
   "error": null,
   "meta": {
     "schema": "trader.readonly.v1",
-    "qmtserver_version": "0.8.0",
+    "qmtserver_version": "0.9.0",
     "xtquant_version": null,
     "account_id": "***",
     "account_type": "STOCK"
@@ -155,7 +155,7 @@ GET /v1/market/bars/daily?symbols=000001.SZ,600000.SH&start=2026-01-01&end=2026-
     },
     "row_count": 1,
     "generated_at": "2026-05-26T00:00:00+00:00",
-    "qmtserver_version": "0.8.0",
+    "qmtserver_version": "0.9.0",
     "xtquant_version": null
   }
 }
@@ -395,6 +395,7 @@ MiniQMT 下载。
   "start": "2026-01-01",
   "end": "2026-01-31",
   "adjust": "none",
+  "storage_profile": "qmt_main",
   "format": "parquet"
 }
 ```
@@ -528,6 +529,15 @@ GET /v1/market/data/jobs?status=succeeded&limit=50
 ```
 
 `status` 可选；`limit` 最大限制为 200。该接口只读取 DuckDB job 元数据，不触发 MiniQMT 下载。
+
+### qmtclient 兼容边界
+
+qmtclient 可以提交 data download job、轮询 job、调用 `retry-failed`、创建 export，并显式下载
+export 或 snapshot 文件。qmtclient 不应维护 server 端 Parquet 文件、DuckDB metadata 或
+MiniQMT `userdata_mini`，也不应 import `xtquant`。如果需要选择 server 端数据湖目录，只能传
+server 预先配置的 `storage_profile` id，不能传本机绝对路径、UNC path、`data_dir`、`db_path`
+或 `output_path`。下载 export/snapshot 后，client 应优先用 manifest 的 `download.hash`、
+`download.content_length` 和 response headers 校验文件。
 
 ## Reference and Quality API
 
