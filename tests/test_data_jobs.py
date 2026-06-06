@@ -1,13 +1,21 @@
 from __future__ import annotations
 
 import unittest
-from typing import Any
 
 from qmtserver.data.jobs import (
     DataDownloadJobService,
-    DataJobRecord,
     DataJobRepository,
     DataJobStatus,
+)
+from tests.data_job_fakes import (
+    FailingHistoryDownloader,
+    FakeBarReader,
+    FakeBarWriter,
+    FakeCoveragePlanner,
+    FakeDataFileRepository,
+    FakeDataJobRepository,
+    FakeDuckDbBackend,
+    FakeHistoryDownloader,
 )
 
 
@@ -297,205 +305,6 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         self.assertIn("INSERT INTO data_coverage", executed_sql)
         self.assertEqual(coverage[0]["symbol"], "000001.SZ")
         self.assertEqual(coverage[0]["coverage_end"], "2026-01-31")
-
-
-class FakeDataJobRepository:
-    def __init__(self) -> None:
-        self.jobs: dict[str, DataJobRecord] = {}
-        self.chunks: dict[str, list[dict[str, Any]]] = {}
-
-    def create(self, job_type: str, request: dict[str, Any]) -> DataJobRecord:
-        job = DataJobRecord(job_type=job_type, request=request)
-        self.jobs[job.job_id] = job
-        return job
-
-    def get(self, job_id: str) -> DataJobRecord | None:
-        return self.jobs.get(job_id)
-
-    def list_jobs(self, *, status: str | None = None, limit: int = 50) -> list[DataJobRecord]:
-        jobs = list(self.jobs.values())
-        if status is not None:
-            jobs = [job for job in jobs if job.status.value == status]
-        return jobs[:limit]
-
-    def mark_running(self, job_id: str) -> None:
-        self.jobs[job_id].status = DataJobStatus.RUNNING
-
-    def mark_succeeded(self, job_id: str, result: dict[str, Any]) -> None:
-        self.jobs[job_id].status = DataJobStatus.SUCCEEDED
-        self.jobs[job_id].result = result
-        self.jobs[job_id].error = None
-
-    def mark_failed(
-        self,
-        job_id: str,
-        error: dict[str, str],
-        *,
-        result: dict[str, Any] | None = None,
-    ) -> None:
-        self.jobs[job_id].status = DataJobStatus.FAILED
-        self.jobs[job_id].error = error
-        self.jobs[job_id].result = result
-
-    def create_chunks(self, job_id: str, chunks: list[dict[str, Any]]) -> None:
-        self.chunks[job_id] = [
-            {**chunk, "chunk_id": f"{job_id}:{index:06d}", "job_id": job_id}
-            for index, chunk in enumerate(chunks)
-        ]
-
-    def list_chunks(self, job_id: str) -> list[dict[str, Any]]:
-        return self.chunks.get(job_id, [])
-
-    def mark_chunk_running(self, chunk_id: str) -> None:
-        chunk = self._chunk(chunk_id)
-        chunk["status"] = "running"
-        chunk["attempts"] = int(chunk.get("attempts", 0)) + 1
-
-    def mark_chunk_succeeded(self, chunk_id: str, *, row_count: int, file_count: int) -> None:
-        chunk = self._chunk(chunk_id)
-        chunk["status"] = "succeeded"
-        chunk["row_count"] = row_count
-        chunk["file_count"] = file_count
-        chunk["error_code"] = None
-        chunk["error_message"] = None
-
-    def mark_chunk_failed(self, chunk_id: str, error: dict[str, str]) -> None:
-        chunk = self._chunk(chunk_id)
-        chunk["status"] = "failed"
-        chunk["error_code"] = error.get("code")
-        chunk["error_message"] = error.get("message")
-
-    def _chunk(self, chunk_id: str) -> dict[str, Any]:
-        for chunks in self.chunks.values():
-            for chunk in chunks:
-                if chunk["chunk_id"] == chunk_id:
-                    return chunk
-        raise KeyError(chunk_id)
-
-
-class FakeHistoryDownloader:
-    def __init__(self) -> None:
-        self.requests: list[dict[str, Any]] = []
-
-    def download_history(self, request: dict[str, Any]) -> None:
-        self.requests.append(request)
-
-
-class FakeBarReader:
-    def __init__(self) -> None:
-        self.requests: list[dict[str, Any]] = []
-
-    def read_bars(self, request: dict[str, Any]) -> list[dict[str, Any]]:
-        self.requests.append(request)
-        return [{"symbol": "000001.SZ", "date": "2026-01-02", "close": 10.3}]
-
-
-class FakeBarWriter:
-    def __init__(self) -> None:
-        self.requests: list[dict[str, Any]] = []
-        self.files = [
-            {
-                "file_id": "file-1",
-                "kind": "daily_bars",
-                "symbol": "000001.SZ",
-                "period": "1d",
-                "adjust": "none",
-                "format": "parquet",
-                "path": "data/market/raw/bars/kind=daily_bars/period=1d/file.parquet",
-                "hash": "sha256:test",
-                "row_count": 1,
-                "coverage_start": "2026-01-02",
-                "coverage_end": "2026-01-02",
-            }
-        ]
-
-    def write_bars(
-        self,
-        request: dict[str, Any],
-        bars: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
-        del bars
-        self.requests.append(request)
-        return self.files
-
-
-class FakeDataFileRepository:
-    def __init__(self) -> None:
-        self.records: list[dict[str, Any]] = []
-
-    def record_file(self, file_record: dict[str, Any]) -> None:
-        self.records.append(file_record)
-
-
-class FakeCoveragePlanner:
-    def __init__(
-        self,
-        *,
-        fully_covered: bool,
-        gaps: list[dict[str, str]] | None = None,
-    ) -> None:
-        self.result = {
-            "schema": "market.data.coverage.v1",
-            "fully_covered": fully_covered,
-            "coverage": [
-                {
-                    "symbol": "000001.SZ",
-                    "coverage_start": "2026-01-01",
-                    "coverage_end": "2026-01-31",
-                    "row_count": 20,
-                    "file_count": 1,
-                }
-            ],
-            "gaps": gaps or [],
-            "missing_symbols": [] if fully_covered else ["000001.SZ"],
-        }
-        self.requests: list[dict[str, Any]] = []
-
-    def coverage(self, request: dict[str, Any]) -> dict[str, Any]:
-        self.requests.append(request)
-        return self.result
-
-
-class FailingHistoryDownloader:
-    def download_history(self, request: dict[str, Any]) -> None:
-        del request
-        raise RuntimeError("boom")
-
-
-class FakeDuckDbBackend:
-    def __init__(self) -> None:
-        from pathlib import Path
-
-        self.database_path = Path("data/market/db/qmtserver.duckdb")
-        self.connection = FakeDuckDbConnection()
-
-    def connect(self, path: str) -> FakeDuckDbConnection:
-        del path
-        return self.connection
-
-
-class FakeDuckDbConnection:
-    def __init__(self) -> None:
-        self.executed: list[tuple[str, tuple[Any, ...]]] = []
-        self.row: tuple[Any, ...] | None = None
-        self.rows: list[tuple[Any, ...]] = []
-
-    def execute(
-        self,
-        sql: str,
-        parameters: tuple[Any, ...] | None = None,
-    ) -> FakeDuckDbConnection:
-        self.executed.append((sql, parameters or ()))
-        return self
-
-    def fetchone(self) -> tuple[Any, ...] | None:
-        return self.row
-
-    def fetchall(self) -> list[tuple[Any, ...]]:
-        return self.rows
-
-    def close(self) -> None:
-        return None
 
 
 if __name__ == "__main__":

@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import unittest
-from pathlib import Path
-from typing import Any
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from qmtserver.api import create_app
 from qmtserver.config import load_settings
-from qmtserver.data.jobs import DataJobRecord, DataJobStatus
+from tests.data_job_fakes import FakeApiDataJobService as FakeDataJobService
 from tests.fakes import FakeService
 
 
@@ -396,126 +394,6 @@ class ApiMarketDataTests(unittest.TestCase):
         self.assertTrue(second.json()["ok"])
         create_service.assert_called_once()
         self.assertIs(app.state.data_job_service, fake_jobs)
-
-
-class FakeDataJobService:
-    def __init__(self) -> None:
-        self.jobs: dict[str, DataJobRecord] = {}
-        self.requests: list[dict[str, Any]] = []
-        self.coverage_requests: list[dict[str, Any]] = []
-        self.query_requests: list[dict[str, Any]] = []
-        self.quality_requests: list[dict[str, Any]] = []
-        self.export_requests: list[dict[str, Any]] = []
-        self.list_job_requests: list[dict[str, Any]] = []
-        self.retry_requests: list[str] = []
-        self.exports: dict[str, dict[str, Any]] = {}
-
-    def submit_download(self, request: dict[str, Any]) -> dict[str, Any]:
-        self.requests.append(request)
-        job = DataJobRecord(
-            job_type="market_data_download",
-            request=request,
-            status=DataJobStatus.SUCCEEDED,
-            result={"downloaded": True},
-        )
-        self.jobs[job.job_id] = job
-        return job.as_dict()
-
-    def get_job(self, job_id: str) -> dict[str, Any] | None:
-        job = self.jobs.get(job_id)
-        if job is None:
-            return None
-        return job.as_dict()
-
-    def list_jobs(self, *, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
-        self.list_job_requests.append({"status": status, "limit": limit})
-        jobs = [job for job in self.jobs.values() if status is None or job.status.value == status]
-        return [job.as_dict() for job in jobs[:limit]]
-
-    def retry_failed_chunks(self, job_id: str) -> dict[str, Any] | None:
-        self.retry_requests.append(job_id)
-        job = self.jobs.get(job_id)
-        if job is None:
-            return None
-        return job.as_dict()
-
-    def coverage(self, request: dict[str, Any]) -> dict[str, Any]:
-        self.coverage_requests.append(request)
-        return {
-            "schema": "market.data.coverage.v1",
-            "fully_covered": True,
-            "coverage": [
-                {
-                    "symbol": "000001.SZ",
-                    "coverage_start": "2026-01-01",
-                    "coverage_end": "2026-01-31",
-                    "row_count": 20,
-                    "file_count": 1,
-                }
-            ],
-            "missing_symbols": [],
-        }
-
-    def query_bars(self, request: dict[str, Any]) -> dict[str, Any]:
-        self.query_requests.append(request)
-        return {
-            "schema": "market.data.bars.v1",
-            "request": request,
-            "bars": [{"symbol": "000001.SZ", "date": "2026-01-02", "close": 10.3}],
-            "row_count": 1,
-            "truncated": False,
-        }
-
-    def create_export(self, request: dict[str, Any]) -> dict[str, Any]:
-        self.export_requests.append(request)
-        manifest = {
-            "export_id": "export-test",
-            "format": "csv",
-            "request": request,
-            "row_count": 1,
-            "hash": "sha256:test",
-        }
-        self.exports["export-test"] = manifest
-        return {
-            "ok": True,
-            "data": {"manifest": manifest, "cached": False},
-            "error": None,
-            "meta": {},
-        }
-
-    def list_exports(self) -> list[dict[str, Any]]:
-        return list(self.exports.values())
-
-    def export_manifest(self, export_id: str) -> dict[str, Any] | None:
-        manifest = self.exports.get(export_id)
-        if manifest is None:
-            return None
-        return manifest
-
-    def export_path(self, export_id: str) -> Path | None:
-        if export_id not in self.exports:
-            return None
-        path = Path("data") / f"{export_id}.csv"
-        path.parent.mkdir(exist_ok=True)
-        path.write_text("date,symbol,close\n2026-01-02,000001.SZ,10.3\n", encoding="utf-8")
-        return path
-
-    def delete_export(self, export_id: str) -> bool:
-        return self.exports.pop(export_id, None) is not None
-
-    def quality(self, request: dict[str, Any]) -> dict[str, Any]:
-        self.quality_requests.append(request)
-        return {
-            "ok": True,
-            "data": {
-                "missing_dates": [],
-                "duplicate_rows": [],
-                "price_anomalies": [],
-                "volume_anomalies": [],
-            },
-            "error": None,
-            "meta": {"schema": "market.quality.v1", "row_count": 1},
-        }
 
 
 if __name__ == "__main__":
