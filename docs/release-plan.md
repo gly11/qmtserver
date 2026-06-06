@@ -1,8 +1,8 @@
 # Release Plan
 
-本文档记录 qmtserver 的版本节奏和发布门禁。当前待发布版本为 `0.8.0`，主题是 Market Data
-Lake 稳定化和大规模全市场调度：让 server 端行情数据湖具备更可靠的 coverage、分块下载、
-增量补齐、维护、查询、导出、job 追踪和只读 smoke 流程。
+本文档记录 qmtserver 的版本节奏和发布门禁。当前待发布版本为 `0.9.0`，主题是 Market Data
+Lake 大规模下载稳定化：把 `0.8.0` 数据湖基线之后的全市场任务契约、分块执行、增量补齐、
+storage profile、retry、Parquet export、维护诊断和只读 smoke 流程收口为可发布能力。
 
 ## 版本节奏
 
@@ -14,7 +14,8 @@ Lake 稳定化和大规模全市场调度：让 server 端行情数据湖具备�
 0.5.0  已发布    实时行情订阅和兼容矩阵基线
 0.6.0  已发布    只读实盘 smoke、历史下载可靠性和实时稳定性基线
 0.7.0  已发布    网关可靠性诊断和 Market Data Lake 基线
-0.8.0  待发布    Market Data Lake 稳定化和全市场调度层
+0.8.0  已发布    Market Data Lake 稳定化和全市场调度层
+0.9.0  待发布    Market Data Lake 大规模下载稳定化
 1.0.0  远期    稳定版本
 ```
 
@@ -197,7 +198,7 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 
 ## 0.8.0
 
-状态：待发布。
+状态：已发布。
 
 `0.8.0` 在 `0.7.0` 数据湖基线之上增强稳定性和可维护性：
 
@@ -233,6 +234,43 @@ MiniQMT 行情订阅，而不直接依赖 `xtquant`。
 发布限制：
 
 - 如果真实 smoke 未执行或失败，发布说明必须明确标注未验证项。
+
+## 0.9.0
+
+状态：待发布。
+
+`0.9.0` 在 `0.8.0` 之后收口 Market Data Lake 的大规模下载稳定化能力，目标是让 server 端
+可以更可靠地支撑“全市场、多年份、可恢复、可诊断”的只读历史行情任务。
+
+范围：
+
+- data download 请求支持显式 `universe="all_a"` 和 `exchange`，并记录 `resolved_symbols`、
+  `symbol_count` 和 `universe_hash`。
+- download job 结果暴露大任务进度摘要和 per-symbol `symbol_results`，包含 downloaded、cached、
+  failed、row/file count、coverage、gaps 和 error。
+- `mode="ensure"` / `incremental=true` 基于 coverage gaps 只补缺口，避免重复写整段历史。
+- 增加 `POST /v1/market/data/jobs/{job_id}/retry-failed`，只重跑失败 chunks，不重复执行已成功
+  chunks。
+- 增加 `QMT_DATA_STORAGE_PROFILES` 和请求级 `storage_profile` 白名单，client 只能传 profile id，
+  不能传 server 端绝对路径。
+- export/snapshot download 找不到文件时返回真实 HTTP 404；download response 和 manifest 暴露
+  `Content-Length`、`ETag`、hash 和格式信息。
+- data export 支持 `format="parquet"`，大结果可通过 Parquet 文件下载。
+- 本地 data lake 维护增强 coverage consistency、Parquet compaction、index rebuild、orphan/export
+  检查和 `/v1/diagnostics` data lake health summary。
+
+发布记录：
+
+- 普通测试使用 fakes 和本地临时目录，不依赖真实 MiniQMT。
+- 真实 MiniQMT smoke 只做 readonly 行情数据湖验证，不连接 trader，不执行下单、撤单、转账或
+  其他交易命令。
+- qmtclient 需要在后续独立项目中补齐 `universe`、`exchange`、`storage_profile`、`retry_failed`、
+  Parquet export download metadata 和 hash 校验能力。
+
+发布限制：
+
+- 如果真实 Market Data Lake smoke 未执行或失败，发布说明必须明确标注未验证项。
+- 不允许为了验证本版本执行任何真实交易命令。
 
 ## 发布门禁
 

@@ -83,11 +83,20 @@ qmtserver 后续重点不是“一次性转发全部 xtquant API”，而是把�
 - client 只提交任务、查询状态和下载结果，不直接 import `xtquant`。
 
 该方向已完成配置、依赖和 schema 骨架、持久化 job、Parquet writer、coverage gap detection、
-本地查询 API、CSV export、质量检查、storage maintenance、job listing 和 readonly data lake
-smoke。大规模全市场调度层已经支持 server 端 universe resolution、symbol/date chunk planner、
-chunk 级执行和进度、`mode="ensure"` / `incremental=true` 缺口补齐，以及 Parquet compaction
-维护入口。后续重点是 storage profile 白名单、显式 resume/retry API、更多真实 MiniQMT smoke
-矩阵和更大数据集的性能压测。
+本地查询 API、CSV/Parquet export、质量检查、storage maintenance、job listing 和 readonly data
+lake smoke。大规模全市场调度层已经支持 server 端 universe resolution、symbol/date chunk
+planner、chunk 级执行和进度、`mode="ensure"` / `incremental=true` 缺口补齐、storage profile
+白名单、失败 chunk retry、Parquet compaction、coverage consistency check 和 export download
+metadata。
+
+后续稳定化重点：
+
+- qmtclient 对齐 `universe`、`exchange`、`storage_profile`、`retry_failed` 和 Parquet export
+  download metadata。
+- 增加 job cancel / pause / resume，明确 stale running job 的恢复语义。
+- 做更大数据集和全市场长区间性能压测，记录推荐 `chunk_days`、并发和 export limit。
+- 建立 jobs、chunks、exports 和 snapshots 的保留/清理策略。
+- 扩展真实 MiniQMT readonly smoke 矩阵，不连接 trader，不执行任何交易命令。
 
 ### Subscriptions And Events
 
