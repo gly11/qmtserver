@@ -31,7 +31,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --extra xtquant
+        run: uv sync --extra xtquant --extra data
 
       - name: Ruff lint
         run: uv run ruff check .
