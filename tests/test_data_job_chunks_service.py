@@ -229,6 +229,34 @@ class DataJobChunkServiceTests(unittest.TestCase):
         self.assertEqual(fetched["progress"]["queued_chunks"], 0)
         self.assertEqual(fetched["progress"]["finished_chunks"], 2)
 
+    def test_ensure_cached_download_reports_coverage_progress_when_no_chunks_planned(self) -> None:
+        repository = FakeDataJobRepository()
+        service = DataDownloadJobService(
+            repository,
+            downloader=FakeHistoryDownloader(),
+            coverage_planner=FakeCoveragePlanner(fully_covered=True),
+            run_async=False,
+        )
+
+        job = service.submit_download(
+            {
+                "kind": "daily_bars",
+                "symbols": ["000001.SZ"],
+                "start": "2026-01-01",
+                "end": "2026-01-31",
+                "adjust": "none",
+                "mode": "ensure",
+            }
+        )
+
+        fetched = service.get_job(str(job["job_id"]))
+        assert fetched is not None
+        self.assertEqual(fetched["chunks"], [])
+        self.assertEqual(fetched["progress"]["total_symbols"], 1)
+        self.assertEqual(fetched["progress"]["finished_symbols"], 1)
+        self.assertEqual(fetched["progress"]["row_count"], 20)
+        self.assertEqual(fetched["progress"]["file_count"], 1)
+
     def test_ensure_download_only_runs_coverage_gaps(self) -> None:
         repository = FakeDataJobRepository()
         downloader = FakeHistoryDownloader()

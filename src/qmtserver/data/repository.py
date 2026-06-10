@@ -269,20 +269,30 @@ class DataJobRepository:
         symbols = {str(symbol) for symbol in request.get("symbols", [])}
         connection = self.backend.connect(str(self.backend.database_path))
         try:
-            cursor = connection.execute(
-                """
-                SELECT coverage_id, kind, symbol, period, adjust, coverage_start, coverage_end,
-                       row_count, file_count, updated_at
-                FROM data_coverage
-                WHERE kind = ? AND period = ? AND adjust = ?
-                ORDER BY symbol
-                """,
-                (
-                    request.get("kind"),
-                    period(request),
-                    request.get("adjust", "none"),
-                ),
-            )
+            if request.get("kind") is None:
+                cursor = connection.execute(
+                    """
+                    SELECT coverage_id, kind, symbol, period, adjust, coverage_start, coverage_end,
+                           row_count, file_count, updated_at
+                    FROM data_coverage
+                    ORDER BY kind, symbol, period, adjust
+                    """
+                )
+            else:
+                cursor = connection.execute(
+                    """
+                    SELECT coverage_id, kind, symbol, period, adjust, coverage_start, coverage_end,
+                           row_count, file_count, updated_at
+                    FROM data_coverage
+                    WHERE kind = ? AND period = ? AND adjust = ?
+                    ORDER BY symbol
+                    """,
+                    (
+                        request.get("kind"),
+                        period(request),
+                        request.get("adjust", "none"),
+                    ),
+                )
             coverage = [coverage_from_row(row) for row in cursor.fetchall()]
             if symbols:
                 return [row for row in coverage if str(row["symbol"]) in symbols]

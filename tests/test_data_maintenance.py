@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from qmtserver.data.maintenance import DataMaintenanceService
+from qmtserver.data.maintenance import DataMaintenanceService, ParquetMetadataReader
 
 
 class DataMaintenanceServiceTests(unittest.TestCase):
@@ -168,6 +168,38 @@ class DataMaintenanceServiceTests(unittest.TestCase):
         self.assertTrue(repository.cleared)
         self.assertEqual(repository.recorded_files, [metadata])
         self.assertEqual(result["rebuilt_file_count"], 1)
+
+    def test_parquet_metadata_reader_ignores_hive_partition_columns(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp)
+            path = (
+                data_dir
+                / "raw"
+                / "bars"
+                / "kind=daily_bars"
+                / "period=1d"
+                / "adjust=none"
+                / "symbol=000001.SZ"
+                / "file.parquet"
+            )
+            path.parent.mkdir(parents=True)
+            pyarrow = __import__("pyarrow")
+            parquet = __import__("pyarrow.parquet").parquet
+            table = pyarrow.table(
+                {
+                    "date": ["2026-01-01", "2026-01-02"],
+                    "symbol": ["000001.SZ", "000001.SZ"],
+                    "close": [10.0, 10.5],
+                }
+            )
+            parquet.write_table(table, path)
+
+            metadata = ParquetMetadataReader().read(path)
+
+        self.assertEqual(metadata["symbol"], "000001.SZ")
+        self.assertEqual(metadata["row_count"], 2)
+        self.assertEqual(metadata["coverage_start"], "2026-01-01")
+        self.assertEqual(metadata["coverage_end"], "2026-01-02")
 
     def test_cleanup_can_delete_expired_exports(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

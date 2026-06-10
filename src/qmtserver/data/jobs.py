@@ -364,7 +364,11 @@ class DataDownloadJobService:
         payload = job.as_dict()
         chunks = self.repository.list_chunks(job.job_id)
         payload["chunks"] = chunks
-        payload["progress"] = progress_from_chunks(chunks)
+        result = payload.get("result")
+        if chunks or not isinstance(result, dict) or not isinstance(result.get("progress"), dict):
+            payload["progress"] = progress_from_chunks(chunks)
+        else:
+            payload["progress"] = result["progress"]
         return payload
 
 

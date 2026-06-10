@@ -321,7 +321,7 @@ class ParquetMetadataReader:
 
     def read(self, path: Path) -> dict[str, Any]:
         parquet: Any = self.import_module("pyarrow.parquet")
-        table = parquet.read_table(path)
+        table = parquet.ParquetFile(path).read()
         rows = table.to_pylist()
         partitions = _path_partitions(path)
         kind = partitions.get("kind", "daily_bars")

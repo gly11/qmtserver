@@ -44,6 +44,7 @@ def cached_result(request: dict[str, Any], coverage: dict[str, Any]) -> dict[str
         "coverage": coverage,
         "files": [],
         "symbol_results": _cached_symbol_results(request, coverage),
+        "progress": _cached_progress(request, coverage),
         "next_step": None,
         **_universe_result_metadata(request),
     }
@@ -184,6 +185,32 @@ def _cached_symbol_results(
             }
         )
     return results
+
+
+def _cached_progress(request: dict[str, Any], coverage: dict[str, Any]) -> dict[str, Any]:
+    rows = [row for row in coverage.get("coverage", []) if isinstance(row, dict)]
+    requested_symbols = [str(symbol) for symbol in request.get("symbols", [])]
+    covered_symbols = {
+        str(row["symbol"])
+        for row in rows
+        if row.get("symbol") is not None
+        and (not requested_symbols or str(row["symbol"]) in requested_symbols)
+    }
+    total_symbols = len(requested_symbols) if requested_symbols else len(covered_symbols)
+    return {
+        "schema": "market.data.job_progress.v1",
+        "total_symbols": total_symbols,
+        "finished_symbols": len(covered_symbols),
+        "failed_symbols": 0,
+        "current_symbol": None,
+        "total_chunks": 0,
+        "finished_chunks": 0,
+        "failed_chunks": 0,
+        "running_chunks": 0,
+        "queued_chunks": 0,
+        "row_count": sum(int(row.get("row_count", 0)) for row in rows),
+        "file_count": sum(int(row.get("file_count", 0)) for row in rows),
+    }
 
 
 def _chunk_symbol_results(

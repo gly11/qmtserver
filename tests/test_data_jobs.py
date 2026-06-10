@@ -306,6 +306,30 @@ class DataDownloadJobServiceTests(unittest.TestCase):
         self.assertEqual(coverage[0]["symbol"], "000001.SZ")
         self.assertEqual(coverage[0]["coverage_end"], "2026-01-31")
 
+    def test_duckdb_repository_lists_all_coverage_for_empty_request(self) -> None:
+        backend = FakeDuckDbBackend()
+        repository = DataJobRepository(backend)
+        backend.connection.rows = [
+            (
+                "daily_bars:000001.SZ:1d:none",
+                "daily_bars",
+                "000001.SZ",
+                "1d",
+                "none",
+                "2026-01-01",
+                "2026-01-31",
+                20,
+                1,
+                "2026-06-02T01:00:00+00:00",
+            )
+        ]
+
+        coverage = repository.list_coverage({})
+
+        executed_sql = "\n".join(sql for sql, _ in backend.connection.executed)
+        self.assertNotIn("WHERE kind = ?", executed_sql)
+        self.assertEqual(coverage[0]["symbol"], "000001.SZ")
+
 
 if __name__ == "__main__":
     unittest.main()
